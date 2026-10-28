@@ -1,0 +1,21 @@
+CAPSTONE PROJECT TEAM ACTIVITY
+
+Project Name: MotoScan
+Group Name: Byte & Bite
+
+Purpose:
+This file is used to practice team collaboration and commit tracking on GitHub.
+
+Member Contributions:
+- Member 1: Initial repository setup
+- Member 2: Updated the test file
+- Member 3: Updated the test file
+- Member 4: Updated the test file
+
+Instructions:
+Each group member should edit this file with their own name and a short description
+of their contribution, then commit the change using their own GitHub account.
+
+Note:
+Replace the sample project name, group name, and member entries with your actual
+project and group information before submitting.
