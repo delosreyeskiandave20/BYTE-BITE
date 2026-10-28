@@ -9,7 +9,7 @@ This file is used to practice team collaboration and commit tracking on GitHub.
 Member Contributions:
 - Member 1: Initial repository setup
 - Member 2: Trexie Ann C. Behagan
-- Member 3: Updated the test file
+- Member 3: James Cliford D. Bugahod 
 - Member 4: Updated the test file
 
 Instructions:
