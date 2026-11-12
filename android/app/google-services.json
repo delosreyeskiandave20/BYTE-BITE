@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "747660377204",
+    "project_id": "byte-and-bite-f39f5",
+    "storage_bucket": "byte-and-bite-f39f5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:747660377204:android:4268bb77539440b4daa521",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4-W83VnlvVPre0BNeMFbySZZTGwWLj8E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
