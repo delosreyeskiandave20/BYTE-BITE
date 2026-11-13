@@ -495,14 +495,6 @@ class ShopStore extends ChangeNotifier {
         .collection(_productsCollection)
         .doc(productId)
         .set(product.toMap());
-    _productsByShop[shop.id] = [
-      ...(_productsByShop[shop.id] ?? shop.products),
-      product,
-    ];
-    _shopDocuments[shop.id] = shop.copyWith(
-      lastEditedAt: DateTime.now().millisecondsSinceEpoch,
-    );
-    _rebuildShops();
   }
 
   Future<void> updateProduct({
@@ -561,11 +553,6 @@ class ShopStore extends ChangeNotifier {
         .collection(_productsCollection)
         .doc(productId)
         .set(updated.toMap(), SetOptions(merge: true));
-    _productsByShop[shop.id] = products;
-    _shopDocuments[shop.id] = shop.copyWith(
-      lastEditedAt: DateTime.now().millisecondsSinceEpoch,
-    );
-    _rebuildShops();
   }
 
   Future<void> deleteProduct({
@@ -597,11 +584,6 @@ class ShopStore extends ChangeNotifier {
         .collection(_productsCollection)
         .doc(productId)
         .delete();
-    _productsByShop[shop.id] = products;
-    _shopDocuments[shop.id] = shop.copyWith(
-      lastEditedAt: DateTime.now().millisecondsSinceEpoch,
-    );
-    _rebuildShops();
   }
 
   Future<void> deleteShop({required String ownerEmail}) async {
