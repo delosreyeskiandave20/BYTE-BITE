@@ -67,6 +67,7 @@ flutter:
     - assets/motorcycle_parts_catalog.json
     - assets/parts/
     - assets/vehicle_parts/
+    - assets/vehicle_parts/beat_playful/
     - assets/brands/
     - assets/categories/engine/
     - assets/categories/electrical/

@@ -65,7 +65,67 @@ class VehiclePartsVariant {
 String vehiclePartImageAsset({
   required String category,
   required String part,
-}) => 'assets/vehicle_parts/${_assetSlug(category)}/${_assetSlug(part)}.png';
+  String? brand,
+  String? model,
+  String? variant,
+}) {
+  if (brand == 'Honda' && model == 'Beat' && variant == 'Playful') {
+    final imageFile = _beatPlayfulPartImages[_assetSlug(part)];
+    if (imageFile != null) {
+      return 'assets/vehicle_parts/beat_playful/$imageFile';
+    }
+  }
+  return 'assets/vehicle_parts/${_assetSlug(category)}/${_assetSlug(part)}.png';
+}
+
+const _beatPlayfulPartImages = <String, String>{
+  'engine_oil': 'engine_oil.jpg',
+  'oil_screen_filter': 'oil_screen_filter.jpg',
+  'drain_plug_washer': 'drain_plug_washer.jpg',
+  'air_filter': 'air_filter.jpg',
+  'spark_plug': 'spark_plug.jpg',
+  'cvt_drive_belt': 'cvt_drive_belt.png',
+  'variator_roller_set': 'variator_roller_set.png',
+  'cvt_slider_set': 'cvt_slider_set.jpg',
+  'clutch_shoe_set': 'clutch_shoe_set.png',
+  'final_drive_gear_oil': 'final_drive_gear_oil.png',
+  '12_v_battery': '12_v_battery.jpg',
+  'main_fuse': 'main_fuse.jpg',
+  'starter_relay': 'starter_relay.jpg',
+  'regulator_rectifier': 'regulator_rectifier.jpg',
+  'spark_plug_cap': 'spark_plug_cap.png',
+  'ignition_coil': 'ignition_coil.png',
+  'ecu_pgm_fi_unit': 'ecu_pgm_fi_unit.png',
+  'oxygen_sensor': 'oxygen_sensor.jpg',
+  'brake_light_switch': 'brake_light_switch.png',
+  'front_fork_oil': 'front_fork_oil.jpg',
+  'fork_oil_seal': 'fork_oil_seal.jpg',
+  'fork_dust_seal': 'fork_dust_seal.jpg',
+  'fork_bushing': 'fork_bushing.jpg',
+  'front_fork_spring': 'front_fork_spring.jpg',
+  'rear_shock_absorber': 'rear_shock_absorber.webp',
+  'rear_shock_bushing': 'rear_shock_bushing.jpg',
+  'steering_head_bearing': 'steering_head_bearing.png',
+  'swingarm_pivot_bushing': 'swingarm_pivot_bushing.jpg',
+  'side_stand_switch': 'side_stand_switch.jpg',
+  'front_tire': 'front_tire.jpg',
+  'rear_tire': 'rear_tire.png',
+  'front_wheel_bearing': 'front_wheel_bearing.jpg',
+  'rear_wheel_bearing': 'rear_wheel_bearing.webp',
+  'wheel_oil_seal': 'wheel_oil_seal.jpg',
+  'front_axle_collar': 'front_axle_collar.jpg',
+  'rear_axle_collar': 'rear_axle_collar.png',
+  'tubeless_valve_stem': 'tubeless_valve_stem.jpg',
+  'tire_pressure_valve_core': 'tire_pressure_valve_core.jpg',
+  'leg_shield_floor_panel': 'leg_shield_floor_panel.jpg',
+  'front_fender': 'front_fender.png',
+  'rear_fender_mudguard': 'rear_fender_mudguard.jpg',
+  'seat_assembly_seat_cover': 'seat_assembly.png',
+  'grab_rail': 'grab_rail.png',
+  'side_mirror': 'side_mirror.jpg',
+  'headlight_assembly': 'headlight_assembly.jpg',
+  'tail_light_turn_signal_assembly': 'tail_light_turn_signal_assembly.jpg',
+};
 
 Future<List<VehiclePartsVariant>> loadVehiclePartsCatalog() {
   return _vehiclePartsCatalogFuture ??= _readVehiclePartsCatalog();

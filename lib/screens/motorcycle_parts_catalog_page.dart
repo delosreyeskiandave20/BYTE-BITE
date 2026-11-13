@@ -244,7 +244,13 @@ class _VehiclePartTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageAsset = vehiclePartImageAsset(category: category, part: part);
+    final imageAsset = vehiclePartImageAsset(
+      brand: brand,
+      model: model,
+      variant: variant,
+      category: category,
+      part: part,
+    );
 
     return Container(
       key: PageStorageKey('$_vehicle-$category-$part'),

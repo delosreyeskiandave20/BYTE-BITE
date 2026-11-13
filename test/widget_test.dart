@@ -826,18 +826,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Engine oil'), findsOneWidget);
     expect(find.text('CVT drive belt'), findsOneWidget);
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            _assetNameOf(widget.image)
-                    ?.startsWith('assets/vehicle_parts/engine/') ==
-                true,
-      ),
-      findsNWidgets(2),
-    );
+    final partImageAssets = tester
+        .widgetList<Image>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Image &&
+                _assetNameOf(widget.image)
+                        ?.startsWith(
+                          'assets/vehicle_parts/beat_playful/',
+                        ) ==
+                    true,
+          ),
+        )
+        .map((image) => _assetNameOf(image.image))
+        .toSet();
+    expect(partImageAssets, {
+      'assets/vehicle_parts/beat_playful/engine_oil.jpg',
+      'assets/vehicle_parts/beat_playful/cvt_drive_belt.png',
+    });
 
-    expect(find.text('Add image'), findsNWidgets(2));
+    expect(find.text('Add image'), findsNothing);
     expect(find.textContaining('Lubricates engine components'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('part-description-Engine-CVT drive belt')),
@@ -845,7 +853,7 @@ void main() {
     );
     expect(
       tester.getSize(
-        find.byKey(const ValueKey('part-image-box-engine_oil.png')),
+        find.byKey(const ValueKey('part-image-box-engine_oil.jpg')),
       ),
       const Size(92, 92),
     );
@@ -860,6 +868,30 @@ void main() {
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       'Engine oil',
     );
+  });
+
+  test('Honda Beat Playful body photos are bundled by part name', () async {
+    const bodyParts = [
+      'Leg shield/floor panel',
+      'Front fender',
+      'Rear fender/mudguard',
+      'Seat assembly/seat cover',
+      'Grab rail',
+      'Side mirror',
+      'Headlight assembly',
+      'Tail-light/turn-signal assembly',
+    ];
+
+    for (final part in bodyParts) {
+      final asset = vehiclePartImageAsset(
+        brand: 'Honda',
+        model: 'Beat',
+        variant: 'Playful',
+        category: 'Body',
+        part: part,
+      );
+      await rootBundle.load(asset);
+    }
   });
 
   testWidgets('Buy options only dismiss from an explicit dialog action', (
