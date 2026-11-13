@@ -70,10 +70,14 @@ class FirebaseBootstrap {
     try {
       if (kIsWeb) {
         if (_webRecaptchaSiteKey.isEmpty) {
-          debugPrint(
-            'App Check skipped: pass --dart-define=APPCHECK_WEB_SITE_KEY=... '
-            'to enforce web builds.',
-          );
+          final message =
+              'App Check skipped: pass --dart-define=APPCHECK_WEB_SITE_KEY=... '
+              'to enforce web builds.';
+          if (kReleaseMode) {
+            debugPrint('SECURITY: $message');
+          } else {
+            debugPrint(message);
+          }
           return;
         }
         await FirebaseAppCheck.instance.activate(

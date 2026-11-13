@@ -140,24 +140,30 @@ class ShopStore extends ChangeNotifier {
   }
 
   void _subscribeToShops() {
-    _shopsSubscription = _shopsRef(_firestore!).snapshots().listen(
-      (snapshot) {
-        _lastError = null;
-        _isLoading = false;
-        _shopDocuments
-          ..clear()
-          ..addEntries(
-            snapshot.docs.map((doc) => MapEntry(doc.id, Shop.fromDoc(doc))),
-          );
-        _syncProductSubscriptions(snapshot.docs.map((doc) => doc.id).toSet());
-        _rebuildShops();
-      },
-      onError: (Object error) {
-        _lastError = error;
-        _isLoading = false;
-        notifyListeners();
-      },
-    );
+    // Public marketplace access is limited to verified shops by Firestore rules.
+    _shopsSubscription = _shopsRef(_firestore!)
+        .where('verified', isEqualTo: true)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _lastError = null;
+            _isLoading = false;
+            _shopDocuments
+              ..clear()
+              ..addEntries(
+                snapshot.docs.map((doc) => MapEntry(doc.id, Shop.fromDoc(doc))),
+              );
+            _syncProductSubscriptions(
+              snapshot.docs.map((doc) => doc.id).toSet(),
+            );
+            _rebuildShops();
+          },
+          onError: (Object error) {
+            _lastError = error;
+            _isLoading = false;
+            notifyListeners();
+          },
+        );
   }
 
   /// Starts product listeners for new shops and stops them for removed shops.
@@ -303,6 +309,9 @@ class ShopStore extends ChangeNotifier {
       return;
     }
 
+    // Firestore rules only accept verified=true when the auth token carries the
+    // verified-email claim, so refresh it after the owner confirms their email.
+    await _ownerAuth?.refreshIdToken();
     await _shopRef(
       firestore,
       shop.id,
@@ -346,11 +355,22 @@ class ShopStore extends ChangeNotifier {
     final firestore = _firestore;
     if (firestore == null) return null;
 
+    final normalizedEmail = _normalizeEmail(email);
+    final account = _ownerAuth?.currentAccount;
+    if (account != null && account.email == normalizedEmail) {
+      // Owners can read their own unverified shop; direct UID reads also avoid
+      // querying by email hash in public data.
+      final shop = await _readShop(firestore, account.uid);
+      if (shop == null) return null;
+      _shopDocuments[shop.id] = shop;
+      _productsByShop[shop.id] = shop.products;
+      _rebuildShops();
+      return shop;
+    }
+
     final snapshot = await _shopsRef(firestore)
-        .where(
-          'ownerEmailHash',
-          isEqualTo: ownerEmailHash(_normalizeEmail(email)),
-        )
+        .where('verified', isEqualTo: true)
+        .where('ownerEmailHash', isEqualTo: ownerEmailHash(normalizedEmail))
         .limit(1)
         .get();
     if (snapshot.docs.isEmpty) return null;
@@ -692,6 +712,7 @@ class ShopStore extends ChangeNotifier {
         name: 'MotoScan Demo Parts',
         location: 'Quezon City, Metro Manila',
         description: 'Sample motorcycle parts and accessories. Contact the shop to confirm fit and availability.',
+        isVerified: true,
         products: const [
           ShopProduct(
             id: 'demo-phone-holder',

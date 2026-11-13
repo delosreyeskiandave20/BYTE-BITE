@@ -1,91 +1,132 @@
-  rules_version = '2';
+rules_version = '2';
 
-  service cloud.firestore {
-    match /databases/{database}/documents {
-      function signedIn() {
-        return request.auth != null;
-      }
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
 
-      // Shop documents are keyed by the owner's Firebase Auth UID, so document
-      // ownership is enough. The owner's email is never stored in plain text.
-      function isShopOwner(ownerId) {
-        return signedIn() && request.auth.uid == ownerId;
-      }
+    // Shop documents are keyed by the owner's Firebase Auth UID, so document
+    // ownership is enough. The owner's email is never stored in plain text.
+    function isShopOwner(ownerId) {
+      return signedIn() && request.auth.uid == ownerId;
+    }
 
-      // Shape and size validation for every shop write. Keep these limits in
-      // sync with ShopStore and the owner dashboard form.
-      function validShop() {
-        let data = request.resource.data;
-        return data.keys().hasAll([
-            'ownerEmailHash',
-            'ownerName',
-            'name',
-            'location',
-            'description'
-          ])
-          && data.ownerEmailHash is string
-          && data.ownerEmailHash.size() == 64
-          && data.ownerEmailHash.matches('^[0-9a-f]{64}$')
-          && data.ownerName is string
-          && data.ownerName.size() <= 120
-          && data.name is string
-          && data.name.size() >= 1
-          && data.name.size() <= 120
-          && data.location is string
-          && data.location.size() >= 1
-          && data.location.size() <= 120
-          && data.description is string
-          && data.description.size() <= 2000;
-      }
+    function isVerifiedShop() {
+      return resource.data.verified == true;
+    }
 
-      // Products live in their own subcollection so each document can be
-      // validated individually. Keep these limits in sync with ShopStore.
-      function validProduct() {
-        let data = request.resource.data;
-        return data.keys().hasAll([
-            'id',
-            'name',
-            'category',
-            'description',
-            'price',
-            'quantity',
-            'imageUrl'
-          ])
-          && data.id is string
-          && data.id.size() >= 1
-          && data.id.size() <= 64
-          && data.name is string
-          && data.name.size() >= 1
-          && data.name.size() <= 120
-          && data.category is string
-          && data.category.size() >= 1
-          && data.category.size() <= 60
-          && data.description is string
-          && data.description.size() <= 1000
-          && data.price is number
-          && data.price >= 0
-          && data.price <= 10000000
-          && data.quantity is int
-          && data.quantity >= 0
-          && data.quantity <= 100000
-          && data.imageUrl is string
-          && data.imageUrl.size() <= 500
-          && (data.imageUrl == '' || data.imageUrl.matches('^https?://.+'));
-      }
+    // Shape and size validation for every shop write. Keep these limits in sync
+    // with ShopStore and the owner dashboard form.
+    function validShop() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'ownerEmailHash',
+          'ownerName',
+          'name',
+          'location',
+          'description',
+          'verified',
+          'lastEditedAt'
+        ])
+        && data.keys().hasAll([
+          'ownerEmailHash',
+          'ownerName',
+          'name',
+          'location',
+          'description',
+          'verified'
+        ])
+        && data.ownerEmailHash is string
+        && data.ownerEmailHash.size() == 64
+        && data.ownerEmailHash.matches('^[0-9a-f]{64}$')
+        && data.ownerName is string
+        && data.ownerName.size() <= 120
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 120
+        && data.location is string
+        && data.location.size() >= 1
+        && data.location.size() <= 120
+        && data.description is string
+        && data.description.size() <= 2000
+        && data.verified is bool
+        && (!('lastEditedAt' in data)
+          || (data.lastEditedAt is int
+            && data.lastEditedAt >= 0
+            && data.lastEditedAt <= 4102444800000));
+    }
 
-      match /shops/{ownerId} {
-        // Shop listings are public so anyone can browse the marketplace.
-        allow read: if true;
-        allow create, update: if isShopOwner(ownerId) && validShop();
+    // Clients may only publish a shop when Firebase Auth has verified the owner
+    // email. A verified shop cannot be un-verified by the client.
+    function validVerificationState() {
+      let verified = request.resource.data.verified;
+      return (!verified || request.auth.token.email_verified == true)
+        && (!(resource != null && resource.data.verified == true)
+          || verified == true);
+    }
+
+    // Products live in their own subcollection so each document can be
+    // validated individually. Keep these limits in sync with ShopStore.
+    function validProduct() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'id',
+          'name',
+          'category',
+          'description',
+          'price',
+          'quantity',
+          'imageUrl'
+        ])
+        && data.keys().hasAll([
+          'id',
+          'name',
+          'category',
+          'description',
+          'price',
+          'quantity',
+          'imageUrl'
+        ])
+        && data.id is string
+        && data.id.size() >= 1
+        && data.id.size() <= 64
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 120
+        && data.category is string
+        && data.category.size() >= 1
+        && data.category.size() <= 60
+        && data.description is string
+        && data.description.size() <= 1000
+        && data.price is number
+        && data.price >= 0
+        && data.price <= 10000000
+        && data.quantity is int
+        && data.quantity >= 0
+        && data.quantity <= 100000
+        && data.imageUrl is string
+        && data.imageUrl.size() <= 500
+        && (data.imageUrl == ''
+          || data.imageUrl.matches('^https://[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]+$'));
+    }
+
+    match /shops/{ownerId} {
+      // Public marketplace reads only verified shops. Owners can read their own
+      // shop before verification to complete setup.
+      allow read: if isVerifiedShop() || isShopOwner(ownerId);
+      allow create, update: if isShopOwner(ownerId)
+        && validShop()
+        && validVerificationState();
+      allow delete: if isShopOwner(ownerId);
+
+      match /products/{productId} {
+        allow read: if isVerifiedShop() || isShopOwner(ownerId);
+        allow create, update: if isShopOwner(ownerId)
+          && validProduct()
+          && request.resource.data.id == productId;
         allow delete: if isShopOwner(ownerId);
-
-        match /products/{productId} {
-          allow read: if true;
-          allow create, update: if isShopOwner(ownerId)
-            && validProduct()
-            && request.resource.data.id == productId;
-          allow delete: if isShopOwner(ownerId);
-        }
       }
     }
   }
+}

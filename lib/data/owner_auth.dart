@@ -98,6 +98,10 @@ abstract class OwnerAuth {
   /// Reloads the account so a newly verified email is reflected immediately.
   Future<void> reloadAccount();
 
+  /// Refreshes the ID token so security rules see updated claims (for example
+  /// `email_verified`) without requiring a new sign-in.
+  Future<void> refreshIdToken();
+
   Future<void> signOut();
 }
 
@@ -179,6 +183,11 @@ class FirebaseOwnerAuth implements OwnerAuth {
   @override
   Future<void> reloadAccount() async {
     await _requireSignedInUser().reload();
+  }
+
+  @override
+  Future<void> refreshIdToken() async {
+    await _requireSignedInUser().getIdToken(true);
   }
 
   @override

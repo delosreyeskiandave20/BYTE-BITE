@@ -78,6 +78,9 @@ class FakeOwnerAuth implements OwnerAuth {
   }
 
   @override
+  Future<void> refreshIdToken() async {}
+
+  @override
   Future<void> signOut() async {
     _current = null;
     _stateController.add(null);
