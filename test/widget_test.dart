@@ -24,7 +24,7 @@ import 'package:flutter_application_1/widgets/buy_options_button.dart';
 import 'package:flutter_application_1/widgets/desktop_phone_frame.dart';
 import 'package:flutter_application_1/widgets/vehicle_variant_carousel.dart';
 
-import 'support/fake_owner_auth.dart';
+import 'fake_owner_auth.dart';
 
 Future<void> _pumpIntoMotoScan(WidgetTester tester) async {
   final logicalSize = tester.view.physicalSize / tester.view.devicePixelRatio;

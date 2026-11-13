@@ -6,6 +6,7 @@ import '../data/shop_store.dart';
 import '../models/catalog_product.dart';
 import '../theme/app_theme.dart';
 import '../widgets/buy_options_button.dart';
+import '../widgets/load_error_banner.dart';
 import 'shop_page.dart';
 
 class SearchPage extends StatefulWidget {
@@ -66,26 +67,14 @@ class _SearchPageState extends State<SearchPage> {
   List<_ShopMatch> get _shopMatches {
     final query = _query.trim().toLowerCase();
     if (query.isEmpty) return const <_ShopMatch>[];
-    final queryTokens = _searchTokens(query);
+    final queryTokens = searchTokens(query);
     if (queryTokens.isEmpty) return const <_ShopMatch>[];
 
     final matches = <_ShopMatch>[];
     for (final shop in _shopStore.shops) {
       for (final product in shop.products) {
         if (!product.isAvailable) continue;
-        final productTokens = _searchTokens(
-          [
-            product.name,
-            product.category,
-            product.description,
-            shop.name,
-            shop.location,
-          ].join(' '),
-        );
-        final matchesQuery = queryTokens.every(
-          (token) => productTokens.any((word) => word.startsWith(token)),
-        );
-        if (matchesQuery) {
+        if (shopProductMatchesTokens(shop, product, queryTokens)) {
           matches.add(_ShopMatch(shop: shop, product: product));
         }
       }
@@ -104,12 +93,6 @@ class _SearchPageState extends State<SearchPage> {
 
     return matches.take(_maxShopMatches).toList(growable: false);
   }
-
-  static List<String> _searchTokens(String value) => value
-      .toLowerCase()
-      .split(RegExp(r'[^a-z0-9]+'))
-      .where((word) => word.isNotEmpty)
-      .toList(growable: false);
 
   void _openShop(_ShopMatch match) {
     Navigator.of(context).push(
@@ -286,8 +269,11 @@ class _SearchPageState extends State<SearchPage> {
               ],
               if (hasQuery && _shopStore.lastErrorMessage != null) ...[
                 const SizedBox(height: 12),
-                _ShopSearchNotice(
-                  message: _shopStore.lastErrorMessage!,
+                LoadErrorBanner(
+                  compact: true,
+                  message:
+                      'Shop listings could not load. '
+                      '${_shopStore.lastErrorMessage}',
                   onRetry: _shopStore.retry,
                 ),
               ],
@@ -389,48 +375,6 @@ class _SearchSectionHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ShopSearchNotice extends StatelessWidget {
-  const _ShopSearchNotice({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-      decoration: BoxDecoration(
-        color: AppColors.dangerSoft,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.cloud_off_outlined,
-            size: 18,
-            color: AppColors.danger,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Shop listings could not load. $message',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.danger,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
-      ),
     );
   }
 }

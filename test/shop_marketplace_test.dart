@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/data/shop_store.dart';
 import 'package:flutter_application_1/screens/shop_page.dart';
 
-import 'support/fake_owner_auth.dart';
+import 'fake_owner_auth.dart';
 
 Future<ShopStore> _marketplaceStore() async {
   final store = ShopStore(ownerAuth: FakeOwnerAuth());

@@ -41,7 +41,9 @@ class _MotoScanShell extends StatefulWidget {
 }
 
 class _MotoScanShellState extends State<_MotoScanShell> {
-  int _selectedIndex = 0;
+  static const _homeTabIndex = 0;
+
+  int _selectedIndex = _homeTabIndex;
   final _shopStore = ShopStore();
   final _homeScrollController = ScrollController();
 
@@ -54,7 +56,7 @@ class _MotoScanShellState extends State<_MotoScanShell> {
 
   void _selectTab(int index) {
     // Re-selecting Home returns the feed to the top, a familiar mobile pattern.
-    if (index == 0 && _selectedIndex == 0) {
+    if (index == _homeTabIndex && _selectedIndex == _homeTabIndex) {
       if (_homeScrollController.hasClients) {
         _homeScrollController.animateTo(
           0,
@@ -176,10 +178,10 @@ class _MotoScanShellState extends State<_MotoScanShell> {
   Widget build(BuildContext context) {
     return PopScope(
       // On Scan or Shop, system back returns to Home instead of closing the app.
-      canPop: _selectedIndex == 0,
+      canPop: _selectedIndex == _homeTabIndex,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop || _selectedIndex == 0) return;
-        setState(() => _selectedIndex = 0);
+        if (didPop || _selectedIndex == _homeTabIndex) return;
+        setState(() => _selectedIndex = _homeTabIndex);
       },
       child: Scaffold(
         body: IndexedStack(

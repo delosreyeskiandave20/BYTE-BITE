@@ -41,7 +41,7 @@ class _CatalogPageState extends State<CatalogPage> {
         : 'Browse accessory groups and their available choices.';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5F0),
+      backgroundColor: AppColors.paper,
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Back to home',
@@ -58,7 +58,7 @@ class _CatalogPageState extends State<CatalogPage> {
                 ? 'MOTOSCAN / SERVICE GUIDE'
                 : 'MOTOSCAN / ACCESSORY LIBRARY',
             style: const TextStyle(
-              color: Color(0xFF277C78),
+              color: AppColors.teal,
               fontSize: 11,
               fontWeight: FontWeight.w900,
               letterSpacing: 1.3,
@@ -68,7 +68,7 @@ class _CatalogPageState extends State<CatalogPage> {
           Text(
             title,
             style: const TextStyle(
-              color: Color(0xFF22201E),
+              color: AppColors.ink,
               fontSize: 31,
               fontWeight: FontWeight.w900,
             ),
@@ -86,7 +86,7 @@ class _CatalogPageState extends State<CatalogPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFDDF2EE),
+              color: AppColors.tealSoft,
               borderRadius: BorderRadius.circular(13),
             ),
             child: Row(
@@ -94,7 +94,7 @@ class _CatalogPageState extends State<CatalogPage> {
                 Icon(
                   _isMaintenance ? Icons.build : Icons.extension,
                   size: 19,
-                  color: const Color(0xFF277C78),
+                  color: AppColors.teal,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -103,7 +103,7 @@ class _CatalogPageState extends State<CatalogPage> {
                         ? '$maintenanceItemCount maintenance items · $count choices'
                         : '$accessoryItemCount accessory groups · $count choices',
                     style: const TextStyle(
-                      color: Color(0xFF277C78),
+                      color: AppColors.teal,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
@@ -118,7 +118,7 @@ class _CatalogPageState extends State<CatalogPage> {
                 ? 'Maintenance supplies and choices'
                 : 'Browse all groups',
             style: TextStyle(
-              color: Color(0xFF22201E),
+              color: AppColors.ink,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
@@ -171,8 +171,8 @@ class _CatalogGroupCard extends StatelessWidget {
 
   static const _itemColors = [
     Color(0xFFFCE7DA),
-    Color(0xFFDDF2EE),
-    Color(0xFFF7EBD1),
+    AppColors.tealSoft,
+    AppColors.warningSoft,
     Color(0xFFE3EAF6),
   ];
 
@@ -183,10 +183,10 @@ class _CatalogGroupCard extends StatelessWidget {
       curve: Curves.easeInOut,
       margin: const EdgeInsets.only(bottom: 9),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBFAF7),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: expanded ? const Color(0xFF277C78) : const Color(0xFFE2DED6),
+          color: expanded ? AppColors.teal : AppColors.line,
           width: expanded ? 1.4 : 1,
         ),
       ),
@@ -204,13 +204,13 @@ class _CatalogGroupCard extends StatelessWidget {
                     height: 37,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDDF2EE),
+                      color: AppColors.tealSoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${index + 1}'.padLeft(2, '0'),
                       style: const TextStyle(
-                        color: Color(0xFF277C78),
+                        color: AppColors.teal,
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                       ),
@@ -224,7 +224,7 @@ class _CatalogGroupCard extends StatelessWidget {
                         Text(
                           group.title,
                           style: const TextStyle(
-                            color: Color(0xFF22201E),
+                            color: AppColors.ink,
                             fontSize: 14,
                             fontWeight: FontWeight.w900,
                           ),
@@ -243,10 +243,7 @@ class _CatalogGroupCard extends StatelessWidget {
                   AnimatedRotation(
                     turns: expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 220),
-                    child: const Icon(
-                      Icons.expand_more,
-                      color: Color(0xFF277C78),
-                    ),
+                    child: const Icon(Icons.expand_more, color: AppColors.teal),
                   ),
                 ],
               ),
@@ -261,8 +258,8 @@ class _CatalogGroupCard extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
                     decoration: const BoxDecoration(
-                      color: Color(0xFFF7F5F0),
-                      border: Border(top: BorderSide(color: Color(0xFFE2DED6))),
+                      color: AppColors.paper,
+                      border: Border(top: BorderSide(color: AppColors.line)),
                     ),
                     child: group.itemChoices.containsKey(group.title)
                         ? _MaintenanceChoiceList(
@@ -286,7 +283,7 @@ class _CatalogGroupCard extends StatelessWidget {
                                     child: Container(
                                       padding: const EdgeInsets.all(9),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFFBFAF7),
+                                        color: AppColors.surface,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Column(
@@ -314,7 +311,7 @@ class _CatalogGroupCard extends StatelessWidget {
                                                   child: Text(
                                                     '${entry.key + 1}',
                                                     style: const TextStyle(
-                                                      color: Color(0xFF277C78),
+                                                      color: AppColors.teal,
                                                       fontSize: 11,
                                                       fontWeight:
                                                           FontWeight.w900,
@@ -385,9 +382,7 @@ class _CatalogItemThumbnail extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Center(
-        child: Icon(icon, size: 42, color: const Color(0xFF277C78)),
-      ),
+      child: Center(child: Icon(icon, size: 42, color: AppColors.teal)),
     );
   }
 }
@@ -455,9 +450,9 @@ class _MaintenanceChoiceCard extends StatelessWidget {
       key: ValueKey('catalog-choice-$name'),
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBFAF7),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2DED6)),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,7 +470,7 @@ class _MaintenanceChoiceCard extends StatelessWidget {
                       child: Text(
                         name,
                         style: const TextStyle(
-                          color: Color(0xFF22201E),
+                          color: AppColors.ink,
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           height: 1.35,
@@ -485,7 +480,7 @@ class _MaintenanceChoiceCard extends StatelessWidget {
                     const Icon(
                       Icons.chevron_right,
                       size: 19,
-                      color: Color(0xFF277C78),
+                      color: AppColors.teal,
                     ),
                   ],
                 ),
@@ -565,7 +560,7 @@ class _MaintenanceChoiceImage extends StatelessWidget {
       child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.add_a_photo_outlined, size: 23, color: Color(0xFF277C78)),
+          Icon(Icons.add_a_photo_outlined, size: 23, color: AppColors.teal),
           SizedBox(height: 5),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 5),
@@ -595,7 +590,7 @@ class _CatalogNotice extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7EBD1),
+        color: AppColors.warningSoft,
         borderRadius: BorderRadius.circular(13),
       ),
       child: Row(
@@ -607,7 +602,7 @@ class _CatalogNotice extends StatelessWidget {
             child: Text(
               text,
               style: const TextStyle(
-                color: Color(0xFF795D2D),
+                color: AppColors.warning,
                 fontSize: 11,
                 height: 1.5,
               ),

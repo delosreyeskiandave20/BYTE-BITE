@@ -69,13 +69,12 @@ class FakeOwnerAuth implements OwnerAuth {
   Future<void> sendEmailVerification() async {}
 
   @override
-  Future<OwnerAccount> reloadAccount() async {
+  Future<void> reloadAccount() async {
     final account = _current;
     if (account == null) {
       throw StateError('Sign in with your shop owner account first.');
     }
     _stateController.add(account);
-    return account;
   }
 
   @override

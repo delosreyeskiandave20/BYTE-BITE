@@ -1,11 +1,27 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+/// Minimum password length accepted when creating a shop owner account.
+///
+/// Firebase allows shorter passwords, but owner accounts protect shop data, so
+/// the app asks for a little more.
+const ownerPasswordMinLength = 8;
+
+/// Longest display name stored for a shop owner.
+const ownerDisplayNameMaxLength = 120;
+
+final _ownerEmailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+/// Whether [email] looks like a valid address.
+///
+/// Firebase performs the authoritative check; this only rejects obvious typos
+/// before a network request is made.
+bool isValidOwnerEmail(String email) => _ownerEmailPattern.hasMatch(email);
+
 /// Immutable snapshot of the signed-in shop owner.
 ///
-/// Passwords and PINs are never kept by the app: Firebase Authentication owns
-/// every credential, and this object only mirrors the public account fields the
-/// UI needs.
+/// Credentials are never kept by the app: Firebase Authentication owns them,
+/// and this object only mirrors the public account fields the UI needs.
 class OwnerAccount {
   const OwnerAccount({
     required this.uid,
@@ -61,7 +77,7 @@ abstract class OwnerAuth {
   /// The currently signed-in owner, or null when signed out.
   OwnerAccount? get currentAccount;
 
-  /// Emits on sign-in, sign-out, and token refreshes.
+  /// Emits whenever the signed-in owner changes, including sign-out.
   Stream<OwnerAccount?> authStateChanges();
 
   Future<OwnerAccount> signIn({
@@ -80,7 +96,7 @@ abstract class OwnerAuth {
   Future<void> sendEmailVerification();
 
   /// Reloads the account so a newly verified email is reflected immediately.
-  Future<OwnerAccount> reloadAccount();
+  Future<void> reloadAccount();
 
   Future<void> signOut();
 }
@@ -117,7 +133,7 @@ class FirebaseOwnerAuth implements OwnerAuth {
       email: email,
       password: password,
     );
-    return _accountFromCredential(credential);
+    return OwnerAccount.fromUser(_requireCredentialUser(credential));
   }
 
   @override
@@ -130,10 +146,7 @@ class FirebaseOwnerAuth implements OwnerAuth {
       email: email,
       password: password,
     );
-    final user = credential.user;
-    if (user == null) {
-      throw StateError('Account creation did not return an account.');
-    }
+    final user = _requireCredentialUser(credential);
 
     final displayName = name.trim();
     if (displayName.isNotEmpty) {
@@ -148,9 +161,7 @@ class FirebaseOwnerAuth implements OwnerAuth {
       // Ignore and let the owner resend from the dashboard.
     }
 
-    await user.reload();
-    final refreshed = _auth.currentUser ?? user;
-    return OwnerAccount.fromUser(refreshed);
+    return OwnerAccount.fromUser(user);
   }
 
   @override
@@ -160,17 +171,14 @@ class FirebaseOwnerAuth implements OwnerAuth {
 
   @override
   Future<void> sendEmailVerification() async {
-    final user = _requireUser();
+    final user = _requireSignedInUser();
     if (user.emailVerified) return;
     await user.sendEmailVerification();
   }
 
   @override
-  Future<OwnerAccount> reloadAccount() async {
-    final user = _requireUser();
-    await user.reload();
-    final refreshed = _auth.currentUser ?? user;
-    return OwnerAccount.fromUser(refreshed);
+  Future<void> reloadAccount() async {
+    await _requireSignedInUser().reload();
   }
 
   @override
@@ -178,15 +186,15 @@ class FirebaseOwnerAuth implements OwnerAuth {
     return _auth.signOut();
   }
 
-  OwnerAccount _accountFromCredential(UserCredential credential) {
+  User _requireCredentialUser(UserCredential credential) {
     final user = credential.user;
     if (user == null) {
-      throw StateError('Sign-in did not return an account.');
+      throw StateError('Firebase Authentication did not return an account.');
     }
-    return OwnerAccount.fromUser(user);
+    return user;
   }
 
-  User _requireUser() {
+  User _requireSignedInUser() {
     final user = _auth.currentUser;
     if (user == null) {
       throw StateError('Sign in with your shop owner account first.');

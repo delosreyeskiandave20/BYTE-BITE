@@ -4,6 +4,21 @@ import 'package:flutter/material.dart';
 import '../data/owner_auth.dart';
 import '../theme/app_theme.dart';
 
+const _authErrorMessages = <String, String>{
+  'invalid-email': 'Enter a valid email address.',
+  'wrong-password': 'Email or password is incorrect.',
+  'user-not-found': 'Email or password is incorrect.',
+  'invalid-credential': 'Email or password is incorrect.',
+  'invalid-login-credentials': 'Email or password is incorrect.',
+  'email-already-in-use': 'An owner account already exists for this email.',
+  'weak-password':
+      'Choose a stronger password (at least $ownerPasswordMinLength characters).',
+  'too-many-requests': 'Too many attempts. Wait a moment and try again.',
+  'network-request-failed': 'Check your connection and try again.',
+  'operation-not-allowed': 'Email sign-in is disabled for this project.',
+  'user-disabled': 'This account has been disabled.',
+};
+
 class MotoScanAuthPage extends StatefulWidget {
   const MotoScanAuthPage({
     super.key,
@@ -108,60 +123,22 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
       return OwnerAuthUnavailableException.message;
     }
     if (error is FirebaseAuthException) {
-      switch (error.code) {
-        case 'invalid-email':
-          return 'Enter a valid email address.';
-        case 'wrong-password':
-        case 'user-not-found':
-        case 'invalid-credential':
-        case 'invalid-login-credentials':
-          return 'Email or password is incorrect.';
-        case 'email-already-in-use':
-          return 'An owner account already exists for this email.';
-        case 'weak-password':
-          return 'Choose a stronger password (at least 8 characters).';
-        case 'too-many-requests':
-          return 'Too many attempts. Wait a moment and try again.';
-        case 'network-request-failed':
-          return 'Check your connection and try again.';
-        case 'operation-not-allowed':
-          return 'Email sign-in is disabled for this project.';
-        case 'user-disabled':
-          return 'This account has been disabled.';
-      }
-      final authMessage = error.message;
-      if (authMessage != null && authMessage.trim().isNotEmpty) {
-        return authMessage;
-      }
+      return _authErrorMessages[error.code] ?? _fallbackAuthMessage(error);
     }
-    final message = error.toString();
-    if (message.contains('invalid-email')) {
-      return 'Enter a valid email address.';
+    if (error is StateError) {
+      return error.message.toString();
     }
-    if (message.contains('wrong-password') ||
-        message.contains('user-not-found') ||
-        message.contains('invalid-credential')) {
-      return 'Email or password is incorrect.';
-    }
-    if (message.contains('email-already-in-use')) {
-      return 'An owner account already exists for this email.';
-    }
-    if (message.contains('weak-password')) {
-      return 'Choose a stronger password (at least 8 characters).';
-    }
-    if (message.contains('already exists')) {
-      return 'An owner account already exists for this email.';
-    }
-    if (message.contains('incorrect')) {
-      return 'Email or password is incorrect.';
-    }
-    return 'Unable to continue: $message';
+    return 'Unable to continue: $error';
+  }
+
+  String _fallbackAuthMessage(FirebaseAuthException error) {
+    final message = error.message?.trim() ?? '';
+    return message.isEmpty ? 'Unable to complete sign-in. Try again.' : message;
   }
 
   String? _validateEmail(String? value) {
     final email = value?.trim() ?? '';
-    if (email.isEmpty ||
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+    if (email.isEmpty || !isValidOwnerEmail(email)) {
       return 'Enter a valid email address.';
     }
     return null;
@@ -169,7 +146,9 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Password is required.';
-    if (value.length < 8) return 'Use at least 8 characters.';
+    if (value.length < ownerPasswordMinLength) {
+      return 'Use at least $ownerPasswordMinLength characters.';
+    }
     return null;
   }
 
@@ -211,7 +190,7 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
     );
     controller.dispose();
     if (!mounted || email == null) return;
-    if (_validateEmail(email) != null) {
+    if (!isValidOwnerEmail(email)) {
       setState(() => _error = 'Enter a valid email address.');
       return;
     }

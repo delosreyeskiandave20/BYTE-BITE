@@ -9,9 +9,14 @@ import 'owner_auth.dart';
 import 'owner_email_hash.dart';
 
 export '../models/shop.dart';
+export 'shop_search.dart';
 
 /// Product categories offered by the owner dashboard.
-const shopProductCategories = <String>['Parts', 'Accessories', 'Maintenance'];
+const shopProductCategories = <String>[
+  defaultShopProductCategory,
+  'Accessories',
+  'Maintenance',
+];
 
 /// Stores shop profiles and shop products.
 ///
@@ -38,6 +43,27 @@ class ShopStore extends ChangeNotifier {
   static const _shopsCollection = 'shops';
   static const _productsCollection = 'products';
   static const _maxProductsPerShop = 500;
+  static const _maxNameLength = 120;
+  static const _maxLocationLength = 120;
+  static const _maxShopDescriptionLength = 2000;
+  static const _maxCategoryLength = 60;
+  static const _maxProductDescriptionLength = 1000;
+  static const _staleShopMaxAge = Duration(days: 30);
+  static const _firestoreBatchLimit = 400;
+
+  static CollectionReference<Map<String, dynamic>> _shopsRef(
+    FirebaseFirestore firestore,
+  ) => firestore.collection(_shopsCollection);
+
+  static DocumentReference<Map<String, dynamic>> _shopRef(
+    FirebaseFirestore firestore,
+    String shopId,
+  ) => _shopsRef(firestore).doc(shopId);
+
+  static CollectionReference<Map<String, dynamic>> _productsRef(
+    FirebaseFirestore firestore,
+    String shopId,
+  ) => _shopRef(firestore, shopId).collection(_productsCollection);
 
   static ShopStore? _sharedInstance;
 
@@ -87,7 +113,10 @@ class ShopStore extends ChangeNotifier {
     return error.toString();
   }
 
-  List<Shop> get shops => List.unmodifiable(_shops);
+  /// Publicly visible shops. Unverified shops are hidden until the owner
+  /// confirms their email address.
+  List<Shop> get shops =>
+      List.unmodifiable(_shops.where((shop) => shop.isVerified));
 
   /// The signed-in owner account, or null when signed out.
   OwnerAccount? get signedInAccount => _ownerAuth?.currentAccount;
@@ -111,29 +140,24 @@ class ShopStore extends ChangeNotifier {
   }
 
   void _subscribeToShops() {
-    _shopsSubscription = _firestore!
-        .collection(_shopsCollection)
-        .snapshots()
-        .listen(
-          (snapshot) {
-            _lastError = null;
-            _isLoading = false;
-            _shopDocuments
-              ..clear()
-              ..addEntries(
-                snapshot.docs.map((doc) => MapEntry(doc.id, Shop.fromDoc(doc))),
-              );
-            _syncProductSubscriptions(
-              snapshot.docs.map((doc) => doc.id).toSet(),
-            );
-            _rebuildShops();
-          },
-          onError: (Object error) {
-            _lastError = error;
-            _isLoading = false;
-            notifyListeners();
-          },
-        );
+    _shopsSubscription = _shopsRef(_firestore!).snapshots().listen(
+      (snapshot) {
+        _lastError = null;
+        _isLoading = false;
+        _shopDocuments
+          ..clear()
+          ..addEntries(
+            snapshot.docs.map((doc) => MapEntry(doc.id, Shop.fromDoc(doc))),
+          );
+        _syncProductSubscriptions(snapshot.docs.map((doc) => doc.id).toSet());
+        _rebuildShops();
+      },
+      onError: (Object error) {
+        _lastError = error;
+        _isLoading = false;
+        notifyListeners();
+      },
+    );
   }
 
   /// Starts product listeners for new shops and stops them for removed shops.
@@ -146,10 +170,7 @@ class ShopStore extends ChangeNotifier {
 
     for (final shopId in shopIds) {
       if (_productSubscriptions.containsKey(shopId)) continue;
-      _productSubscriptions[shopId] = _firestore!
-          .collection(_shopsCollection)
-          .doc(shopId)
-          .collection(_productsCollection)
+      _productSubscriptions[shopId] = _productsRef(_firestore!, shopId)
           .snapshots()
           .listen(
             (snapshot) {
@@ -210,9 +231,15 @@ class ShopStore extends ChangeNotifier {
     final ownerAuth = _requireOwnerAuth();
     final normalizedEmail = _normalizeEmail(email);
     _validateEmail(normalizedEmail);
-    final displayName = _requiredText(name, 'Name', maxLength: 120);
-    if (password.length < 8) {
-      throw StateError('Choose a password with at least 8 characters.');
+    final displayName = _requiredText(
+      name,
+      'Name',
+      maxLength: ownerDisplayNameMaxLength,
+    );
+    if (password.length < ownerPasswordMinLength) {
+      throw StateError(
+        'Choose a password with at least $ownerPasswordMinLength characters.',
+      );
     }
     await ownerAuth.createAccount(
       name: displayName,
@@ -249,7 +276,6 @@ class ShopStore extends ChangeNotifier {
   Future<void> sendEmailVerification() async {
     final ownerAuth = _requireOwnerAuth();
     await ownerAuth.sendEmailVerification();
-    notifyListeners();
   }
 
   /// Refreshes the cached account after the owner follows the verification
@@ -258,7 +284,31 @@ class ShopStore extends ChangeNotifier {
     final ownerAuth = _ownerAuth;
     if (ownerAuth == null) return;
     await ownerAuth.reloadAccount();
+    await _syncVerifiedStatus();
     notifyListeners();
+  }
+
+  /// Publishes the owner's verified status to their shop once confirmed.
+  Future<void> _syncVerifiedStatus() async {
+    final account = _ownerAuth?.currentAccount;
+    if (account == null || !account.emailVerified) return;
+
+    final shop = shopForOwner(account.email);
+    if (shop == null || shop.isVerified) return;
+
+    final verifiedShop = shop.copyWith(isVerified: true);
+    final firestore = _firestore;
+    if (firestore == null) {
+      _replaceShop(verifiedShop);
+      return;
+    }
+
+    await _shopRef(
+      firestore,
+      shop.id,
+    ).set({'verified': true}, SetOptions(merge: true));
+    _shopDocuments[shop.id] = verifiedShop;
+    _rebuildShops();
   }
 
   OwnerAuth _requireOwnerAuth() {
@@ -296,8 +346,7 @@ class ShopStore extends ChangeNotifier {
     final firestore = _firestore;
     if (firestore == null) return null;
 
-    final snapshot = await firestore
-        .collection(_shopsCollection)
+    final snapshot = await _shopsRef(firestore)
         .where(
           'ownerEmailHash',
           isEqualTo: ownerEmailHash(_normalizeEmail(email)),
@@ -319,11 +368,7 @@ class ShopStore extends ChangeNotifier {
     FirebaseFirestore firestore,
     String shopId,
   ) async {
-    final snapshot = await firestore
-        .collection(_shopsCollection)
-        .doc(shopId)
-        .collection(_productsCollection)
-        .get();
+    final snapshot = await _productsRef(firestore, shopId).get();
     return snapshot.docs
         .map((doc) => ShopProduct.fromMap(doc.id, doc.data()))
         .toList(growable: false);
@@ -337,39 +382,29 @@ class ShopStore extends ChangeNotifier {
   }) async {
     final normalizedEmail = _normalizeEmail(ownerEmail);
     _validateEmail(normalizedEmail);
-    final trimmedName = _requiredText(name, 'Shop name', maxLength: 120);
-    final trimmedLocation = _requiredText(location, 'Location', maxLength: 120);
+    final trimmedName = _requiredText(
+      name,
+      'Shop name',
+      maxLength: _maxNameLength,
+    );
+    final trimmedLocation = _requiredText(
+      location,
+      'Location',
+      maxLength: _maxLocationLength,
+    );
     final trimmedDescription = _optionalText(
       description,
       'Shop information',
-      maxLength: 2000,
+      maxLength: _maxShopDescriptionLength,
     );
     final account = _requireSignedInOwner(normalizedEmail);
     final firestore = _firestore;
-
-    if (firestore == null) {
-      final existing = shopForOwner(normalizedEmail);
-      final shop = Shop(
-        id: normalizedEmail,
-        ownerEmailHash: ownerEmailHash(normalizedEmail),
-        ownerName: account.displayName.isEmpty
-            ? normalizedEmail
-            : account.displayName,
-        name: trimmedName,
-        location: trimmedLocation,
-        description: trimmedDescription,
-        products: existing?.products ?? const <ShopProduct>[],
-        lastEditedAt: DateTime.now().millisecondsSinceEpoch,
-      );
-      _replaceShop(shop);
-      return;
-    }
-
+    final shopId = firestore == null ? normalizedEmail : account.uid;
     final existing =
         shopForOwner(normalizedEmail) ??
-        await _readShop(firestore, account.uid);
+        (firestore == null ? null : await _readShop(firestore, account.uid));
     final shop = Shop(
-      id: account.uid,
+      id: shopId,
       ownerEmailHash: ownerEmailHash(normalizedEmail),
       ownerName: account.displayName.isEmpty
           ? (existing?.ownerName ?? normalizedEmail)
@@ -378,22 +413,26 @@ class ShopStore extends ChangeNotifier {
       location: trimmedLocation,
       description: trimmedDescription,
       products: existing?.products ?? const <ShopProduct>[],
+      isVerified: account.emailVerified || (existing?.isVerified ?? false),
       lastEditedAt: DateTime.now().millisecondsSinceEpoch,
     );
-    await firestore
-        .collection(_shopsCollection)
-        .doc(account.uid)
-        .set(shop.toMap(), SetOptions(merge: true));
+
+    if (firestore == null) {
+      _replaceShop(shop);
+      return;
+    }
+
+    await _shopRef(
+      firestore,
+      account.uid,
+    ).set(shop.toMap(), SetOptions(merge: true));
     _shopDocuments[account.uid] = shop;
     _productsByShop[account.uid] ??= shop.products;
     _rebuildShops();
   }
 
   Future<Shop?> _readShop(FirebaseFirestore firestore, String shopId) async {
-    final snapshot = await firestore
-        .collection(_shopsCollection)
-        .doc(shopId)
-        .get();
+    final snapshot = await _shopRef(firestore, shopId).get();
     if (!snapshot.exists) return null;
     return Shop.fromDoc(snapshot)
         .copyWith(products: await _readProducts(firestore, shopId));
@@ -402,7 +441,7 @@ class ShopStore extends ChangeNotifier {
   Future<void> addProduct({
     required String ownerEmail,
     required String name,
-    String category = 'Parts',
+    String category = defaultShopProductCategory,
     String description = '',
     double price = 0,
     int quantity = 0,
@@ -414,40 +453,29 @@ class ShopStore extends ChangeNotifier {
         'This shop has reached the $_maxProductsPerShop product limit.',
       );
     }
-    final trimmedName = _requiredText(name, 'Product name', maxLength: 120);
-    final trimmedCategory = _requiredText(category, 'Category', maxLength: 60);
+    final trimmedName = _requiredText(
+      name,
+      'Product name',
+      maxLength: _maxNameLength,
+    );
+    final trimmedCategory = _requiredText(
+      category,
+      'Category',
+      maxLength: _maxCategoryLength,
+    );
     final trimmedDescription = _optionalText(
       description,
       'Product information',
-      maxLength: 1000,
+      maxLength: _maxProductDescriptionLength,
     );
     _validatePrice(price);
     _validateQuantity(quantity);
     final normalizedImageUrl = _validateImageUrl(imageUrl);
 
     final firestore = _firestore;
-
-    if (firestore == null) {
-      final productId = 'product-${_nextProductId++}';
-      final product = ShopProduct(
-        id: productId,
-        name: trimmedName,
-        category: trimmedCategory,
-        description: trimmedDescription,
-        price: price,
-        quantity: quantity,
-        imageUrl: normalizedImageUrl,
-      );
-      _replaceShop(
-        shop.copyWith(
-          products: [...shop.products, product],
-          lastEditedAt: DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
-      return;
-    }
-
-    final productId = firestore.collection(_shopsCollection).doc().id;
+    final productId = firestore == null
+        ? 'product-${_nextProductId++}'
+        : _shopsRef(firestore).doc().id;
     final product = ShopProduct(
       id: productId,
       name: trimmedName,
@@ -458,12 +486,17 @@ class ShopStore extends ChangeNotifier {
       imageUrl: normalizedImageUrl,
     );
 
-    await firestore
-        .collection(_shopsCollection)
-        .doc(shop.id)
-        .collection(_productsCollection)
-        .doc(productId)
-        .set(product.toMap());
+    if (firestore == null) {
+      _replaceShop(
+        shop.copyWith(
+          products: [...shop.products, product],
+          lastEditedAt: DateTime.now().millisecondsSinceEpoch,
+        ),
+      );
+      return;
+    }
+
+    await _productsRef(firestore, shop.id).doc(productId).set(product.toMap());
   }
 
   Future<void> updateProduct({
@@ -490,14 +523,14 @@ class ShopStore extends ChangeNotifier {
     final updated = products[productIndex].copyWith(
       name: name == null
           ? null
-          : _requiredText(name, 'Product name', maxLength: 120),
+          : _requiredText(name, 'Product name', maxLength: _maxNameLength),
       category: category == null
           ? null
-          : _requiredText(category, 'Category', maxLength: 60),
+          : _requiredText(category, 'Category', maxLength: _maxCategoryLength),
       description: _optionalText(
         description,
         'Product information',
-        maxLength: 1000,
+        maxLength: _maxProductDescriptionLength,
       ),
       price: price,
       quantity: quantity,
@@ -516,12 +549,10 @@ class ShopStore extends ChangeNotifier {
       return;
     }
 
-    await firestore
-        .collection(_shopsCollection)
-        .doc(shop.id)
-        .collection(_productsCollection)
-        .doc(productId)
-        .set(updated.toMap(), SetOptions(merge: true));
+    await _productsRef(
+      firestore,
+      shop.id,
+    ).doc(productId).set(updated.toMap(), SetOptions(merge: true));
   }
 
   Future<void> deleteProduct({
@@ -547,12 +578,7 @@ class ShopStore extends ChangeNotifier {
       return;
     }
 
-    await firestore
-        .collection(_shopsCollection)
-        .doc(shop.id)
-        .collection(_productsCollection)
-        .doc(productId)
-        .delete();
+    await _productsRef(firestore, shop.id).doc(productId).delete();
   }
 
   Future<void> deleteShop({required String ownerEmail}) async {
@@ -585,15 +611,16 @@ class ShopStore extends ChangeNotifier {
     List<ShopProduct> products,
   ) async {
     final firestore = _firestore!;
-    final shopRef = firestore.collection(_shopsCollection).doc(shopId);
+    final shopRef = _shopRef(firestore, shopId);
+    final productsRef = _productsRef(firestore, shopId);
     final batches = <WriteBatch>[];
     var batch = firestore.batch();
     var pending = 0;
 
     for (final product in products) {
-      batch.delete(shopRef.collection(_productsCollection).doc(product.id));
+      batch.delete(productsRef.doc(product.id));
       pending++;
-      if (pending == 400) {
+      if (pending == _firestoreBatchLimit) {
         batches.add(batch);
         batch = firestore.batch();
         pending = 0;
@@ -620,32 +647,30 @@ class ShopStore extends ChangeNotifier {
 
   void purgeStaleShops() {
     final cutoff = DateTime.now()
-        .subtract(const Duration(days: 30))
+        .subtract(_staleShopMaxAge)
         .millisecondsSinceEpoch;
     final firestore = _firestore;
     if (firestore == null) {
-      final before = _shops.length;
-      _shops.removeWhere(
-        (shop) =>
-            (shop.lastEditedAt ?? 0) > 0 && (shop.lastEditedAt ?? 0) < cutoff,
-      );
-      if (_shops.length != before) notifyListeners();
+      final shopsBeforePurge = _shops.length;
+      _shops.removeWhere((shop) => _isStale(shop, cutoff));
+      if (_shops.length != shopsBeforePurge) notifyListeners();
       return;
     }
     final account = _ownerAuth?.currentAccount;
     if (account == null) return;
     final hash = ownerEmailHash(account.email);
     final stale = _shops
-        .where(
-          (shop) =>
-              shop.ownerEmailHash == hash &&
-              (shop.lastEditedAt ?? 0) > 0 &&
-              (shop.lastEditedAt ?? 0) < cutoff,
-        )
+        .where((shop) => shop.ownerEmailHash == hash && _isStale(shop, cutoff))
         .toList(growable: false);
     if (stale.isNotEmpty) {
+      // Purge runs in the background on launch, so failures are retried then.
       deleteShop(ownerEmail: account.email).catchError((_) {});
     }
+  }
+
+  static bool _isStale(Shop shop, int cutoff) {
+    final lastEditedAt = shop.lastEditedAt ?? 0;
+    return lastEditedAt > 0 && lastEditedAt < cutoff;
   }
 
   void _replaceShop(Shop shop) {
@@ -680,7 +705,7 @@ class ShopStore extends ChangeNotifier {
           ShopProduct(
             id: 'demo-tire',
             name: 'Tubeless tire 90/90-17',
-            category: 'Parts',
+            category: defaultShopProductCategory,
             description: 'Everyday road tire. Confirm the size is compatible with your motorcycle.',
             price: 1850,
             quantity: 4,
@@ -701,7 +726,7 @@ class ShopStore extends ChangeNotifier {
   static String _normalizeEmail(String email) => email.trim().toLowerCase();
 
   static void _validateEmail(String email) {
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+    if (!isValidOwnerEmail(email)) {
       throw StateError('Enter a valid email address.');
     }
   }
@@ -715,9 +740,7 @@ class ShopStore extends ChangeNotifier {
     if (trimmed.isEmpty) {
       throw StateError('$label is required.');
     }
-    if (trimmed.length > maxLength) {
-      throw StateError('$label must be $maxLength characters or fewer.');
-    }
+    _validateLength(trimmed, label, maxLength);
     return trimmed;
   }
 
@@ -727,10 +750,14 @@ class ShopStore extends ChangeNotifier {
     required int maxLength,
   }) {
     final trimmed = value.trim();
-    if (trimmed.length > maxLength) {
+    _validateLength(trimmed, label, maxLength);
+    return trimmed;
+  }
+
+  static void _validateLength(String value, String label, int maxLength) {
+    if (value.length > maxLength) {
       throw StateError('$label must be $maxLength characters or fewer.');
     }
-    return trimmed;
   }
 
   static void _validatePrice(double price) {
@@ -768,39 +795,6 @@ class ShopStore extends ChangeNotifier {
     super.dispose();
   }
 }
-
-List<ShopProduct> availableProductsForQuery(Shop shop, String query) {
-  return shop.products
-      .where(
-        (product) =>
-            product.isAvailable && matchesShopProductQuery(product.name, query),
-      )
-      .toList(growable: false);
-}
-
-bool matchesShopProductQuery(String productName, String query) {
-  final queryWords = _searchWords(query);
-  final productWords = _searchWords(productName);
-  if (productWords.isEmpty) return false;
-  final matchingWords = productWords.intersection(queryWords).length;
-  return matchingWords >= (productWords.length < 2 ? productWords.length : 2);
-}
-
-Set<String> _searchWords(String value) => value
-    .toLowerCase()
-    .split(RegExp(r'[^a-z0-9]+'))
-    .where(
-      (word) =>
-          word.length > 1 &&
-          word != 'motorcycle' &&
-          word != 'motoscan' &&
-          word != 'universal' &&
-          word != 'replacement' &&
-          word != 'with' &&
-          word != 'and' &&
-          word != 'for',
-    )
-    .toSet();
 
 @Deprecated('Use ShopStore instead.')
 typedef TemporaryShopStore = ShopStore;

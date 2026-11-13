@@ -6,7 +6,7 @@ import 'package:flutter_application_1/data/shop_store.dart';
 import 'package:flutter_application_1/screens/auth_page.dart';
 import 'package:flutter_application_1/screens/shop_owner_dashboard_page.dart';
 
-import 'support/fake_owner_auth.dart';
+import 'fake_owner_auth.dart';
 
 const _owner = 'owner@example.com';
 
@@ -62,7 +62,6 @@ void main() {
 
     expect(email, 'owner@example.com');
     expect(password, 'temporary123');
-    expect(find.text('6-digit PIN'), findsNothing);
   });
 
   testWidgets('owner sign-up submits name, email, and password', (
@@ -113,7 +112,6 @@ void main() {
     expect(name, 'New Owner');
     expect(email, 'new-owner@example.com');
     expect(password, 'temporary123');
-    expect(find.text('6-digit PIN'), findsNothing);
   });
 
   testWidgets('owner sign-in shows inline validation errors', (

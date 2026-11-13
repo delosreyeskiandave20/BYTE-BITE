@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Category assigned to a product created without one.
+const defaultShopProductCategory = 'Parts';
+
 class ShopProduct {
   const ShopProduct({
     required this.id,
@@ -60,7 +63,7 @@ class ShopProduct {
     return ShopProduct(
       id: (map['id'] as String?)?.isNotEmpty == true ? map['id'] as String : id,
       name: map['name'] as String? ?? '',
-      category: map['category'] as String? ?? 'Parts',
+      category: map['category'] as String? ?? defaultShopProductCategory,
       description: map['description'] as String? ?? '',
       price: (map['price'] as num?)?.toDouble() ?? 0,
       quantity: (map['quantity'] as num?)?.toInt() ?? 0,
@@ -78,6 +81,7 @@ class Shop {
     required this.location,
     required this.description,
     required this.products,
+    this.isVerified = false,
     this.lastEditedAt,
   });
 
@@ -94,6 +98,10 @@ class Shop {
   final String description;
 
   final List<ShopProduct> products;
+
+  /// Whether the owner confirmed their email address. Unverified shops are
+  /// hidden from the public shop list.
+  final bool isVerified;
 
   /// Epoch milliseconds of the last shop or product edit. Used by the store to
   /// purge shops that have been idle for more than 30 days.
@@ -117,6 +125,7 @@ class Shop {
     String? location,
     String? description,
     List<ShopProduct>? products,
+    bool? isVerified,
     int? lastEditedAt,
   }) {
     return Shop(
@@ -127,6 +136,7 @@ class Shop {
       location: location ?? this.location,
       description: description ?? this.description,
       products: products ?? this.products,
+      isVerified: isVerified ?? this.isVerified,
       lastEditedAt: lastEditedAt ?? this.lastEditedAt,
     );
   }
@@ -138,6 +148,7 @@ class Shop {
       'name': name,
       'location': location,
       'description': description,
+      'verified': isVerified,
       if (lastEditedAt != null) 'lastEditedAt': lastEditedAt,
     };
   }
@@ -153,6 +164,7 @@ class Shop {
       location: data['location'] as String? ?? '',
       description: data['description'] as String? ?? '',
       products: const <ShopProduct>[],
+      isVerified: data['verified'] as bool? ?? false,
       lastEditedAt: (data['lastEditedAt'] as num?)?.toInt(),
     );
   }

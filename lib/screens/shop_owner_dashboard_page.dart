@@ -3,6 +3,13 @@ import 'package:flutter/material.dart';
 
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/load_error_banner.dart';
+
+/// Form validator for fields that must not be blank.
+String? _requiredField(String? value, String label) {
+  if (value == null || value.trim().isEmpty) return '$label is required.';
+  return null;
+}
 
 class ShopOwnerDashboardPage extends StatefulWidget {
   const ShopOwnerDashboardPage({
@@ -418,8 +425,8 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                 const SizedBox(height: 14),
               ],
               if (_loadError != null) ...[
-                _LoadErrorBanner(
-                  message: _loadError!,
+                LoadErrorBanner(
+                  message: 'Could not load your shop: $_loadError',
                   onRetry: _loadExistingShop,
                 ),
                 const SizedBox(height: 14),
@@ -449,7 +456,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                         labelText: 'Shop name',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) => _required(value, 'Shop name'),
+                      validator: (value) => _requiredField(value, 'Shop name'),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -460,7 +467,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                         hintText: 'City, province',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) => _required(value, 'Location'),
+                      validator: (value) => _requiredField(value, 'Location'),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -558,12 +565,14 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
       ),
     );
   }
-
-  String? _required(String? value, String label) {
-    if (value == null || value.trim().isEmpty) return '$label is required.';
-    return null;
-  }
 }
+
+/// Small in-button progress indicator shared by the verification actions.
+const _verificationSpinner = SizedBox(
+  width: 16,
+  height: 16,
+  child: CircularProgressIndicator(strokeWidth: 2),
+);
 
 class _VerificationBanner extends StatelessWidget {
   const _VerificationBanner({
@@ -634,65 +643,17 @@ class _VerificationBanner extends StatelessWidget {
               TextButton(
                 onPressed: sending ? null : onSend,
                 child: sending
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? _verificationSpinner
                     : const Text('Resend email'),
               ),
               TextButton(
                 onPressed: checking ? null : onCheck,
                 child: checking
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? _verificationSpinner
                     : const Text('I have verified'),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LoadErrorBanner extends StatelessWidget {
-  const _LoadErrorBanner({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-      decoration: BoxDecoration(
-        color: AppColors.dangerSoft,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.cloud_off_outlined,
-            color: AppColors.danger,
-            size: 19,
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              'Could not load your shop: $message',
-              style: const TextStyle(
-                color: AppColors.danger,
-                fontSize: 12,
-                height: 1.35,
-              ),
-            ),
-          ),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );
@@ -827,7 +788,7 @@ class _AddProductNameSheetState extends State<_AddProductNameSheet> {
                   labelText: 'Product name',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => _required(value, 'Product name'),
+                validator: (value) => _requiredField(value, 'Product name'),
               ),
               const SizedBox(height: 16),
               FilledButton(onPressed: _submit, child: const Text('Post name')),
@@ -836,11 +797,6 @@ class _AddProductNameSheetState extends State<_AddProductNameSheet> {
         ),
       ),
     );
-  }
-
-  String? _required(String? value, String label) {
-    if (value == null || value.trim().isEmpty) return '$label is required.';
-    return null;
   }
 }
 
@@ -975,7 +931,7 @@ class _EditProductSheetState extends State<_EditProductSheet> {
                   labelText: 'Product name',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => _required(value, 'Product name'),
+                validator: (value) => _requiredField(value, 'Product name'),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -1000,7 +956,8 @@ class _EditProductSheetState extends State<_EditProductSheet> {
                   labelText: 'Description or information',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => _required(value, 'Product information'),
+                validator: (value) =>
+                    _requiredField(value, 'Product information'),
               ),
               const SizedBox(height: 12),
               Row(
@@ -1117,10 +1074,5 @@ class _EditProductSheetState extends State<_EditProductSheet> {
         ),
       ),
     );
-  }
-
-  String? _required(String? value, String label) {
-    if (value == null || value.trim().isEmpty) return '$label is required.';
-    return null;
   }
 }

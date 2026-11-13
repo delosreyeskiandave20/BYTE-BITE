@@ -37,7 +37,7 @@ class _MotorcyclePartsCatalogPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5F0),
+      backgroundColor: AppColors.paper,
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Back to home',
@@ -132,7 +132,7 @@ class _MotorcyclePartsCatalogPageState
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: const Color(0xFFB7D8D2)),
+            border: Border.all(color: AppColors.tealBorder),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,10 +144,10 @@ class _MotorcyclePartsCatalogPageState
                   height: 210,
                   child: selectedImageAsset == null
                       ? const ColoredBox(
-                          color: Color(0xFFF7F5F0),
+                          color: AppColors.paper,
                           child: Icon(
                             Icons.two_wheeler,
-                            color: Color(0xFF277C78),
+                            color: AppColors.teal,
                             size: 36,
                           ),
                         )
@@ -164,7 +164,7 @@ class _MotorcyclePartsCatalogPageState
               Text(
                 '${selected.brand} ${selected.model} ${selected.variant}',
                 style: const TextStyle(
-                  color: Color(0xFF22201E),
+                  color: AppColors.ink,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
                 ),
@@ -175,11 +175,11 @@ class _MotorcyclePartsCatalogPageState
         const SizedBox(height: 12),
         ...selected.categories.map(
           (category) => Card(
-            color: const Color(0xFFFBFAF7),
+            color: AppColors.surface,
             margin: const EdgeInsets.only(bottom: 8),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
-              side: const BorderSide(color: Color(0xFFE2DED6)),
+              side: const BorderSide(color: AppColors.line),
             ),
             clipBehavior: Clip.antiAlias,
             child: ExpansionTile(
@@ -190,7 +190,7 @@ class _MotorcyclePartsCatalogPageState
               title: Text(
                 category.name,
                 style: const TextStyle(
-                  color: Color(0xFF22201E),
+                  color: AppColors.ink,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
@@ -251,9 +251,9 @@ class _VehiclePartTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBFAF7),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2DED6)),
+        border: Border.all(color: AppColors.line),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,14 +376,14 @@ class _VehiclePartImage extends StatelessWidget {
   Widget _placeholder() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F5F0),
-        border: Border.all(color: const Color(0xFFE2DED6)),
+        color: AppColors.paper,
+        border: Border.all(color: AppColors.line),
         borderRadius: BorderRadius.circular(8),
       ),
       child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.add_a_photo_outlined, size: 19, color: Color(0xFF277C78)),
+          Icon(Icons.add_a_photo_outlined, size: 19, color: AppColors.teal),
           SizedBox(height: 3),
           Text(
             'Add image',
@@ -417,7 +417,7 @@ class _VehicleSelection extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2DED6)),
+        border: Border.all(color: AppColors.line),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -463,7 +463,7 @@ class _VehicleSelection extends StatelessWidget {
                           Text(
                             value,
                             style: const TextStyle(
-                              color: Color(0xFF22201E),
+                              color: AppColors.ink,
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
                             ),
@@ -523,18 +523,14 @@ class _VehicleChoiceGroup extends StatelessWidget {
                   selected: isSelected,
                   onSelected: (_) => onSelected(choice),
                   showCheckmark: false,
-                  selectedColor: const Color(0xFFDDF2EE),
+                  selectedColor: AppColors.tealSoft,
                   backgroundColor: Colors.white,
                   side: BorderSide(
-                    color: isSelected
-                        ? const Color(0xFF277C78)
-                        : const Color(0xFFE2DED6),
+                    color: isSelected ? AppColors.teal : AppColors.line,
                     width: isSelected ? 1.5 : 1,
                   ),
                   labelStyle: TextStyle(
-                    color: isSelected
-                        ? const Color(0xFF277C78)
-                        : AppColors.muted,
+                    color: isSelected ? AppColors.teal : AppColors.muted,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -596,9 +592,7 @@ class _BrandChoiceGrid extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(13),
                         side: BorderSide(
-                          color: isSelected
-                              ? const Color(0xFF277C78)
-                              : const Color(0xFFE2DED6),
+                          color: isSelected ? AppColors.teal : AppColors.line,
                           width: isSelected ? 1.5 : 1,
                         ),
                       ),
@@ -615,7 +609,7 @@ class _BrandChoiceGrid extends StatelessWidget {
                             errorBuilder: (context, error, stackTrace) =>
                                 const Icon(
                                   Icons.two_wheeler,
-                                  color: Color(0xFF277C78),
+                                  color: AppColors.teal,
                                   size: 28,
                                 ),
                           ),
@@ -651,7 +645,7 @@ class _ChoiceItem extends StatelessWidget {
             label,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: Color(0xFF22201E),
+              color: AppColors.ink,
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),

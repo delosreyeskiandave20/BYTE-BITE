@@ -238,8 +238,8 @@ class _DesignGroupCard extends StatelessWidget {
 
   static const _imageColors = [
     Color(0xFFFCE7DA),
-    Color(0xFFDDF2EE),
-    Color(0xFFF7EBD1),
+    AppColors.tealSoft,
+    AppColors.warningSoft,
     Color(0xFFE3EAF6),
   ];
   static const _imageAssets = {

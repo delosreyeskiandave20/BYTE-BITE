@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
 import '../widgets/vehicle_variant_carousel.dart';
 
 class MotorcycleBrowsePage extends StatelessWidget {
@@ -8,7 +9,7 @@ class MotorcycleBrowsePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5F0),
+      backgroundColor: AppColors.paper,
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Back to home',

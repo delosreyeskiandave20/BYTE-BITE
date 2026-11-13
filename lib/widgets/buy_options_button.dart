@@ -3,6 +3,7 @@ import 'dart:math' show min;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/marketplace.dart';
 import '../data/shop_store.dart';
 import '../screens/shop_page.dart';
 import '../theme/app_theme.dart';
@@ -74,6 +75,13 @@ class _BuyOptionsDialog extends StatefulWidget {
 }
 
 class _BuyOptionsDialogState extends State<_BuyOptionsDialog> {
+  static const _dialogWidth = 420.0;
+  static const _emptyDialogHeight = 180.0;
+  static const _maxDialogHeight = 360.0;
+  static const _dialogHeightRatio = 0.55;
+  static const _dialogBaseHeight = 130.0;
+  static const _shopRowHeight = 150.0;
+
   bool _canPop = false;
 
   void _close<T extends Object?>([T? result]) {
@@ -86,16 +94,19 @@ class _BuyOptionsDialogState extends State<_BuyOptionsDialog> {
   @override
   Widget build(BuildContext context) {
     final dialogHeight = min(
-      min(360.0, MediaQuery.sizeOf(context).height * 0.55),
-      130.0 + widget.shops.length * 150.0,
+      min(
+        _maxDialogHeight,
+        MediaQuery.sizeOf(context).height * _dialogHeightRatio,
+      ),
+      _dialogBaseHeight + widget.shops.length * _shopRowHeight,
     );
     return PopScope(
       canPop: _canPop,
       child: AlertDialog(
         title: Text('Where to buy ${widget.productQuery}'),
         content: SizedBox(
-          width: 420,
-          height: widget.shops.isEmpty ? 180 : dialogHeight,
+          width: _dialogWidth,
+          height: widget.shops.isEmpty ? _emptyDialogHeight : dialogHeight,
           child: widget.shops.isEmpty
               ? _marketplaceChoices(context)
               : ListView(
@@ -171,13 +182,13 @@ class _BuyOptionsDialogState extends State<_BuyOptionsDialog> {
         const Text('No local shop has this item in stock.'),
         const SizedBox(height: 12),
         _MarketplaceButton(
-          name: 'Shopee',
-          onPressed: () => _openMarketplace(context, 'Shopee'),
+          name: Marketplaces.shopee,
+          onPressed: () => _openMarketplace(context, Marketplaces.shopee),
         ),
         const SizedBox(height: 8),
         _MarketplaceButton(
-          name: 'Lazada',
-          onPressed: () => _openMarketplace(context, 'Lazada'),
+          name: Marketplaces.lazada,
+          onPressed: () => _openMarketplace(context, Marketplaces.lazada),
         ),
       ],
     );
@@ -187,15 +198,7 @@ class _BuyOptionsDialogState extends State<_BuyOptionsDialog> {
     BuildContext context,
     String marketplace,
   ) async {
-    final uri = switch (marketplace) {
-      'Shopee' => Uri.https('shopee.ph', '/search', {
-        'keyword': widget.productQuery,
-      }),
-      'Lazada' => Uri.https('www.lazada.com.ph', '/catalog/', {
-        'q': widget.productQuery,
-      }),
-      _ => throw ArgumentError.value(marketplace, 'marketplace'),
-    };
+    final uri = Marketplaces.searchUri(marketplace, widget.productQuery);
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

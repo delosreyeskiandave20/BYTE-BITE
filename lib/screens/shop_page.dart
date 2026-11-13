@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/marketplace.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
+import '../widgets/load_error_banner.dart';
+
+/// Pseudo-category that shows every product in a shop.
+const _allCategories = 'All';
 
 class ShopPage extends StatefulWidget {
   const ShopPage({
@@ -24,7 +29,9 @@ class ShopPage extends StatefulWidget {
 }
 
 class _ShopPageState extends State<ShopPage> {
-  String _selectedCategory = 'All';
+  static const _marketplaceQuery = 'motorcycle parts';
+
+  String _selectedCategory = _allCategories;
   late final TextEditingController _searchController;
   late String _searchQuery;
 
@@ -47,15 +54,7 @@ class _ShopPageState extends State<ShopPage> {
   }
 
   Future<void> _openMarketplace(String marketplace) async {
-    final uri = switch (marketplace) {
-      'Shopee' => Uri.https('shopee.ph', '/search', {
-        'keyword': 'motorcycle parts',
-      }),
-      'Lazada' => Uri.https('www.lazada.com.ph', '/catalog/', {
-        'q': 'motorcycle parts',
-      }),
-      _ => throw ArgumentError.value(marketplace, 'marketplace'),
-    };
+    final uri = Marketplaces.searchUri(marketplace, _marketplaceQuery);
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
       ScaffoldMessenger.of(
@@ -169,28 +168,9 @@ class _ShopContent extends StatelessWidget {
   final ValueChanged<String> onOpenMarketplace;
   final String? error;
 
-  static List<String> _tokens(String value) => value
-      .toLowerCase()
-      .split(RegExp(r'[^a-z0-9]+'))
-      .where((word) => word.isNotEmpty)
-      .toList(growable: false);
-
-  static bool _matches(Shop shop, ShopProduct product, List<String> tokens) {
-    final words = _tokens(
-      [
-        product.name,
-        product.category,
-        product.description,
-        shop.name,
-        shop.location,
-      ].join(' '),
-    );
-    return tokens.every((token) => words.any((word) => word.startsWith(token)));
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filterTokens = _tokens(searchQuery.trim());
+    final filterTokens = searchTokens(searchQuery.trim());
     final shops = store.shops
         .where(
           (shop) => initialShopName == null || shop.name == initialShopName,
@@ -202,7 +182,10 @@ class _ShopContent extends StatelessWidget {
           final filtered = filterTokens.isEmpty
               ? base
               : base
-                    .where((product) => _matches(shop, product, filterTokens))
+                    .where(
+                      (product) =>
+                          shopProductMatchesTokens(shop, product, filterTokens),
+                    )
                     .toList(growable: false);
           // In-stock products lead each shop; unavailable items stay visible so
           // shoppers can still see what the shop carries.
@@ -219,13 +202,16 @@ class _ShopContent extends StatelessWidget {
         )
         .toList(growable: false);
     final categories = <String>{
-      'All',
+      _allCategories,
       for (final entry in shops)
         for (final product in entry.products) product.category,
     };
     final visibleCategories = categories.contains(selectedCategory)
         ? categories
-        : {'All', ...categories.where((item) => item != 'All')};
+        : {
+            _allCategories,
+            ...categories.where((item) => item != _allCategories),
+          };
     final productCount = shops.fold<int>(
       0,
       (count, entry) => count + entry.products.length,
@@ -237,7 +223,10 @@ class _ShopContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
         if (error != null) ...[
-          _ShopErrorBanner(message: error!, onRetry: store.retry),
+          LoadErrorBanner(
+            message: 'Live shop data is unavailable: $error',
+            onRetry: store.retry,
+          ),
           const SizedBox(height: 14),
         ],
         TextField(
@@ -272,17 +261,17 @@ class _ShopContent extends StatelessWidget {
             children: [
               Expanded(
                 child: _MarketplaceCard(
-                  name: 'Shopee',
+                  name: Marketplaces.shopee,
                   icon: Icons.shopping_bag_outlined,
-                  onTap: () => onOpenMarketplace('Shopee'),
+                  onTap: () => onOpenMarketplace(Marketplaces.shopee),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _MarketplaceCard(
-                  name: 'Lazada',
+                  name: Marketplaces.lazada,
                   icon: Icons.local_mall_outlined,
-                  onTap: () => onOpenMarketplace('Lazada'),
+                  onTap: () => onOpenMarketplace(Marketplaces.lazada),
                 ),
               ),
             ],
@@ -340,12 +329,12 @@ class _ShopContent extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           ...shops.map((entry) {
-            final products = selectedCategory == 'All'
+            final products = selectedCategory == _allCategories
                 ? entry.products
                 : entry.products
                       .where((product) => product.category == selectedCategory)
                       .toList();
-            if (selectedCategory != 'All' && products.isEmpty) {
+            if (selectedCategory != _allCategories && products.isEmpty) {
               return const SizedBox.shrink();
             }
             return FadeSlideIn(
@@ -355,46 +344,6 @@ class _ShopContent extends StatelessWidget {
           }),
         ],
       ],
-    );
-  }
-}
-
-class _ShopErrorBanner extends StatelessWidget {
-  const _ShopErrorBanner({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-      decoration: BoxDecoration(
-        color: AppColors.dangerSoft,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.cloud_off_outlined,
-            color: AppColors.danger,
-            size: 19,
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              'Live shop data is unavailable: $message',
-              style: const TextStyle(
-                color: AppColors.danger,
-                fontSize: 12,
-                height: 1.35,
-              ),
-            ),
-          ),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
-      ),
     );
   }
 }

@@ -42,7 +42,7 @@ class _PartsCatalogPageState extends State<PartsCatalogPage> {
     final products = _categoryProducts;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F5F0),
+      backgroundColor: AppColors.paper,
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Back to part groups',
@@ -83,7 +83,7 @@ class _PartsCatalogPageState extends State<PartsCatalogPage> {
           const Text(
             'Motorcycle parts categories',
             style: TextStyle(
-              color: Color(0xFF22201E),
+              color: AppColors.ink,
               fontSize: 18,
               fontWeight: FontWeight.w900,
             ),
@@ -95,11 +95,11 @@ class _PartsCatalogPageState extends State<PartsCatalogPage> {
           ),
           const SizedBox(height: 9),
           Card(
-            color: const Color(0xFFFBFAF7),
+            color: AppColors.surface,
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
-              side: const BorderSide(color: Color(0xFFE2DED6)),
+              side: const BorderSide(color: AppColors.line),
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(
@@ -112,19 +112,19 @@ class _PartsCatalogPageState extends State<PartsCatalogPage> {
                         key: ValueKey('motorcycle-parts-category-$category'),
                         leading: const Icon(
                           Icons.build_outlined,
-                          color: Color(0xFF277C78),
+                          color: AppColors.teal,
                         ),
                         title: Text(
                           category,
                           style: const TextStyle(
-                            color: Color(0xFF22201E),
+                            color: AppColors.ink,
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         trailing: const Icon(
                           Icons.chevron_right,
-                          color: Color(0xFF277C78),
+                          color: AppColors.teal,
                         ),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
@@ -180,12 +180,12 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: const Color(0xFFFBFAF7),
+      color: AppColors.surface,
       margin: const EdgeInsets.only(bottom: 10),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(17),
-        side: const BorderSide(color: Color(0xFFE2DED6)),
+        side: const BorderSide(color: AppColors.line),
       ),
       child: Column(
         children: [
@@ -195,15 +195,15 @@ class _ProductCard extends StatelessWidget {
               width: 43,
               height: 43,
               decoration: BoxDecoration(
-                color: const Color(0xFFDDF2EE),
+                color: AppColors.tealSoft,
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(product.icon, color: const Color(0xFF277C78)),
+              child: Icon(product.icon, color: AppColors.teal),
             ),
             title: Text(
               product.name,
               style: const TextStyle(
-                color: Color(0xFF22201E),
+                color: AppColors.ink,
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
               ),
@@ -214,7 +214,7 @@ class _ProductCard extends StatelessWidget {
             ),
             trailing: Icon(
               expanded ? Icons.expand_less : Icons.expand_more,
-              color: const Color(0xFF277C78),
+              color: AppColors.teal,
             ),
           ),
           if (expanded)
@@ -222,8 +222,8 @@ class _ProductCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: const BoxDecoration(
-                color: Color(0xFFF7F5F0),
-                border: Border(top: BorderSide(color: Color(0xFFE2DED6))),
+                color: AppColors.paper,
+                border: Border(top: BorderSide(color: AppColors.line)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,9 +280,9 @@ class _EmptyCategory extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(26),
       decoration: BoxDecoration(
-        color: const Color(0xFFFBFAF7),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2DED6)),
+        border: Border.all(color: AppColors.line),
       ),
       child: const Column(
         children: [
@@ -292,7 +292,7 @@ class _EmptyCategory extends StatelessWidget {
             'No catalog entries in this group yet',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF22201E),
+              color: AppColors.ink,
               fontSize: 15,
               fontWeight: FontWeight.w900,
             ),
