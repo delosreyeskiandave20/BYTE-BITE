@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/shop_store.dart';
 import '../data/vehicle_images.dart';
 import '../data/vehicle_parts_catalog.dart';
+import 'shop_page.dart';
 import '../theme/app_theme.dart';
-import '../widgets/buy_options_button.dart';
 
 class MotorcyclePartsCatalogPage extends StatefulWidget {
   const MotorcyclePartsCatalogPage({
@@ -286,10 +286,31 @@ class _VehiclePartTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 7),
-                BuyOptionsButton(
-                  store: shopStore,
-                  productQuery: '$_vehicle $part',
-                  onOwnerSignIn: onOwnerSignIn,
+                FilledButton.icon(
+                  key: ValueKey('go-to-shop-$part'),
+                  onPressed: () {
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ShopPage(
+                          store: shopStore,
+                          onOwnerSignIn: onOwnerSignIn,
+                          initialProductQuery: part,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.storefront_outlined, size: 17),
+                  label: const Text('Go to shop'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.teal,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 44),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ],
             ),

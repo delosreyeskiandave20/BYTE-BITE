@@ -759,6 +759,8 @@ void main() {
   testWidgets('motorcycle parts catalog selects and lists vehicle parts', (
     WidgetTester tester,
   ) async {
+    final store = TemporaryShopStore();
+    addTearDown(store.dispose);
     const vehicle = VehiclePartsVariant(
       brand: 'Honda',
       model: 'Beat',
@@ -776,6 +778,7 @@ void main() {
         home: MotorcyclePartsCatalogPage(
           catalogOverride: Future.value([vehicle]),
           initialCategory: 'Engine',
+          shopStore: store,
         ),
       ),
     );
@@ -846,19 +849,17 @@ void main() {
       ),
       const Size(92, 92),
     );
-    final buyButton = find.byKey(
-      const ValueKey('buy-Honda Beat Playful Engine oil'),
-    );
-    await tester.ensureVisible(buyButton);
+    final shopButton = find.byKey(const ValueKey('go-to-shop-Engine oil'));
+    await tester.ensureVisible(shopButton);
     await tester.pumpAndSettle();
-    await tester.tap(buyButton);
+    await tester.tap(shopButton);
     await tester.pumpAndSettle();
+    expect(find.text('MotoScan Shop'), findsOneWidget);
+    expect(find.text('Available shops for Engine oil'), findsOneWidget);
     expect(
-      find.text('Where to buy Honda Beat Playful Engine oil'),
-      findsOneWidget,
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'Engine oil',
     );
-    expect(find.text('Shopee'), findsOneWidget);
-    expect(find.text('Lazada'), findsOneWidget);
   });
 
   testWidgets('Buy options only dismiss from an explicit dialog action', (
