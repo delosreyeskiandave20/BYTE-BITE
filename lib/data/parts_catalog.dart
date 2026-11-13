@@ -41,29 +41,6 @@ const Map<String, Map<String, List<String>>> vehicleCatalog = {
     'Access': ['Standard', 'Ride Connect Edition'],
     'Avenis': ['Standard'],
     'Burgman Street 125 EX': ['Standard'],
-    'Burgman Street': ['Standard'],
-    'Raider R150': ['Standard'],
-    'Raider PRO': ['Standard'],
-    'Smash Fi': ['Standard'],
-    'V-STROM 160': ['Standard'],
-    'GIXXER 155': ['Standard'],
-  },
-  'Kawasaki': {
-    'Barako II': ['Standard', 'Alloy'],
-    'Brusky 125': ['Standard'],
-    'Ninja 500': ['Standard', 'SE'],
-    'Ninja 650': ['Standard', 'KRT Edition'],
-    'Z650': ['Standard'],
-    'Versys 650': ['Standard', 'LT'],
-  },
-  'RUSI': {
-    'Surf': ['Standard'],
-    'Royal 125': ['Standard'],
-    'RFI 175': ['Standard'],
-    'Gamma SS 200': ['Standard'],
-  },
-  'MotorStar': {
-    'Xplorer 250R': ['Standard'],
   },
 };
 

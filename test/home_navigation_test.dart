@@ -29,22 +29,13 @@ double _homeScrollOffset(WidgetTester tester) =>
     tester.state<ScrollableState>(_homeScrollable()).position.pixels;
 
 void main() {
-  testWidgets('home has an in-body search entry that opens the parts search', (
+  testWidgets('home does not show an in-body search entry', (
     WidgetTester tester,
   ) async {
     await _pumpApp(tester);
 
-    expect(find.text('Search parts, brands, and shops'), findsOneWidget);
-    expect(find.text('Search for a part'), findsNothing);
-
-    final entry = find.byKey(const ValueKey('home-search-entry'));
-    expect(entry, findsOneWidget);
-    await tester.ensureVisible(entry);
-    await tester.pumpAndSettle();
-    await tester.tap(entry);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Parts library'), findsOneWidget);
+    expect(find.text('Search parts, brands, and shops'), findsNothing);
+    expect(find.byTooltip('Search parts'), findsOneWidget);
   });
 
   testWidgets('system back returns to Home from another tab', (
@@ -83,13 +74,12 @@ void main() {
     expect(find.text('Browse parts').hitTestable(), findsOneWidget);
   });
 
-  testWidgets('search opened from the body keeps the app-bar shortcut', (
+  testWidgets('app-bar shortcut opens search', (
     WidgetTester tester,
   ) async {
     await _pumpApp(tester);
 
-    final entry = find.byKey(const ValueKey('home-search-entry'));
-    await tester.tap(entry);
+    await tester.tap(find.byTooltip('Search parts'));
     await tester.pumpAndSettle();
     expect(find.text('Parts library'), findsOneWidget);
 

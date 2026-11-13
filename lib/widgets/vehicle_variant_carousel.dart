@@ -32,29 +32,29 @@ class _VehicleVariantCarouselState extends State<VehicleVariantCarousel> {
           _VehicleVariant(brand: brand.key, model: model.key, variant: variant),
   ];
 
-  String _selectedBrand = vehicleCatalog.keys.first;
   int _currentIndex = 0;
+
+  String get _selectedBrand => _currentVehicle.brand;
 
   List<_VehicleVariant> get _brandVehicles =>
       _vehicles.where((vehicle) => vehicle.brand == _selectedBrand).toList();
 
-  _VehicleVariant get _currentVehicle => _brandVehicles[_currentIndex];
+  _VehicleVariant get _currentVehicle => _vehicles[_currentIndex];
 
   void _showPrevious() {
-    if (_currentIndex > 0) setState(() => _currentIndex -= 1);
+    setState(() {
+      _currentIndex = (_currentIndex - 1 + _vehicles.length) % _vehicles.length;
+    });
   }
 
   void _showNext() {
-    if (_currentIndex < _brandVehicles.length - 1) {
-      setState(() => _currentIndex += 1);
-    }
+    setState(() => _currentIndex = (_currentIndex + 1) % _vehicles.length);
   }
 
   void _selectBrand(String brand) {
     if (brand == _selectedBrand) return;
     setState(() {
-      _selectedBrand = brand;
-      _currentIndex = 0;
+      _currentIndex = _vehicles.indexWhere((vehicle) => vehicle.brand == brand);
     });
   }
 
@@ -104,7 +104,7 @@ class _VehicleVariantCarouselState extends State<VehicleVariantCarousel> {
             ),
             const SizedBox(width: 8),
             Text(
-              '${_currentIndex + 1} / ${brandVehicles.length}',
+              '${brandVehicles.indexOf(vehicle) + 1} / ${brandVehicles.length}',
               style: const TextStyle(
                 color: AppColors.muted,
                 fontSize: 11,
@@ -172,7 +172,6 @@ class _VehicleVariantCarouselState extends State<VehicleVariantCarousel> {
                 _CarouselArrow(
                   tooltip: 'Previous motorcycle variant',
                   icon: Icons.chevron_left,
-                  enabled: _currentIndex > 0,
                   onPressed: _showPrevious,
                 ),
                 IconButton(
@@ -195,7 +194,6 @@ class _VehicleVariantCarouselState extends State<VehicleVariantCarousel> {
                 _CarouselArrow(
                   tooltip: 'Next motorcycle variant',
                   icon: Icons.chevron_right,
-                  enabled: _currentIndex < brandVehicles.length - 1,
                   onPressed: _showNext,
                 ),
               ],
@@ -300,13 +298,11 @@ class _CarouselArrow extends StatelessWidget {
   const _CarouselArrow({
     required this.tooltip,
     required this.icon,
-    required this.enabled,
     required this.onPressed,
   });
 
   final String tooltip;
   final IconData icon;
-  final bool enabled;
   final VoidCallback onPressed;
 
   @override
@@ -318,10 +314,9 @@ class _CarouselArrow extends StatelessWidget {
         shape: const CircleBorder(),
         child: IconButton(
           tooltip: tooltip,
-          onPressed: enabled ? onPressed : null,
+          onPressed: onPressed,
           icon: Icon(icon),
           color: AppColors.teal,
-          disabledColor: AppColors.faint,
           style: IconButton.styleFrom(
             minimumSize: const Size(44, 44),
             maximumSize: const Size(44, 44),

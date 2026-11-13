@@ -94,21 +94,44 @@ void main() {
     );
   });
 
-  test('vehicle catalog contains the supplied 50 model records', () {
+  test('vehicle catalog removes the final 21 motorcycle versions', () {
     final modelCount = vehicleCatalog.values.fold<int>(
       0,
       (count, models) => count + models.length,
     );
 
-    expect(modelCount, 50);
-    expect(vehicleCatalog.keys, [
-      'Honda',
-      'Yamaha',
-      'Suzuki',
-      'Kawasaki',
-      'RUSI',
-      'MotorStar',
+    expect(modelCount, 33);
+    expect(vehicleCatalog.keys, ['Honda', 'Yamaha', 'Suzuki']);
+    expect(vehicleCatalog['Suzuki']!.keys, [
+      'Burgman 15',
+      'Access',
+      'Avenis',
+      'Burgman Street 125 EX',
     ]);
+    expect(
+      vehicleCatalog.values
+          .expand((models) => models.values)
+          .expand((variants) => variants)
+          .length,
+      53,
+    );
+  });
+
+  test('parts catalog omits the removed motorcycle versions', () async {
+    final catalog = await loadVehiclePartsCatalog();
+
+    expect(catalog, hasLength(53));
+    expect(
+      catalog.any(
+        (vehicle) =>
+            vehicle.brand == 'Kawasaki' ||
+            vehicle.brand == 'RUSI' ||
+            vehicle.brand == 'MotorStar' ||
+            (vehicle.brand == 'Suzuki' &&
+                !vehicleCatalog['Suzuki']!.containsKey(vehicle.model)),
+      ),
+      isFalse,
+    );
   });
 
   test(
@@ -134,20 +157,20 @@ void main() {
         }
       }
 
-      expect(variantCount, 74);
-      expect(vehicleVariantImageAssets, hasLength(74));
+      expect(variantCount, 53);
+      expect(vehicleVariantImageAssets, hasLength(53));
     },
   );
 
   test(
-    'motorcycle parts catalog contains all supplied variant records',
+    'motorcycle parts catalog contains the remaining variant records',
     () async {
       final catalog = await loadVehiclePartsCatalog();
 
-      expect(catalog, hasLength(74));
+      expect(catalog, hasLength(53));
       expect(
         catalog.fold<int>(0, (total, vehicle) => total + vehicle.partCount),
-        3700,
+        2650,
       );
       final beat = catalog.firstWhere(
         (vehicle) =>
@@ -527,14 +550,67 @@ void main() {
     await tester.tap(find.byTooltip('Close zoomed image'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('gallery-brand-Yamaha')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('gallery-brand-Yamaha')), findsOneWidget);
+    Future<void> advanceVariants(int count) async {
+      for (var index = 0; index < count; index++) {
+        await tester.tap(find.byTooltip('Next motorcycle variant'));
+        await tester.pump(const Duration(milliseconds: 250));
+      }
+      await tester.pumpAndSettle();
+    }
+
+    final yamahaVariantCount = vehicleCatalog['Yamaha']!.values
+        .expand((variants) => variants)
+        .length;
+    final suzukiVariantCount = vehicleCatalog['Suzuki']!.values
+        .expand((variants) => variants)
+        .length;
+    await advanceVariants(hondaVariantCount - 1);
+    expect(
+      tester
+          .widget<ChoiceChip>(
+            find.byKey(const ValueKey('gallery-brand-Yamaha')),
+          )
+          .selected,
+      isTrue,
+    );
     expect(find.text('Mio Gear'), findsOneWidget);
     expect(
       _motorcycleImage('assets/motorcycles/yamaha_mio_gear_standard.png'),
       findsWidgets,
     );
+
+    await advanceVariants(yamahaVariantCount);
+    expect(
+      tester
+          .widget<ChoiceChip>(
+            find.byKey(const ValueKey('gallery-brand-Suzuki')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(find.text('Burgman 15'), findsOneWidget);
+
+    await advanceVariants(suzukiVariantCount);
+    expect(
+      tester
+          .widget<ChoiceChip>(find.byKey(const ValueKey('gallery-brand-Honda')))
+          .selected,
+      isTrue,
+    );
+    expect(find.text('BeAT'), findsOneWidget);
+    expect(find.text('Playful'), findsNWidgets(2));
+
+    await tester.tap(find.byTooltip('Previous motorcycle variant'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<ChoiceChip>(
+            find.byKey(const ValueKey('gallery-brand-Suzuki')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(find.text('Burgman Street 125 EX'), findsOneWidget);
   });
 
   testWidgets('design buy buttons show shops without a detail panel', (

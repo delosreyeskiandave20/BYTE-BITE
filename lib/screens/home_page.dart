@@ -46,8 +46,6 @@ class _MotoScanHomePageState extends State<MotoScanHomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _HomeSearchEntry(onTap: widget.onSearch),
-              const SizedBox(height: 14),
               VehicleLookupCard(onViewMotorcycles: widget.onViewMotorcycles),
               const SizedBox(height: 20),
               Row(
@@ -81,81 +79,6 @@ class _MotoScanHomePageState extends State<MotoScanHomePage> {
                 onOwnerSignIn: widget.onOwnerSignIn,
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// In-body search entry for the Home tab. It navigates to [SearchPage] through
-/// [onTap], matching the app-bar search shortcut without being a real field, so
-/// typing always happens on the dedicated search screen.
-class _HomeSearchEntry extends StatelessWidget {
-  const _HomeSearchEntry({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Search parts, brands, and shops',
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
-          key: const ValueKey('home-search-entry'),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 50),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.lineStrong),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search, color: AppColors.teal, size: 20),
-                const SizedBox(width: AppSpacing.sm),
-                const Expanded(
-                  child: Text(
-                    'Search parts, brands, and shops',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.muted,
-                      fontSize: AppType.body,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.tealSoft,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.tealBorder),
-                  ),
-                  child: const Text(
-                    'Search',
-                    style: TextStyle(
-                      color: AppColors.teal,
-                      fontSize: AppType.micro,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
