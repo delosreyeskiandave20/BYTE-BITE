@@ -461,12 +461,12 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                   alignment: Alignment.topCenter,
                   child: Column(
                     children: [
-                      for (final product in shop.products)
+                      for (var index = 0; index < shop.products.length; index++)
                         _OwnerProductTile(
-                          key: ValueKey('owner-product-${product.id}'),
-                          product: product,
-                          onEdit: () => _editProduct(product),
-                          onDelete: () => _deleteProduct(product),
+                          key: ValueKey('owner-product-$index-${shop.products[index].id}'),
+                          product: shop.products[index],
+                          onEdit: () => _editProduct(shop.products[index]),
+                          onDelete: () => _deleteProduct(shop.products[index]),
                         ),
                     ],
                   ),
