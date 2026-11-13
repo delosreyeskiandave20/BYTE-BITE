@@ -6,18 +6,22 @@ import 'package:flutter_application_1/data/shop_store.dart';
 import 'package:flutter_application_1/screens/auth_page.dart';
 import 'package:flutter_application_1/screens/shop_owner_dashboard_page.dart';
 
+import 'support/fake_owner_auth.dart';
+
 const _owner = 'owner@example.com';
 
-Future<TemporaryShopStore> _storeWithShop() async {
-  final store = TemporaryShopStore();
+Future<ShopStore> _storeWithShop({
+  FakeOwnerAuth? ownerAuth,
+  String email = _owner,
+}) async {
+  final store = ShopStore(ownerAuth: ownerAuth ?? FakeOwnerAuth());
   await store.createOwner(
     name: 'Test Owner',
-    email: _owner,
+    email: email,
     password: 'temporary123',
-    pin: '123456',
   );
   await store.saveShop(
-    ownerEmail: _owner,
+    ownerEmail: email,
     name: 'Test Parts Shop',
     location: 'Cebu City, Cebu',
     description: 'Parts for every ride.',
@@ -26,11 +30,8 @@ Future<TemporaryShopStore> _storeWithShop() async {
   return store;
 }
 
-TextFormField _field(WidgetTester tester, String label) =>
-    tester.widget<TextFormField>(find.widgetWithText(TextFormField, label));
-
 void main() {
-  testWidgets('demo login fills the owner form and submits', (
+  testWidgets('owner login submits email and password', (
     WidgetTester tester,
   ) async {
     String? email;
@@ -38,7 +39,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MotoScanAuthPage(
-          onLogin: (submittedEmail, submittedPassword, _) async {
+          onLogin: (submittedEmail, submittedPassword) async {
             email = submittedEmail;
             password = submittedPassword;
           },
@@ -46,42 +47,80 @@ void main() {
       ),
     );
 
-    expect(find.text('Demo shop owner'), findsOneWidget);
-    await tester.ensureVisible(find.text('Use demo login'));
-    await tester.tap(find.text('Use demo login'));
-    await tester.pumpAndSettle();
-
-    expect(
-      _field(tester, 'Email address').controller!.text,
-      'demo@motoscan.test',
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email address'),
+      'owner@example.com',
     );
-    expect(_field(tester, 'Password').controller!.text, 'demo1234');
-
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'temporary123',
+    );
     final loginButton = find.widgetWithText(ElevatedButton, 'Log in');
     await tester.ensureVisible(loginButton);
     await tester.tap(loginButton);
     await tester.pumpAndSettle();
 
-    expect(email, 'demo@motoscan.test');
-    expect(password, 'demo1234');
+    expect(email, 'owner@example.com');
+    expect(password, 'temporary123');
+    expect(find.text('6-digit PIN'), findsNothing);
   });
 
-  testWidgets('demo helper is hidden when Firebase Auth is connected', (
+  testWidgets('owner sign-up submits name, email, and password', (
     WidgetTester tester,
   ) async {
+    String? name;
+    String? email;
+    String? password;
     await tester.pumpWidget(
-      const MaterialApp(home: MotoScanAuthPage(isDemoMode: false)),
+      MaterialApp(
+        home: MotoScanAuthPage(
+          onCreateAccount:
+              (submittedName, submittedEmail, submittedPassword) async {
+                name = submittedName;
+                email = submittedEmail;
+                password = submittedPassword;
+              },
+        ),
+      ),
     );
 
-    expect(find.text('Use demo login'), findsNothing);
-    expect(find.textContaining('Temporary demo only'), findsNothing);
+    await tester.tap(find.text('Create owner account'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Full name'),
+      'New Owner',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email address'),
+      'new-owner@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'temporary123',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Confirm password'),
+      'temporary123',
+    );
+    final createButton = find.widgetWithText(
+      ElevatedButton,
+      'Create owner account',
+    );
+    await tester.ensureVisible(createButton);
+    await tester.tap(createButton);
+    await tester.pumpAndSettle();
+
+    expect(name, 'New Owner');
+    expect(email, 'new-owner@example.com');
+    expect(password, 'temporary123');
+    expect(find.text('6-digit PIN'), findsNothing);
   });
 
   testWidgets('owner sign-in shows inline validation errors', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(home: MotoScanAuthPage(onLogin: (_, _, _) async {})),
+      MaterialApp(home: MotoScanAuthPage(onLogin: (_, _) async {})),
     );
 
     await tester.enterText(
@@ -107,7 +146,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MotoScanAuthPage(
-          onLogin: (_, _, _) async =>
+          onLogin: (_, _) async =>
               throw FirebaseAuthException(code: 'too-many-requests'),
         ),
       ),
@@ -120,10 +159,6 @@ void main() {
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Password'),
       'temporary123',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, '6-digit PIN'),
-      '123456',
     );
     final loginButton = find.widgetWithText(ElevatedButton, 'Log in');
     await tester.ensureVisible(loginButton);
@@ -209,6 +244,31 @@ void main() {
 
     expect(find.text('Open shop'), findsOneWidget);
     expect(store.shopForOwner(_owner)!.name, 'Saved Shop');
+  });
+
+  testWidgets('unverified owners can resend the verification email', (
+    WidgetTester tester,
+  ) async {
+    final ownerAuth = FakeOwnerAuth(emailVerified: false);
+    final store = await _storeWithShop(ownerAuth: ownerAuth);
+    addTearDown(ownerAuth.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(home: _DashboardLauncher(store: store)),
+    );
+    await tester.tap(find.text('Open shop'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Verify your email'), findsOneWidget);
+    await tester.ensureVisible(find.text('Resend email'));
+    await tester.tap(find.text('Resend email'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Verification email sent'), findsOneWidget);
+
+    ownerAuth.markEmailVerified();
+    await tester.tap(find.text('I have verified'));
+    await tester.pumpAndSettle();
+    expect(find.text('Verify your email'), findsNothing);
   });
 }
 

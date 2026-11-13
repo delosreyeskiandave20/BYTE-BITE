@@ -1,13 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../data/owner_auth.dart';
 import '../theme/app_theme.dart';
-
-/// Demo credentials shown in the owner sign-in screen while Firebase is not
-/// connected. Kept in one place so the note and the autofill button agree.
-const _demoEmail = 'demo@motoscan.test';
-const _demoPassword = 'demo1234';
-const _demoPin = '123456';
 
 class MotoScanAuthPage extends StatefulWidget {
   const MotoScanAuthPage({
@@ -16,21 +11,13 @@ class MotoScanAuthPage extends StatefulWidget {
     this.onCreateAccount,
     this.onForgotPassword,
     this.onAuthenticated,
-    this.isDemoMode = true,
   });
 
-  final Future<void> Function(String email, String password, String pin)?
-  onLogin;
-  final Future<void> Function(
-    String name,
-    String email,
-    String password,
-    String pin,
-  )?
+  final Future<void> Function(String email, String password)? onLogin;
+  final Future<void> Function(String name, String email, String password)?
   onCreateAccount;
   final Future<void> Function(String email)? onForgotPassword;
   final Future<void> Function(String email)? onAuthenticated;
-  final bool isDemoMode;
 
   @override
   State<MotoScanAuthPage> createState() => _MotoScanAuthPageState();
@@ -41,7 +28,6 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _pinController = TextEditingController();
   bool _isLogin = true;
   bool _loading = false;
   bool _obscurePassword = true;
@@ -65,20 +51,6 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
       _formKey.currentState?.reset();
       _error = null;
     });
-  }
-
-  void _fillDemoCredentials() {
-    _emailController.text = _demoEmail;
-    _passwordController.text = _demoPassword;
-    _pinController.text = _demoPin;
-    _emailController.selection = TextSelection.collapsed(
-      offset: _demoEmail.length,
-    );
-    _passwordController.selection = TextSelection.collapsed(
-      offset: _demoPassword.length,
-    );
-    _pinController.selection = TextSelection.collapsed(offset: _demoPin.length);
-    setState(() => _error = null);
   }
 
   Future<void> _submit() async {
@@ -105,15 +77,22 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
         await loginHandler(
           _emailController.text.trim(),
           _passwordController.text,
-          _pinController.text.trim(),
         );
       } else {
         await accountHandler!(
           _nameController.text.trim(),
           _emailController.text.trim(),
           _passwordController.text,
-          _pinController.text.trim(),
         );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Account created. Check your inbox to verify your email.',
+              ),
+            ),
+          );
+        }
       }
       await widget.onAuthenticated?.call(_emailController.text.trim());
     } catch (error) {
@@ -125,6 +104,9 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
   }
 
   String _messageFor(Object error) {
+    if (error is OwnerAuthUnavailableException) {
+      return OwnerAuthUnavailableException.message;
+    }
     if (error is FirebaseAuthException) {
       switch (error.code) {
         case 'invalid-email':
@@ -414,31 +396,6 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
                                     ),
                                     validator: _validatePassword,
                                   ),
-                                  const SizedBox(height: 12),
-                                  TextFormField(
-                                    controller: _pinController,
-                                    keyboardType: TextInputType.number,
-                                    obscureText: true,
-                                    autocorrect: false,
-                                    enableSuggestions: false,
-                                    textInputAction: _isLogin
-                                        ? TextInputAction.done
-                                        : TextInputAction.next,
-                                    maxLength: 6,
-                                    decoration: const InputDecoration(
-                                      labelText: '6-digit PIN',
-                                      prefixIcon: Icon(Icons.dialpad),
-                                      counterText: '',
-                                    ),
-                                    validator: (value) {
-                                      final pin = value?.trim() ?? '';
-                                      if (pin.length != 6 ||
-                                          int.tryParse(pin) == null) {
-                                        return 'Enter a 6-digit PIN.';
-                                      }
-                                      return null;
-                                    },
-                                  ),
                                   if (!_isLogin) ...[
                                     const SizedBox(height: 12),
                                     TextFormField(
@@ -562,16 +519,10 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          if (widget.isDemoMode) ...[
-                            _DemoCredentialsCard(
-                              onUseDemo: _loading ? null : _fillDemoCredentials,
-                            ),
-                            const SizedBox(height: 10),
-                          ],
                           Text(
-                            widget.isDemoMode
-                                ? 'Temporary demo only — accounts and shop listings reset when the app restarts. Demo login: $_demoEmail / $_demoPassword. Do not use a real password.'
-                                : 'Accounts are secured by Firebase Authentication and shop listings are saved to Cloud Firestore. Email verification and one-time codes are not required.',
+                            _isLogin
+                                ? 'Accounts are secured by Firebase Authentication and shop listings are saved to Cloud Firestore.'
+                                : 'We will email a verification link to confirm your address. Your shop stays manageable from this account.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: AppColors.muted,
@@ -588,70 +539,6 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Compact demo-only helper that fills the login form. It deliberately avoids
-/// the person icon used by the header so the account-entry-point icon test
-/// keeps a single match.
-class _DemoCredentialsCard extends StatelessWidget {
-  const _DemoCredentialsCard({required this.onUseDemo});
-
-  final VoidCallback? onUseDemo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
-      decoration: BoxDecoration(
-        color: AppColors.tealSoft,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.tealBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.bolt_outlined, size: 16, color: AppColors.teal),
-              SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Demo shop owner',
-                  style: TextStyle(
-                    color: AppColors.teal,
-                    fontSize: AppType.caption,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            '$_demoEmail · $_demoPassword',
-            style: TextStyle(
-              color: AppColors.inkSoft,
-              fontSize: AppType.micro,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: onUseDemo,
-              icon: const Icon(Icons.arrow_downward_rounded, size: 16),
-              label: const Text('Use demo login'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.teal,
-                minimumSize: const Size(0, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

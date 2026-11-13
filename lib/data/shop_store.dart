@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/shop.dart';
+import 'owner_auth.dart';
 import 'owner_email_hash.dart';
 
 export '../models/shop.dart';
@@ -16,16 +16,17 @@ const shopProductCategories = <String>['Parts', 'Accessories', 'Maintenance'];
 /// Stores shop profiles and shop products.
 ///
 /// When Firebase is initialized the data is kept in Cloud Firestore and owner
-/// accounts are managed by Firebase Authentication. If Firebase is not
-/// configured (for example during a local preview without credentials), the
-/// store falls back to the in-memory demo data used by earlier builds.
+/// accounts are managed exclusively by Firebase Authentication. If Firebase is
+/// not configured (for example during a local preview without credentials),
+/// the store falls back to read-only in-memory demo shop data; owner
+/// authentication stays unavailable.
 class ShopStore extends ChangeNotifier {
-  ShopStore() {
+  ShopStore({OwnerAuth? ownerAuth}) {
+    _ownerAuth = ownerAuth ?? createOwnerAuth();
+    _listenToAuthState();
     if (Firebase.apps.isNotEmpty) {
       _firestore = FirebaseFirestore.instance;
-      _auth = FirebaseAuth.instance;
       _isLoading = true;
-      _listenToAuthState();
       _subscribeToShops();
       purgeStaleShops();
     } else {
@@ -46,9 +47,9 @@ class ShopStore extends ChangeNotifier {
   static ShopStore get shared => _sharedInstance ??= ShopStore();
 
   FirebaseFirestore? _firestore;
-  FirebaseAuth? _auth;
+  OwnerAuth? _ownerAuth;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _shopsSubscription;
-  StreamSubscription<User?>? _authStateSubscription;
+  StreamSubscription<OwnerAccount?>? _authStateSubscription;
 
   /// Live product listeners, one per shop. Products live in a subcollection so
   /// Firestore rules can validate each product document.
@@ -59,24 +60,15 @@ class ShopStore extends ChangeNotifier {
   final Map<String, List<ShopProduct>> _productsByShop = {};
   Object? _lastError;
   bool _isLoading = false;
-  String? _demoSignedInEmail;
 
   final List<Shop> _shops = [];
-  final Map<String, _DemoOwner> _demoOwners = {
-    'demo@motoscan.test': const _DemoOwner(
-      name: 'MotoScan Demo Owner',
-      password: 'demo1234',
-      pin: '123456',
-    ),
-  };
-
-  /// In-memory 6-digit PINs for cloud owners. Firebase Auth still authenticates
-  /// with the password, but the app additionally requires the PIN.
-  final Map<String, String> _ownerPins = {};
   int _nextProductId = 0;
 
   /// Whether shop data is backed by Cloud Firestore.
   bool get isCloudConnected => _firestore != null;
+
+  /// Whether Firebase Authentication is available for owner accounts.
+  bool get isOwnerAuthAvailable => _ownerAuth != null;
 
   /// True while the first Firestore snapshot is still being fetched, or while a
   /// manual retry is in flight.
@@ -97,16 +89,23 @@ class ShopStore extends ChangeNotifier {
 
   List<Shop> get shops => List.unmodifiable(_shops);
 
-  String? get signedInEmail =>
-      _auth?.currentUser?.email?.toLowerCase() ?? _demoSignedInEmail;
+  /// The signed-in owner account, or null when signed out.
+  OwnerAccount? get signedInAccount => _ownerAuth?.currentAccount;
+
+  String? get signedInEmail {
+    final email = signedInAccount?.email;
+    return email == null || email.isEmpty ? null : email;
+  }
 
   bool get isSignedIn => signedInEmail != null;
 
+  /// Whether the signed-in owner has confirmed their email address.
+  bool get isEmailVerified => signedInAccount?.emailVerified ?? false;
+
   void _listenToAuthState() {
-    _authStateSubscription = _auth?.authStateChanges().listen((user) {
-      // Keep the in-memory demo session consistent when Firebase signs the
-      // owner out (for example after a password reset on another device).
-      if (user == null) _demoSignedInEmail = null;
+    _authStateSubscription = _ownerAuth?.authStateChanges().listen((_) {
+      // Firebase also emits when ownership changes outside this device, so the
+      // dashboard reacts instead of keeping a stale session.
       notifyListeners();
     });
   }
@@ -200,97 +199,84 @@ class ShopStore extends ChangeNotifier {
     _subscribeToShops();
   }
 
+  /// Creates a Firebase Authentication account for a shop owner.
+  ///
+  /// The account is signed in immediately and a verification email is sent.
   Future<void> createOwner({
     required String name,
     required String email,
     required String password,
-    String pin = '',
   }) async {
+    final ownerAuth = _requireOwnerAuth();
     final normalizedEmail = _normalizeEmail(email);
     _validateEmail(normalizedEmail);
+    final displayName = _requiredText(name, 'Name', maxLength: 120);
     if (password.length < 8) {
       throw StateError('Choose a password with at least 8 characters.');
     }
-    if (pin.length != 6 || int.tryParse(pin) == null) {
-      throw StateError('Enter a 6-digit PIN.');
-    }
-    final auth = _auth;
-    if (auth == null) {
-      if (_demoOwners.containsKey(normalizedEmail)) {
-        throw StateError('An owner account already exists for this email.');
-      }
-      _demoOwners[normalizedEmail] = _DemoOwner(
-        name: name.trim(),
-        password: password,
-        pin: pin,
-      );
-      _demoSignedInEmail = normalizedEmail;
-      notifyListeners();
-      return;
-    }
-
-    final credential = await auth.createUserWithEmailAndPassword(
+    await ownerAuth.createAccount(
+      name: displayName,
       email: normalizedEmail,
       password: password,
     );
-    final displayName = name.trim();
-    if (displayName.isNotEmpty) {
-      await credential.user?.updateDisplayName(displayName);
-    }
-    final uid = credential.user?.uid;
-    if (uid != null) _ownerPins[uid] = pin;
+    notifyListeners();
   }
 
-  Future<void> signIn({
-    required String email,
-    required String password,
-    String pin = '',
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
+    final ownerAuth = _requireOwnerAuth();
     final normalizedEmail = _normalizeEmail(email);
     _validateEmail(normalizedEmail);
-    final auth = _auth;
-    if (auth == null) {
-      final owner = _demoOwners[normalizedEmail];
-      if (owner == null || owner.password != password || owner.pin != pin) {
-        throw StateError('Email, password, or PIN is incorrect.');
-      }
-      _demoSignedInEmail = normalizedEmail;
-      notifyListeners();
-      return;
+    if (password.isEmpty) {
+      throw StateError('Password is required.');
     }
-
-    await auth.signInWithEmailAndPassword(
-      email: normalizedEmail,
-      password: password,
-    );
-    final user = auth.currentUser;
-    if (user != null) {
-      final storedPin = _ownerPins[user.uid];
-      if (storedPin != null && storedPin != pin) {
-        await auth.signOut();
-        throw StateError('Email, password, or PIN is incorrect.');
-      }
-      _ownerPins[user.uid] = pin;
-    }
+    await ownerAuth.signIn(email: normalizedEmail, password: password);
     notifyListeners();
   }
 
   Future<void> signOut() async {
-    await _auth?.signOut();
-    _demoSignedInEmail = null;
+    await _ownerAuth?.signOut();
     notifyListeners();
   }
 
   Future<void> sendPasswordResetEmail(String email) async {
+    final ownerAuth = _requireOwnerAuth();
     final normalizedEmail = _normalizeEmail(email);
     _validateEmail(normalizedEmail);
-    final auth = _auth;
-    if (auth == null) {
-      throw StateError(
-        'Password reset is only available when Firebase is connected.',
-      );
+    await ownerAuth.sendPasswordResetEmail(normalizedEmail);
+  }
+
+  /// Sends (or resends) the Firebase email-verification message.
+  Future<void> sendEmailVerification() async {
+    final ownerAuth = _requireOwnerAuth();
+    await ownerAuth.sendEmailVerification();
+    notifyListeners();
+  }
+
+  /// Refreshes the cached account after the owner follows the verification
+  /// link, so [isEmailVerified] reflects the change without signing in again.
+  Future<void> refreshOwnerAccount() async {
+    final ownerAuth = _ownerAuth;
+    if (ownerAuth == null) return;
+    await ownerAuth.reloadAccount();
+    notifyListeners();
+  }
+
+  OwnerAuth _requireOwnerAuth() {
+    final ownerAuth = _ownerAuth;
+    if (ownerAuth == null) throw const OwnerAuthUnavailableException();
+    return ownerAuth;
+  }
+
+  /// Ensures the signed-in owner matches [normalizedEmail].
+  OwnerAccount _requireSignedInOwner(String normalizedEmail) {
+    final account = _ownerAuth?.currentAccount;
+    if (account == null) {
+      throw StateError('Sign in with your shop owner account first.');
     }
-    await auth.sendPasswordResetEmail(email: normalizedEmail);
+    if (account.email != normalizedEmail) {
+      throw StateError('You can only edit the shop for the signed-in account.');
+    }
+    return account;
   }
 
   Shop? shopForOwner(String email) {
@@ -358,18 +344,17 @@ class ShopStore extends ChangeNotifier {
       'Shop information',
       maxLength: 2000,
     );
+    final account = _requireSignedInOwner(normalizedEmail);
     final firestore = _firestore;
 
     if (firestore == null) {
-      final owner = _demoOwners[normalizedEmail];
-      if (owner == null) {
-        throw StateError('Sign in with a demo owner account first.');
-      }
       final existing = shopForOwner(normalizedEmail);
       final shop = Shop(
         id: normalizedEmail,
         ownerEmailHash: ownerEmailHash(normalizedEmail),
-        ownerName: owner.name,
+        ownerName: account.displayName.isEmpty
+            ? normalizedEmail
+            : account.displayName,
         name: trimmedName,
         location: trimmedLocation,
         description: trimmedDescription,
@@ -380,23 +365,15 @@ class ShopStore extends ChangeNotifier {
       return;
     }
 
-    final user = _auth?.currentUser;
-    if (user == null) {
-      throw StateError('Sign in with your shop owner account first.');
-    }
-    if (_normalizeEmail(user.email ?? '') != normalizedEmail) {
-      throw StateError('You can only edit the shop for the signed-in account.');
-    }
-
     final existing =
-        shopForOwner(normalizedEmail) ?? await _readShop(firestore, user.uid);
-    final displayName = user.displayName?.trim();
+        shopForOwner(normalizedEmail) ??
+        await _readShop(firestore, account.uid);
     final shop = Shop(
-      id: user.uid,
+      id: account.uid,
       ownerEmailHash: ownerEmailHash(normalizedEmail),
-      ownerName: displayName == null || displayName.isEmpty
+      ownerName: account.displayName.isEmpty
           ? (existing?.ownerName ?? normalizedEmail)
-          : displayName,
+          : account.displayName,
       name: trimmedName,
       location: trimmedLocation,
       description: trimmedDescription,
@@ -405,10 +382,10 @@ class ShopStore extends ChangeNotifier {
     );
     await firestore
         .collection(_shopsCollection)
-        .doc(user.uid)
+        .doc(account.uid)
         .set(shop.toMap(), SetOptions(merge: true));
-    _shopDocuments[user.uid] = shop;
-    _productsByShop[user.uid] ??= shop.products;
+    _shopDocuments[account.uid] = shop;
+    _productsByShop[account.uid] ??= shop.products;
     _rebuildShops();
   }
 
@@ -468,14 +445,6 @@ class ShopStore extends ChangeNotifier {
         ),
       );
       return;
-    }
-
-    final user = _auth?.currentUser;
-    if (user == null) {
-      throw StateError('Sign in with your shop owner account first.');
-    }
-    if (_normalizeEmail(user.email ?? '') != _normalizeEmail(ownerEmail)) {
-      throw StateError('You can only edit the shop for the signed-in account.');
     }
 
     final productId = firestore.collection(_shopsCollection).doc().id;
@@ -588,6 +557,7 @@ class ShopStore extends ChangeNotifier {
 
   Future<void> deleteShop({required String ownerEmail}) async {
     final normalizedEmail = _normalizeEmail(ownerEmail);
+    _requireSignedInOwner(normalizedEmail);
     final shop = shopForOwner(normalizedEmail);
     if (shop == null) {
       throw StateError('There is no shop profile to delete.');
@@ -595,15 +565,6 @@ class ShopStore extends ChangeNotifier {
 
     final firestore = _firestore;
     if (firestore != null) {
-      final user = _auth?.currentUser;
-      if (user == null) {
-        throw StateError('Sign in with your shop owner account first.');
-      }
-      if (_normalizeEmail(user.email ?? '') != normalizedEmail) {
-        throw StateError(
-          'You can only delete the shop for the signed-in account.',
-        );
-      }
       final products =
           _productsByShop[shop.id] ?? await _readProducts(firestore, shop.id);
       await _deleteShopDocuments(shop.id, products);
@@ -649,6 +610,7 @@ class ShopStore extends ChangeNotifier {
 
   Shop _requireOwnerShop(String ownerEmail) {
     final normalizedEmail = _normalizeEmail(ownerEmail);
+    _requireSignedInOwner(normalizedEmail);
     final shop = shopForOwner(normalizedEmail);
     if (shop == null) {
       throw StateError('Create your shop profile before adding products.');
@@ -670,9 +632,9 @@ class ShopStore extends ChangeNotifier {
       if (_shops.length != before) notifyListeners();
       return;
     }
-    final user = _auth?.currentUser;
-    if (user == null) return;
-    final hash = ownerEmailHash(_normalizeEmail(user.email ?? ''));
+    final account = _ownerAuth?.currentAccount;
+    if (account == null) return;
+    final hash = ownerEmailHash(account.email);
     final stale = _shops
         .where(
           (shop) =>
@@ -682,7 +644,7 @@ class ShopStore extends ChangeNotifier {
         )
         .toList(growable: false);
     if (stale.isNotEmpty) {
-      deleteShop(ownerEmail: user.email!).catchError((_) {});
+      deleteShop(ownerEmail: account.email).catchError((_) {});
     }
   }
 
@@ -839,18 +801,6 @@ Set<String> _searchWords(String value) => value
           word != 'for',
     )
     .toSet();
-
-class _DemoOwner {
-  const _DemoOwner({
-    required this.name,
-    required this.password,
-    required this.pin,
-  });
-
-  final String name;
-  final String password;
-  final String pin;
-}
 
 @Deprecated('Use ShopStore instead.')
 typedef TemporaryShopStore = ShopStore;

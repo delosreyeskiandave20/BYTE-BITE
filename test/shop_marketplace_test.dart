@@ -4,13 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/data/shop_store.dart';
 import 'package:flutter_application_1/screens/shop_page.dart';
 
-Future<TemporaryShopStore> _marketplaceStore() async {
-  final store = TemporaryShopStore();
+import 'support/fake_owner_auth.dart';
+
+Future<ShopStore> _marketplaceStore() async {
+  final store = ShopStore(ownerAuth: FakeOwnerAuth());
   await store.createOwner(
     name: 'Alpha Owner',
     email: 'alpha@example.com',
     password: 'temporary123',
-    pin: '123456',
   );
   await store.saveShop(
     ownerEmail: 'alpha@example.com',
@@ -38,7 +39,6 @@ Future<TemporaryShopStore> _marketplaceStore() async {
     name: 'Beta Owner',
     email: 'beta@example.com',
     password: 'temporary123',
-    pin: '123456',
   );
   await store.saveShop(
     ownerEmail: 'beta@example.com',
@@ -72,12 +72,11 @@ void main() {
   testWidgets('public shop page shows saved shops before products are listed', (
     WidgetTester tester,
   ) async {
-    final store = TemporaryShopStore();
+    final store = ShopStore(ownerAuth: FakeOwnerAuth());
     await store.createOwner(
       name: 'New Owner',
       email: 'new@example.com',
       password: 'temporary123',
-      pin: '123456',
     );
     await store.saveShop(
       ownerEmail: 'new@example.com',

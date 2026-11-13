@@ -24,6 +24,8 @@ import 'package:flutter_application_1/widgets/buy_options_button.dart';
 import 'package:flutter_application_1/widgets/desktop_phone_frame.dart';
 import 'package:flutter_application_1/widgets/vehicle_variant_carousel.dart';
 
+import 'support/fake_owner_auth.dart';
+
 Future<void> _pumpIntoMotoScan(WidgetTester tester) async {
   final logicalSize = tester.view.physicalSize / tester.view.devicePixelRatio;
   if (logicalSize == const Size(800, 600)) {
@@ -295,31 +297,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Manage your shop'));
     await tester.pumpAndSettle();
-    expect(find.text('Shop owner sign in'), findsOneWidget);
-    expect(find.byType(TextFormField), findsNWidgets(3));
-    expect(find.textContaining('Temporary demo only'), findsOneWidget);
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Email address'),
-      'demo@motoscan.test',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Password'),
-      'demo1234',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, '6-digit PIN'),
-      '123456',
-    );
-    final loginButton = find.widgetWithText(ElevatedButton, 'Log in');
-    await tester.ensureVisible(loginButton);
-    await tester.tap(loginButton);
-    await tester.pumpAndSettle();
-    expect(find.text('Shop profile'), findsOneWidget);
-    expect(find.text('MotoScan Demo Parts'), findsOneWidget);
 
-    Navigator.of(tester.element(find.text('Manage your shop'))).pop();
-    await tester.pumpAndSettle();
-    expect(find.text('MotoScan Shop'), findsOneWidget);
+    expect(find.text('Shop owner sign in'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(2));
+    expect(find.text('6-digit PIN'), findsNothing);
+    expect(find.textContaining('Temporary demo only'), findsNothing);
+    expect(find.textContaining('Firebase Authentication'), findsOneWidget);
   });
 
   testWidgets('shop tab lists demo products, prices, location, and markets', (
@@ -342,22 +325,25 @@ void main() {
   testWidgets('new owner products appear in the public shop list', (
     WidgetTester tester,
   ) async {
-    final store = TemporaryShopStore();
-    store.createOwner(
+    final store = ShopStore(ownerAuth: FakeOwnerAuth());
+    addTearDown(store.dispose);
+    await store.createOwner(
       name: 'Test Owner',
       email: 'test-owner@example.com',
       password: 'temporary123',
-      pin: '123456',
     );
-    store.saveShop(
+    await store.saveShop(
       ownerEmail: 'test-owner@example.com',
       name: 'Test Parts Shop',
       location: 'Cebu City, Cebu',
       description: 'Local motorcycle parts.',
     );
-    store.addProduct(ownerEmail: 'test-owner@example.com', name: 'Brake lever');
+    await store.addProduct(
+      ownerEmail: 'test-owner@example.com',
+      name: 'Brake lever',
+    );
     final product = store.shopForOwner('test-owner@example.com')!.products.last;
-    store.updateProduct(
+    await store.updateProduct(
       ownerEmail: 'test-owner@example.com',
       productId: product.id,
       description: 'Replacement brake lever.',
@@ -383,7 +369,7 @@ void main() {
     expect(find.text('3 in stock'), findsOneWidget);
     expect(find.text('Unavailable'), findsOneWidget);
 
-    store.updateProduct(
+    await store.updateProduct(
       ownerEmail: 'test-owner@example.com',
       productId: product.id,
       description: product.description,
@@ -399,14 +385,14 @@ void main() {
     WidgetTester tester,
   ) async {
     var didFinishEditing = false;
-    final store = TemporaryShopStore();
-    store.createOwner(
+    final store = ShopStore(ownerAuth: FakeOwnerAuth());
+    addTearDown(store.dispose);
+    await store.createOwner(
       name: 'Test Owner',
       email: 'test-owner@example.com',
       password: 'temporary123',
-      pin: '123456',
     );
-    store.saveShop(
+    await store.saveShop(
       ownerEmail: 'test-owner@example.com',
       name: 'Test Parts Shop',
       location: 'Cebu City, Cebu',
@@ -661,7 +647,8 @@ void main() {
   testWidgets('Buy shows matching in-stock local shops first', (
     WidgetTester tester,
   ) async {
-    final store = TemporaryShopStore();
+    final store = ShopStore(ownerAuth: FakeOwnerAuth());
+    addTearDown(store.dispose);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -1084,14 +1071,6 @@ void main() {
       var child = renderObject.firstChild;
       while (child != null) {
         final parentData = child.parentData! as FlexParentData;
-        if (parentData.offset.dx + child.size.width >
-            renderObject.size.width + 1) {
-          debugPrint(
-            'Overflow candidate ${renderObject.debugCreator}: '
-            'row=${renderObject.size.width}, child=${child.size.width}, '
-            'right=${parentData.offset.dx + child.size.width}',
-          );
-        }
         child = parentData.nextSibling;
       }
     }

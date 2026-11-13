@@ -128,27 +128,39 @@ class _MotoScanShellState extends State<_MotoScanShell> {
     );
   }
 
-  void _openOwnerSignIn() {
+  Future<void> _openOwnerSignIn() async {
+    final store = _shopStore;
+    final signedInEmail = store.signedInEmail;
+
+    // Firebase keeps the owner session across restarts; go straight to the
+    // dashboard instead of asking for credentials again.
+    if (signedInEmail != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ShopOwnerDashboardPage(
+            store: store,
+            ownerEmail: signedInEmail,
+            onDone: () => Navigator.of(context).pop(),
+          ),
+        ),
+      );
+      return;
+    }
+
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (authContext) => MotoScanAuthPage(
-          isDemoMode: !_shopStore.isCloudConnected,
-          onLogin: (email, password, pin) =>
-              _shopStore.signIn(email: email, password: password, pin: pin),
-          onCreateAccount: (name, email, password, pin) =>
-              _shopStore.createOwner(
-                name: name,
-                email: email,
-                password: password,
-                pin: pin,
-              ),
-          onForgotPassword: _shopStore.sendPasswordResetEmail,
+          onLogin: (email, password) =>
+              store.signIn(email: email, password: password),
+          onCreateAccount: (name, email, password) =>
+              store.createOwner(name: name, email: email, password: password),
+          onForgotPassword: store.sendPasswordResetEmail,
           onAuthenticated: (email) async {
             if (!authContext.mounted) return;
             Navigator.of(authContext).pushReplacement(
               MaterialPageRoute<void>(
                 builder: (_) => ShopOwnerDashboardPage(
-                  store: _shopStore,
+                  store: store,
                   ownerEmail: email,
                   onDone: () => Navigator.of(context).pop(),
                 ),

@@ -15,17 +15,19 @@ MotoScan is a Flutter catalog and marketplace app for motorcycles, parts, and ac
 
 ## Authentication model
 
-Shop owners sign in with **Firebase Email/Password** authentication. Public browsing does not require an account.
+Shop owners sign in with **Firebase Email/Password** authentication. Public browsing does not require an account. Firebase is the only credential store: the app does not keep passwords, PINs, or custom auth tokens.
 
-There is **no OTP, MFA, email-verification gate, custom-token flow, or Cloud Functions backend** in this project. The Firestore OTP, rate-limit, audit, and session collections were removed.
+Owner account features:
 
-If Firebase is not configured, or the current platform is not registered in `lib/firebase_options.dart`, the app falls back to an **in-memory demo store**:
+- **Create account** and sign in with email and password.
+- **Email verification** link sent on sign-up, with resend and status check actions in the dashboard.
+- **Password reset** email from the sign-in screen.
+- **Persistent session** across app restarts using Firebase Authentication's local persistence.
+- **Sign out** from the owner dashboard.
 
-- Shop: `MotoScan Demo Parts`
-- Owner login: `demo@motoscan.test` / `demo1234`
-- All demo data resets when the app restarts.
+There is **no OTP, MFA, app-managed PIN, custom-token flow, or Cloud Functions backend** in this project.
 
-Do not use a real password in demo mode.
+If Firebase is not configured, or the current platform is not registered in `lib/firebase_options.dart`, public shop data still falls back to the in-memory demo listing (`MotoScan Demo Parts`). Owner authentication is intentionally unavailable in that mode; run `flutterfire configure` and enable **Authentication → Email/Password** to create accounts.
 
 ## Project structure
 
@@ -75,6 +77,14 @@ GitHub Actions runs `flutter analyze` and `flutter test` on pushes and pull requ
 ## Assets
 
 Catalog images live under `assets/` and are declared in `pubspec.yaml`. Keep new images compressed and reasonably sized before adding them.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for project security guidelines.
+
+## Coding guidelines
+
+See [CODING_GUIDELINES.md](CODING_GUIDELINES.md) for readability, structure, and clean code guidelines.
 
 ## License
 

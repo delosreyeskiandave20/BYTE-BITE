@@ -28,6 +28,8 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
 
   bool _saving = false;
   bool _loadingShop = false;
+  bool _sendingVerification = false;
+  bool _checkingVerification = false;
   String? _loadError;
   String _savedSignature = '';
 
@@ -303,6 +305,43 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
     }
   }
 
+  Future<void> _sendVerificationEmail() async {
+    setState(() => _sendingVerification = true);
+    try {
+      await widget.store.sendEmailVerification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Verification email sent to ${widget.ownerEmail}.'),
+        ),
+      );
+    } catch (error) {
+      if (mounted) _showError(error, action: 'send the verification email');
+    } finally {
+      if (mounted) setState(() => _sendingVerification = false);
+    }
+  }
+
+  Future<void> _checkVerification() async {
+    setState(() => _checkingVerification = true);
+    try {
+      await widget.store.refreshOwnerAccount();
+      if (!mounted) return;
+      final verified = widget.store.isEmailVerified;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            verified ? 'Email verified. Your owner account is fully set up.' : 'Email is not verified yet. Open the link in your inbox and try again.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) _showError(error, action: 'check your email verification');
+    } finally {
+      if (mounted) setState(() => _checkingVerification = false);
+    }
+  }
+
   Future<void> _signOut() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -367,6 +406,17 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
+              if (widget.store.isOwnerAuthAvailable &&
+                  !widget.store.isEmailVerified) ...[
+                _VerificationBanner(
+                  email: widget.ownerEmail,
+                  sending: _sendingVerification,
+                  checking: _checkingVerification,
+                  onSend: _sendVerificationEmail,
+                  onCheck: _checkVerification,
+                ),
+                const SizedBox(height: 14),
+              ],
               if (_loadError != null) ...[
                 _LoadErrorBanner(
                   message: _loadError!,
@@ -463,7 +513,9 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                     children: [
                       for (var index = 0; index < shop.products.length; index++)
                         _OwnerProductTile(
-                          key: ValueKey('owner-product-$index-${shop.products[index].id}'),
+                          key: ValueKey(
+                            'owner-product-$index-${shop.products[index].id}',
+                          ),
                           product: shop.products[index],
                           onEdit: () => _editProduct(shop.products[index]),
                           onDelete: () => _deleteProduct(shop.products[index]),
@@ -510,6 +562,100 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
   String? _required(String? value, String label) {
     if (value == null || value.trim().isEmpty) return '$label is required.';
     return null;
+  }
+}
+
+class _VerificationBanner extends StatelessWidget {
+  const _VerificationBanner({
+    required this.email,
+    required this.sending,
+    required this.checking,
+    required this.onSend,
+    required this.onCheck,
+  });
+
+  final String email;
+  final bool sending;
+  final bool checking;
+  final VoidCallback onSend;
+  final VoidCallback onCheck;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.tealSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.tealBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.mark_email_unread_outlined,
+                color: AppColors.teal,
+                size: 20,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Verify your email',
+                      style: TextStyle(
+                        color: AppColors.ink,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'We sent a verification link to $email. Confirm it to secure your owner account.',
+                      style: const TextStyle(
+                        color: AppColors.inkSoft,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 2,
+            children: [
+              TextButton(
+                onPressed: sending ? null : onSend,
+                child: sending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Resend email'),
+              ),
+              TextButton(
+                onPressed: checking ? null : onCheck,
+                child: checking
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('I have verified'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
