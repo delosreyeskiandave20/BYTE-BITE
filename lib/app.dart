@@ -11,13 +11,20 @@ import 'screens/parts_catalog_page.dart';
 import 'screens/search_page.dart';
 import 'screens/shop_page.dart';
 import 'screens/shop_owner_dashboard_page.dart';
+import 'screens/welcome_page.dart';
 import 'theme/app_theme.dart';
 import 'widgets/desktop_phone_frame.dart';
 import 'widgets/home_bottom_navigation.dart';
 
 /// Root app widget.
 class MotoScanApp extends StatelessWidget {
-  const MotoScanApp({super.key});
+  const MotoScanApp({this.showWelcome = false, super.key});
+
+  /// Whether to open on the [WelcomePage] front page before Home.
+  ///
+  /// `main()` turns this on for real launches. It defaults to off so widget
+  /// tests can start directly on the Home tab.
+  final bool showWelcome;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +32,20 @@ class MotoScanApp extends StatelessWidget {
       title: 'MotoScan',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const _MotoScanShell(),
+      home: showWelcome
+          ? Builder(
+              builder: (context) => WelcomePage(
+                onGetStarted: () => Navigator.of(context).pushReplacement(
+                  PageRouteBuilder<void>(
+                    transitionDuration: const Duration(milliseconds: 320),
+                    pageBuilder: (_, _, _) => const _MotoScanShell(),
+                    transitionsBuilder: (_, animation, _, child) =>
+                        FadeTransition(opacity: animation, child: child),
+                  ),
+                ),
+              ),
+            )
+          : const _MotoScanShell(),
       builder: (context, child) =>
           DesktopPhoneFrame(child: child ?? const SizedBox.shrink()),
     );

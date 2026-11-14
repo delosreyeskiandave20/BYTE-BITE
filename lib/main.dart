@@ -8,5 +8,5 @@ export 'app.dart' show MotoScanApp;
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseBootstrap.initialize();
-  runApp(const MotoScanApp());
+  runApp(const MotoScanApp(showWelcome: true));
 }

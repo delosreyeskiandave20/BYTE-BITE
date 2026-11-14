@@ -70,6 +70,58 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('welcome front page opens the home tab', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 860);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const MotoScanApp(showWelcome: true));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('welcome-hero-image')), findsOneWidget);
+    expect(find.text('The right parts for your ride.'), findsOneWidget);
+    expect(find.text('Browse parts'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('welcome-get-started')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('welcome-get-started')), findsNothing);
+    expect(find.text('Browse parts'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('welcome front page fits a small phone with large text', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await tester.pumpWidget(const MotoScanApp(showWelcome: true));
+    await tester.pumpAndSettle();
+
+    final layoutException = tester.takeException();
+    expect(
+      layoutException,
+      isNull,
+      reason: layoutException is FlutterError
+          ? layoutException.toStringDeep()
+          : '$layoutException',
+    );
+    final getStarted = find.byKey(const ValueKey('welcome-get-started'));
+    await tester.ensureVisible(getStarted);
+    await tester.pumpAndSettle();
+    await tester.tap(getStarted);
+    await tester.pumpAndSettle();
+    expect(find.text('Browse parts'), findsOneWidget);
+  });
+
   testWidgets('login account entry points use a person icon', (
     WidgetTester tester,
   ) async {
