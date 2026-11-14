@@ -62,13 +62,36 @@ class VehiclePartsVariant {
   }
 }
 
-String vehiclePartImageAsset({
+String? vehiclePartImageAsset({
   required String category,
   required String part,
   String? brand,
   String? model,
   String? variant,
 }) {
+  if (brand == 'Honda' &&
+      model == 'Click125' &&
+      (variant == 'Smart Edition' || variant == 'Street')) {
+    const partsWithoutVariantImages = {
+      'front_cowl_fairing',
+      'leg_shield_floor_panel',
+      'rear_fender_mudguard',
+      'side_cover',
+      'seat_assembly_seat_cover',
+    };
+    if (partsWithoutVariantImages.contains(_assetSlug(part))) {
+      return null;
+    }
+
+    final imageFile = _click125StandardPartImages[_assetSlug(part)];
+    if (imageFile != null) {
+      final variantFolder = variant == 'Smart Edition'
+          ? 'click125_smart_edition'
+          : 'click125_street';
+      return 'assets/vehicle_parts/$variantFolder/$imageFile';
+    }
+  }
+
   if (brand == 'Honda' && model == 'Click125' && variant == 'Standard') {
     final imageFile = _click125StandardPartImages[_assetSlug(part)];
     if (imageFile != null) {

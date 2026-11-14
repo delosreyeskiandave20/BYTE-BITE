@@ -379,25 +379,30 @@ const _specificPartDescriptions = {
 class _VehiclePartImage extends StatelessWidget {
   const _VehiclePartImage({required this.imageAsset, super.key});
 
-  final String imageAsset;
+  final String? imageAsset;
 
   @override
   Widget build(BuildContext context) {
+    final imageAsset = this.imageAsset;
     return SizedBox(
-      key: ValueKey('part-image-box-${imageAsset.split('/').last}'),
+      key: ValueKey(
+        'part-image-box-${imageAsset?.split('/').last ?? 'missing'}',
+      ),
       width: 92,
       height: 92,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(9),
         child: ColoredBox(
           color: Colors.white,
-          child: Image.asset(
-            imageAsset,
-            cacheWidth: 184,
-            fit: BoxFit.contain,
-            excludeFromSemantics: true,
-            errorBuilder: (context, error, stackTrace) => _placeholder(),
-          ),
+          child: imageAsset == null
+              ? _placeholder()
+              : Image.asset(
+                  imageAsset,
+                  cacheWidth: 184,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true,
+                  errorBuilder: (context, error, stackTrace) => _placeholder(),
+                ),
         ),
       ),
     );

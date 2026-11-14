@@ -899,7 +899,7 @@ void main() {
         category: 'Body',
         part: part,
       );
-      await rootBundle.load(asset);
+      await rootBundle.load(asset!);
     }
   });
 
@@ -986,7 +986,7 @@ void main() {
           part: entry.key,
         );
         expect(asset, 'assets/vehicle_parts/click125_standard/${entry.value}');
-        await rootBundle.load(asset);
+        await rootBundle.load(asset!);
       }
 
       expect(
@@ -1030,7 +1030,7 @@ void main() {
           part: entry.key,
         );
         expect(asset, 'assets/vehicle_parts/beat_playful/${entry.value}');
-        await rootBundle.load(asset);
+        await rootBundle.load(asset!);
       }
 
       const premiumSpecificParts = {
@@ -1050,7 +1050,7 @@ void main() {
           part: entry.key,
         );
         expect(asset, 'assets/vehicle_parts/beat_premium/${entry.value}');
-        await rootBundle.load(asset);
+        await rootBundle.load(asset!);
       }
 
       const brakeAsset =
@@ -1066,6 +1066,65 @@ void main() {
         brakeAsset,
       );
       await rootBundle.load(brakeAsset);
+    },
+  );
+
+  test(
+    'Click125 Smart Edition and Street keep parts but omit five images',
+    () async {
+      final catalog = await loadVehiclePartsCatalog();
+      const partsWithoutImages = [
+        'Front cowl/fairing',
+        'Leg shield/floor panel',
+        'Rear fender/mudguard',
+        'Side cover',
+        'Seat assembly/seat cover',
+      ];
+
+      for (final variant in ['Smart Edition', 'Street']) {
+        final click125 = catalog.singleWhere(
+          (vehicle) =>
+              vehicle.brand == 'Honda' &&
+              vehicle.model == 'Click125' &&
+              vehicle.variant == variant,
+        );
+        final bodyParts = click125.categories
+            .singleWhere((category) => category.name == 'Body')
+            .parts;
+
+        expect(click125.partCount, 50);
+        for (final part in partsWithoutImages) {
+          expect(bodyParts, contains(part));
+          expect(
+            vehiclePartImageAsset(
+              brand: click125.brand,
+              model: click125.model,
+              variant: click125.variant,
+              category: 'Body',
+              part: part,
+            ),
+            isNull,
+          );
+        }
+
+        for (final part in [
+          'Front fender',
+          'Side mirror',
+          'Headlight assembly',
+          'Tail-light/turn-signal assembly',
+        ]) {
+          expect(bodyParts, contains(part));
+          final imageAsset = vehiclePartImageAsset(
+            brand: click125.brand,
+            model: click125.model,
+            variant: click125.variant,
+            category: 'Body',
+            part: part,
+          );
+          expect(imageAsset, startsWith('assets/vehicle_parts/click125_'));
+          await rootBundle.load(imageAsset!);
+        }
+      }
     },
   );
 

@@ -70,6 +70,8 @@ flutter:
     - assets/vehicle_parts/beat_playful/
     - assets/vehicle_parts/beat_premium/
     - assets/vehicle_parts/click125_standard/
+    - assets/vehicle_parts/click125_smart_edition/
+    - assets/vehicle_parts/click125_street/
     - assets/brands/
     - assets/categories/engine/
     - assets/categories/electrical/
