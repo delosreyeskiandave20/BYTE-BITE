@@ -103,6 +103,10 @@ flutter:
     - assets/vehicle_parts/mio_fazzio_neo/
     - assets/vehicle_parts/mio_i125_standard/
     - assets/vehicle_parts/mio_i125_s/
+    - assets/vehicle_parts/lexi_155_standard/
+    - assets/vehicle_parts/lexi_155_connected/
+    - assets/vehicle_parts/nmax_standard/
+    - assets/vehicle_parts/nmax_tech_max/
     - assets/brands/
     - assets/categories/engine/
     - assets/categories/electrical/
