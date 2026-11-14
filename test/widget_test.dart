@@ -1189,7 +1189,7 @@ void main() {
           category: 'Suspension',
           part: 'Fork bushing',
         ),
-        'assets/vehicle_parts/suspension/fork_bushing.png',
+        'assets/vehicle_parts/click125_standard/fork_bushing.jpg',
       );
       expect(
         vehiclePartImageAsset(
@@ -1199,7 +1199,7 @@ void main() {
           category: 'Body',
           part: 'Grab rail',
         ),
-        'assets/vehicle_parts/body/grab_rail.png',
+        'assets/vehicle_parts/click125_standard/grab_rail.jpg',
       );
     },
   );
@@ -1262,10 +1262,12 @@ void main() {
   );
 
   test(
-    'Click125 Smart Edition and Street keep parts but omit five images',
+    'Click125 Smart Edition and Street use their own body panel photos',
     () async {
       final catalog = await loadVehiclePartsCatalog();
-      const partsWithoutImages = [
+      // These panels differ from the Standard's, so each variant has its own
+      // photo instead of borrowing the Standard one.
+      const variantBodyParts = [
         'Front cowl/fairing',
         'Leg shield/floor panel',
         'Rear fender/mudguard',
@@ -1285,18 +1287,20 @@ void main() {
             .parts;
 
         expect(click125.partCount, 50);
-        for (final part in partsWithoutImages) {
+        final folder = variant == 'Smart Edition'
+            ? 'click125_smart_edition'
+            : 'click125_street';
+        for (final part in variantBodyParts) {
           expect(bodyParts, contains(part));
-          expect(
-            vehiclePartImageAsset(
-              brand: click125.brand,
-              model: click125.model,
-              variant: click125.variant,
-              category: 'Body',
-              part: part,
-            ),
-            isNull,
+          final imageAsset = vehiclePartImageAsset(
+            brand: click125.brand,
+            model: click125.model,
+            variant: click125.variant,
+            category: 'Body',
+            part: part,
           );
+          expect(imageAsset, startsWith('assets/vehicle_parts/$folder/'));
+          await rootBundle.load(imageAsset!);
         }
 
         for (final part in [

@@ -107,6 +107,40 @@ flutter:
     - assets/vehicle_parts/lexi_155_connected/
     - assets/vehicle_parts/nmax_standard/
     - assets/vehicle_parts/nmax_tech_max/
+    - assets/vehicle_parts/access_ride_connect_edition/
+    - assets/vehicle_parts/access_standard/
+    - assets/vehicle_parts/aerox_sp/
+    - assets/vehicle_parts/aerox_standard/
+    - assets/vehicle_parts/avenis_standard/
+    - assets/vehicle_parts/barako_ii_alloy/
+    - assets/vehicle_parts/barako_ii_standard/
+    - assets/vehicle_parts/brusky_125_standard/
+    - assets/vehicle_parts/burgman_15_standard/
+    - assets/vehicle_parts/burgman_street_125_ex_standard/
+    - assets/vehicle_parts/burgman_street_standard/
+    - assets/vehicle_parts/gamma_ss_200_standard/
+    - assets/vehicle_parts/gixxer_155_standard/
+    - assets/vehicle_parts/mt15_standard/
+    - assets/vehicle_parts/ninja_500_se/
+    - assets/vehicle_parts/ninja_500_standard/
+    - assets/vehicle_parts/ninja_650_krt_edition/
+    - assets/vehicle_parts/ninja_650_standard/
+    - assets/vehicle_parts/raider_pro_standard/
+    - assets/vehicle_parts/raider_r150_standard/
+    - assets/vehicle_parts/rfi_175_standard/
+    - assets/vehicle_parts/royal_125_standard/
+    - assets/vehicle_parts/smash_fi_standard/
+    - assets/vehicle_parts/sniper155_r/
+    - assets/vehicle_parts/sniper155_standard/
+    - assets/vehicle_parts/surf_standard/
+    - assets/vehicle_parts/v_strom_160_standard/
+    - assets/vehicle_parts/versys_650_lt/
+    - assets/vehicle_parts/versys_650_standard/
+    - assets/vehicle_parts/xmax_standard/
+    - assets/vehicle_parts/xplorer_250r_standard/
+    - assets/vehicle_parts/xsr155_standard/
+    - assets/vehicle_parts/yzf_r15m_r15m/
+    - assets/vehicle_parts/z650_standard/
     - assets/brands/
     - assets/categories/engine/
     - assets/categories/electrical/

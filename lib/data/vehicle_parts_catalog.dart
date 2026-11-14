@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import 'vehicle_part_added_images.dart';
+
 const vehiclePartsCatalogAssetPath = 'assets/motorcycle_parts_catalog.json';
 
 Future<List<VehiclePartsVariant>>? _vehiclePartsCatalogFuture;
@@ -69,6 +71,12 @@ String? vehiclePartImageAsset({
   String? model,
   String? variant,
 }) {
+  final folder = _partImageFolder(brand, model, variant);
+  final addedImage = addedVehiclePartImages[folder]?[_assetSlug(part)];
+  if (addedImage != null) {
+    return 'assets/vehicle_parts/$folder/$addedImage';
+  }
+
   if (brand == 'Honda' &&
       model == 'Click125' &&
       (variant == 'Smart Edition' || variant == 'Street')) {
@@ -130,6 +138,28 @@ String? vehiclePartImageAsset({
     return 'assets/vehicle_parts/$variantFolder/${_assetSlug(part)}.jpg';
   }
   return 'assets/vehicle_parts/${_assetSlug(category)}/${_assetSlug(part)}.png';
+}
+
+/// The `assets/vehicle_parts/` folder that holds a variant's part photos.
+String? _partImageFolder(String? brand, String? model, String? variant) {
+  if (brand == 'Honda') {
+    switch ((model, variant)) {
+      case ('Beat', 'Playful'):
+        return 'beat_playful';
+      case ('Beat', 'Premium'):
+        return 'beat_premium';
+      case ('Click125', 'Standard'):
+        return 'click125_standard';
+      case ('Click125', 'Smart Edition'):
+        return 'click125_smart_edition';
+      case ('Click125', 'Street'):
+        return 'click125_street';
+      case ('Giorno+', 'Standard'):
+        return 'giorno_plus_standard';
+    }
+  }
+  final key = '$brand|$model|$variant';
+  return _jpgPartImageFolders[key] ?? addedVehiclePartImageFolders[key];
 }
 
 /// Variants whose part images are all `<part_slug>.jpg` in one folder.
