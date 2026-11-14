@@ -69,6 +69,13 @@ String vehiclePartImageAsset({
   String? model,
   String? variant,
 }) {
+  if (brand == 'Honda' && model == 'Click125' && variant == 'Standard') {
+    final imageFile = _click125StandardPartImages[_assetSlug(part)];
+    if (imageFile != null) {
+      return 'assets/vehicle_parts/click125_standard/$imageFile';
+    }
+  }
+
   if (brand == 'Honda' &&
       model == 'Beat' &&
       (variant == 'Playful' || variant == 'Premium')) {
@@ -90,6 +97,57 @@ String vehiclePartImageAsset({
   }
   return 'assets/vehicle_parts/${_assetSlug(category)}/${_assetSlug(part)}.png';
 }
+
+const _click125StandardPartImages = <String, String>{
+  'engine_oil': 'engine_oil.png',
+  'oil_screen_filter': 'oil_screen_filter.jpg',
+  'drain_plug_washer': 'drain_plug_washer.png',
+  'air_filter': 'air_filter.png',
+  'spark_plug': 'spark_plug.webp',
+  'cvt_drive_belt': 'cvt_drive_belt.jpg',
+  'variator_roller_set': 'variator_roller_set.jpg',
+  'cvt_slider_set': 'cvt_slider_set.png',
+  'clutch_shoe_set': 'clutch_shoe_set.png',
+  'final_drive_gear_oil': 'final_drive_gear_oil.png',
+  '12_v_battery': '12_v_battery.jpg',
+  'main_fuse': 'main_fuse.png',
+  'starter_relay': 'starter_relay.png',
+  'regulator_rectifier': 'regulator_rectifier.png',
+  'stator_charging_coil': 'stator_charging_coil.webp',
+  'spark_plug_cap': 'spark_plug_cap.jpg',
+  'ignition_coil': 'ignition_coil.png',
+  'ecu_pgm_fi_unit': 'ecu_pgm_fi_unit.png',
+  'oxygen_sensor': 'oxygen_sensor.png',
+  'brake_light_switch': 'brake_light_switch.png',
+  'front_fork_oil': 'front_fork_oil.jpg',
+  'fork_oil_seal': 'fork_oil_seal.png',
+  'fork_dust_seal': 'fork_dust_seal.png',
+  'front_fork_spring': 'front_fork_spring.png',
+  'rear_shock_absorber': 'rear_shock_absorber.png',
+  'rear_shock_bushing': 'rear_shock_bushing.png',
+  'steering_head_bearing': 'steering_head_bearing.png',
+  'swingarm_pivot_bushing': 'swingarm_pivot_bushing.png',
+  'side_stand_switch': 'side_stand_switch.png',
+  'front_tire': 'front_tire.png',
+  'rear_tire': 'rear_tire.png',
+  'front_wheel_bearing': 'front_wheel_bearing.jpg',
+  'rear_wheel_bearing': 'rear_wheel_bearing.png',
+  'wheel_oil_seal': 'wheel_oil_seal.jpg',
+  'front_axle_collar': 'front_axle_collar.png',
+  'rear_axle_collar': 'rear_axle_collar.png',
+  'tubeless_valve_stem': 'tubeless_valve_stem.jpg',
+  'brake_disc_or_drum': 'brake_disc_or_drum.png',
+  'tire_pressure_valve_core': 'tire_pressure_valve_core.png',
+  'front_cowl_fairing': 'front_cowl_fairing.png',
+  'leg_shield_floor_panel': 'leg_shield_floor_panel.png',
+  'front_fender': 'front_fender.jpg',
+  'rear_fender_mudguard': 'rear_fender_mudguard.jpg',
+  'side_cover': 'side_cover.png',
+  'seat_assembly_seat_cover': 'seat_assembly_seat_cover.png',
+  'side_mirror': 'side_mirror.png',
+  'headlight_assembly': 'headlight_assembly.png',
+  'tail_light_turn_signal_assembly': 'tail_light_turn_signal_assembly.png',
+};
 
 const _beatPlayfulPartImages = <String, String>{
   'engine_oil': 'engine_oil.jpg',

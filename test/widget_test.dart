@@ -904,6 +904,115 @@ void main() {
   });
 
   test(
+    'Honda Click125 Standard photos match supplied parts and order',
+    () async {
+      final catalog = await loadVehiclePartsCatalog();
+      final click125 = catalog.firstWhere(
+        (vehicle) =>
+            vehicle.brand == 'Honda' &&
+            vehicle.model == 'Click125' &&
+            vehicle.variant == 'Standard',
+      );
+      const imageFiles = <String, String>{
+        'Engine oil': 'engine_oil.png',
+        'Oil screen/filter': 'oil_screen_filter.jpg',
+        'Drain-plug washer': 'drain_plug_washer.png',
+        'Air filter': 'air_filter.png',
+        'Spark plug': 'spark_plug.webp',
+        'CVT drive belt': 'cvt_drive_belt.jpg',
+        'Variator roller set': 'variator_roller_set.jpg',
+        'CVT slider set': 'cvt_slider_set.png',
+        'Clutch shoe set': 'clutch_shoe_set.png',
+        'Final-drive gear oil': 'final_drive_gear_oil.png',
+        '12-V battery': '12_v_battery.jpg',
+        'Main fuse': 'main_fuse.png',
+        'Starter relay': 'starter_relay.png',
+        'Regulator/rectifier': 'regulator_rectifier.png',
+        'Stator/charging coil': 'stator_charging_coil.webp',
+        'Spark-plug cap': 'spark_plug_cap.jpg',
+        'Ignition coil': 'ignition_coil.png',
+        'ECU/PGM-FI unit': 'ecu_pgm_fi_unit.png',
+        'Oxygen sensor': 'oxygen_sensor.png',
+        'Brake-light switch': 'brake_light_switch.png',
+        'Front-fork oil': 'front_fork_oil.jpg',
+        'Fork oil seal': 'fork_oil_seal.png',
+        'Fork dust seal': 'fork_dust_seal.png',
+        'Front fork spring': 'front_fork_spring.png',
+        'Rear shock absorber': 'rear_shock_absorber.png',
+        'Rear-shock bushing': 'rear_shock_bushing.png',
+        'Steering-head bearing': 'steering_head_bearing.png',
+        'Swingarm/pivot bushing': 'swingarm_pivot_bushing.png',
+        'Side-stand switch': 'side_stand_switch.png',
+        'Front tire': 'front_tire.png',
+        'Rear tire': 'rear_tire.png',
+        'Front wheel bearing': 'front_wheel_bearing.jpg',
+        'Rear wheel bearing': 'rear_wheel_bearing.png',
+        'Wheel oil seal': 'wheel_oil_seal.jpg',
+        'Front axle/collar': 'front_axle_collar.png',
+        'Rear axle/collar': 'rear_axle_collar.png',
+        'Tubeless valve stem': 'tubeless_valve_stem.jpg',
+        'Brake disc or drum': 'brake_disc_or_drum.png',
+        'Tire-pressure valve/core': 'tire_pressure_valve_core.png',
+        'Front cowl/fairing': 'front_cowl_fairing.png',
+        'Leg shield/floor panel': 'leg_shield_floor_panel.png',
+        'Front fender': 'front_fender.jpg',
+        'Rear fender/mudguard': 'rear_fender_mudguard.jpg',
+        'Side cover': 'side_cover.png',
+        'Seat assembly/seat cover': 'seat_assembly_seat_cover.png',
+        'Side mirror': 'side_mirror.png',
+        'Headlight assembly': 'headlight_assembly.png',
+        'Tail-light/turn-signal assembly':
+            'tail_light_turn_signal_assembly.png',
+      };
+
+      final orderedParts = click125.categories
+          .expand((category) => category.parts)
+          .toList();
+      expect([
+        ...orderedParts.take(23),
+        ...orderedParts.skip(24).take(22),
+        ...orderedParts.skip(47).take(3),
+      ], imageFiles.keys);
+
+      for (final entry in imageFiles.entries) {
+        final category = click125.categories.firstWhere(
+          (category) => category.parts.contains(entry.key),
+        );
+        final asset = vehiclePartImageAsset(
+          brand: click125.brand,
+          model: click125.model,
+          variant: click125.variant,
+          category: category.name,
+          part: entry.key,
+        );
+        expect(asset, 'assets/vehicle_parts/click125_standard/${entry.value}');
+        await rootBundle.load(asset);
+      }
+
+      expect(
+        vehiclePartImageAsset(
+          brand: click125.brand,
+          model: click125.model,
+          variant: click125.variant,
+          category: 'Suspension',
+          part: 'Fork bushing',
+        ),
+        'assets/vehicle_parts/suspension/fork_bushing.png',
+      );
+      expect(
+        vehiclePartImageAsset(
+          brand: click125.brand,
+          model: click125.model,
+          variant: click125.variant,
+          category: 'Body',
+          part: 'Grab rail',
+        ),
+        'assets/vehicle_parts/body/grab_rail.png',
+      );
+    },
+  );
+
+  test(
     'Honda Beat Premium reuses only compatible Playful part photos',
     () async {
       const compatibleParts = {
