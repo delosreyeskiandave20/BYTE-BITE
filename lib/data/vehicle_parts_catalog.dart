@@ -69,8 +69,21 @@ String vehiclePartImageAsset({
   String? model,
   String? variant,
 }) {
-  if (brand == 'Honda' && model == 'Beat' && variant == 'Playful') {
-    final imageFile = _beatPlayfulPartImages[_assetSlug(part)];
+  if (brand == 'Honda' &&
+      model == 'Beat' &&
+      (variant == 'Playful' || variant == 'Premium')) {
+    final partSlug = _assetSlug(part);
+    if (variant == 'Premium') {
+      final premiumImageFile = _beatPremiumPartImages[partSlug];
+      if (premiumImageFile != null) {
+        return 'assets/vehicle_parts/beat_premium/$premiumImageFile';
+      }
+      if (_beatPremiumPartImageExclusions.contains(partSlug)) {
+        return 'assets/vehicle_parts/${_assetSlug(category)}/$partSlug.png';
+      }
+    }
+
+    final imageFile = _beatPlayfulPartImages[partSlug];
     if (imageFile != null) {
       return 'assets/vehicle_parts/beat_playful/$imageFile';
     }
@@ -125,6 +138,24 @@ const _beatPlayfulPartImages = <String, String>{
   'side_mirror': 'side_mirror.jpg',
   'headlight_assembly': 'headlight_assembly.jpg',
   'tail_light_turn_signal_assembly': 'tail_light_turn_signal_assembly.jpg',
+};
+
+const _beatPremiumPartImages = <String, String>{
+  'front_fender': 'front_fender.jpg',
+  'grab_rail': 'grab_rail.png',
+  'side_mirror': 'side_mirror.png',
+  'headlight_assembly': 'headlight_assembly.jpg',
+  'tail_light_turn_signal_assembly': 'tail_light_turn_signal_assembly.png',
+  'brake_disc_or_drum': 'brake_disc_or_drum.png',
+};
+
+const _beatPremiumPartImageExclusions = <String>{
+  'front_fender',
+  'grab_rail',
+  'side_mirror',
+  'headlight_assembly',
+  'tail_light_turn_signal_assembly',
+  'brake_disc_or_drum',
 };
 
 Future<List<VehiclePartsVariant>> loadVehiclePartsCatalog() {

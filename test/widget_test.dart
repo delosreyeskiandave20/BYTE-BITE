@@ -903,6 +903,63 @@ void main() {
     }
   });
 
+  test(
+    'Honda Beat Premium reuses only compatible Playful part photos',
+    () async {
+      const compatibleParts = {
+        'Leg shield/floor panel': 'leg_shield_floor_panel.jpg',
+        'Rear fender/mudguard': 'rear_fender_mudguard.jpg',
+        'Engine oil': 'engine_oil.jpg',
+      };
+
+      for (final entry in compatibleParts.entries) {
+        final asset = vehiclePartImageAsset(
+          brand: 'Honda',
+          model: 'Beat',
+          variant: 'Premium',
+          category: entry.key == 'Engine oil' ? 'Engine' : 'Body',
+          part: entry.key,
+        );
+        expect(asset, 'assets/vehicle_parts/beat_playful/${entry.value}');
+        await rootBundle.load(asset);
+      }
+
+      const premiumSpecificParts = {
+        'Front fender': 'front_fender.jpg',
+        'Grab rail': 'grab_rail.png',
+        'Side mirror': 'side_mirror.png',
+        'Headlight assembly': 'headlight_assembly.jpg',
+        'Tail-light/turn-signal assembly':
+            'tail_light_turn_signal_assembly.png',
+      };
+      for (final entry in premiumSpecificParts.entries) {
+        final asset = vehiclePartImageAsset(
+          brand: 'Honda',
+          model: 'Beat',
+          variant: 'Premium',
+          category: 'Body',
+          part: entry.key,
+        );
+        expect(asset, 'assets/vehicle_parts/beat_premium/${entry.value}');
+        await rootBundle.load(asset);
+      }
+
+      const brakeAsset =
+          'assets/vehicle_parts/beat_premium/brake_disc_or_drum.png';
+      expect(
+        vehiclePartImageAsset(
+          brand: 'Honda',
+          model: 'Beat',
+          variant: 'Premium',
+          category: 'Wheels & Tires',
+          part: 'Brake disc or drum',
+        ),
+        brakeAsset,
+      );
+      await rootBundle.load(brakeAsset);
+    },
+  );
+
   testWidgets('Buy options only dismiss from an explicit dialog action', (
     WidgetTester tester,
   ) async {

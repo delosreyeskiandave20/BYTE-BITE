@@ -68,6 +68,7 @@ flutter:
     - assets/parts/
     - assets/vehicle_parts/
     - assets/vehicle_parts/beat_playful/
+    - assets/vehicle_parts/beat_premium/
     - assets/brands/
     - assets/categories/engine/
     - assets/categories/electrical/
