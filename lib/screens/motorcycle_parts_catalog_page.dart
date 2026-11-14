@@ -389,12 +389,15 @@ class _VehiclePartImage extends StatelessWidget {
       height: 92,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(9),
-        child: Image.asset(
-          imageAsset,
-          cacheWidth: 184,
-          fit: BoxFit.cover,
-          excludeFromSemantics: true,
-          errorBuilder: (context, error, stackTrace) => _placeholder(),
+        child: ColoredBox(
+          color: Colors.white,
+          child: Image.asset(
+            imageAsset,
+            cacheWidth: 184,
+            fit: BoxFit.contain,
+            excludeFromSemantics: true,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+          ),
         ),
       ),
     );

@@ -832,18 +832,27 @@ void main() {
             (widget) =>
                 widget is Image &&
                 _assetNameOf(widget.image)
-                        ?.startsWith(
-                          'assets/vehicle_parts/beat_playful/',
-                        ) ==
+                        ?.startsWith('assets/vehicle_parts/beat_playful/') ==
                     true,
           ),
         )
         .map((image) => _assetNameOf(image.image))
         .toSet();
+    final partImages = tester.widgetList<Image>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            _assetNameOf(widget.image)
+                    ?.startsWith('assets/vehicle_parts/beat_playful/') ==
+                true,
+      ),
+    );
     expect(partImageAssets, {
       'assets/vehicle_parts/beat_playful/engine_oil.jpg',
       'assets/vehicle_parts/beat_playful/cvt_drive_belt.png',
     });
+    expect(partImages, isNotEmpty);
+    expect(partImages.every((image) => image.fit == BoxFit.contain), isTrue);
 
     expect(find.text('Add image'), findsNothing);
     expect(find.textContaining('Lubricates engine components'), findsOneWidget);
