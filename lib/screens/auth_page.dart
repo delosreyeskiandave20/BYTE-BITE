@@ -255,7 +255,7 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
                             width: 62,
                             height: 62,
                             decoration: BoxDecoration(
-                              color: AppColors.teal,
+                              color: AppColors.primary,
                               borderRadius: BorderRadius.circular(21),
                             ),
                             child: const Icon(
@@ -489,7 +489,7 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
                           ElevatedButton(
                             onPressed: _loading ? null : _submit,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.teal,
+                              backgroundColor: AppColors.primary,
                               foregroundColor: AppColors.surface,
                             ),
                             child: Text(

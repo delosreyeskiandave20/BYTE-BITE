@@ -56,7 +56,7 @@ final homeCategories = [
     count: '$accessoryItemCount items',
     imageAsset: 'assets/parts/accessories-showcase.png',
     icon: Icons.extension,
-    color: Color(0xFF277C78),
+    color: Color(0xFFB8400F),
   ),
   PartCategory(
     id: 'maintenance',

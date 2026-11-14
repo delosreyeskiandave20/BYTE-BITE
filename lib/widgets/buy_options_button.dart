@@ -3,6 +3,7 @@ import 'dart:math' show min;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/price_format.dart';
 import '../data/marketplace.dart';
 import '../data/shop_store.dart';
 import '../screens/shop_page.dart';
@@ -28,7 +29,7 @@ class BuyOptionsButton extends StatelessWidget {
       icon: const Icon(Icons.shopping_bag_outlined, size: 17),
       label: const Text('Buy'),
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         minimumSize: const Size(0, 44),
         padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -147,7 +148,7 @@ class _BuyOptionsDialogState extends State<_BuyOptionsDialog> {
                                   padding: const EdgeInsets.only(top: 8),
                                   child: Text(
                                     '${product.name} · '
-                                    '₱${product.price.toStringAsFixed(2)} · '
+                                    '${formatPeso(product.price)} · '
                                     '${product.quantity} in stock',
                                     style: const TextStyle(fontSize: 12),
                                   ),

@@ -23,12 +23,20 @@ abstract final class AppColors {
   static const line = Color(0xFFE2DED6);
   static const lineStrong = Color(0xFFD2CEC5);
 
-  static const teal = Color(0xFF277C78);
-  static const tealSoft = Color(0xFFDDF2EE);
-  static const tealBorder = Color(0xFFB7D8D2);
+  /// Brand burnt orange, taken from the front-page photo. White text on it is
+  /// 5.5:1, and it is 5:1 as text on [paper] and [primarySoft].
+  static const primary = Color(0xFFB8400F);
+  static const primarySoft = Color(0xFFFDEBDD);
+  static const primaryBorder = Color(0xFFF2C3A3);
 
-  /// Accent only: 2.7:1 on [paper], so never use it for text.
+  /// Bright accent only: 2.7:1 on [paper], so never use it for text. Dark
+  /// [ink] text on it is fine (5.8:1), as on the welcome page button.
   static const orange = Color(0xFFF07A2F);
+
+  /// Neutral information notices ("this is sample data"). Kept grey so they
+  /// are not mistaken for warnings or for the orange brand colour.
+  static const notice = inkSoft;
+  static const noticeSoft = Color(0xFFEFEDE8);
 
   static const danger = Color(0xFFB3261E);
   static const dangerSoft = Color(0xFFFFF1EC);
@@ -36,7 +44,7 @@ abstract final class AppColors {
   static const successSoft = Color(0xFFE3F1E7);
   static const warning = Color(0xFF795D2D);
   static const warningSoft = Color(0xFFF7EBD1);
-  static const focus = Color(0xFF1F6F6B);
+  static const focus = Color(0xFF8A2F0B);
 }
 
 /// 4-point spacing scale. Use these instead of ad-hoc padding values.
@@ -73,7 +81,7 @@ class AppTheme {
 
   static ThemeData get light {
     const colorScheme = ColorScheme.light(
-      primary: AppColors.teal,
+      primary: AppColors.primary,
       onPrimary: Colors.white,
       secondary: AppColors.orange,
       onSecondary: AppColors.ink,
@@ -88,7 +96,7 @@ class AppTheme {
       useMaterial3: true,
       scaffoldBackgroundColor: AppColors.paper,
       focusColor: AppColors.focus.withValues(alpha: 0.16),
-      hoverColor: AppColors.teal.withValues(alpha: 0.06),
+      hoverColor: AppColors.primary.withValues(alpha: 0.06),
       visualDensity: VisualDensity.standard,
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
@@ -126,7 +134,7 @@ class AppTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size(48, 46),
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          backgroundColor: AppColors.teal,
+          backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
           shape: RoundedRectangleBorder(
@@ -138,8 +146,8 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(48, 46),
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          foregroundColor: AppColors.teal,
-          side: const BorderSide(color: AppColors.tealBorder),
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primaryBorder),
           textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -148,8 +156,8 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surface,
-        selectedColor: AppColors.tealSoft,
-        secondarySelectedColor: AppColors.tealSoft,
+        selectedColor: AppColors.primarySoft,
+        secondarySelectedColor: AppColors.primarySoft,
         side: const BorderSide(color: AppColors.line),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         labelStyle: const TextStyle(
@@ -158,7 +166,7 @@ class AppTheme {
           fontWeight: FontWeight.w700,
         ),
         secondaryLabelStyle: const TextStyle(
-          color: AppColors.teal,
+          color: AppColors.primary,
           fontSize: 12,
           fontWeight: FontWeight.w800,
         ),
@@ -172,28 +180,28 @@ class AppTheme {
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AppColors.teal
+              ? AppColors.primary
               : AppColors.line,
         ),
         trackOutlineColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AppColors.teal
+              ? AppColors.primary
               : AppColors.muted,
         ),
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AppColors.teal
+              ? AppColors.primary
               : Colors.transparent,
         ),
-        side: const BorderSide(color: AppColors.teal, width: 1.5),
+        side: const BorderSide(color: AppColors.primary, width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AppColors.teal
+              ? AppColors.primary
               : AppColors.muted,
         ),
       ),
@@ -207,7 +215,7 @@ class AppTheme {
         hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(13),
-          borderSide: const BorderSide(color: AppColors.tealBorder),
+          borderSide: const BorderSide(color: AppColors.primaryBorder),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(13),
@@ -215,18 +223,18 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(13),
-          borderSide: const BorderSide(color: AppColors.teal, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.tealSoft,
+        indicatorColor: AppColors.primarySoft,
         elevation: 0,
         height: 68,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
             color: states.contains(WidgetState.selected)
-                ? AppColors.teal
+                ? AppColors.primary
                 : AppColors.muted,
             fontSize: 11,
             fontWeight: states.contains(WidgetState.selected)

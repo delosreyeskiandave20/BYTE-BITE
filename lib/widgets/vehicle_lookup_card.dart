@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
+/// Compact Home card that sends riders to the motorcycle picker.
+///
+/// The welcome page already shows the full brand photo, so Home uses a small
+/// cropped strip of it and leads with the action instead of a slogan.
 class VehicleLookupCard extends StatelessWidget {
   const VehicleLookupCard({required this.onViewMotorcycles, super.key});
 
@@ -9,116 +13,77 @@ class VehicleLookupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewportWidth = MediaQuery.sizeOf(context).width;
-    final minHeight = viewportWidth < 340
-        ? 360.0
-        : viewportWidth < 420
-        ? 292.0
-        : 238.0;
-
-    // The hero is content-driven above a minimum height, so the overlay copy
-    // reflows instead of clipping when the user increases text size.
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: minHeight),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+    return Material(
+      color: AppColors.ink,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onViewMotorcycles,
         child: Stack(
           children: [
-            Positioned.fill(
-              child: Image.asset(
-                'assets/motoscan-new-front-page.png',
-                cacheWidth: 1200,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Color(0xE6151B1A),
-                      Color(0x9C151B1A),
-                      Color(0x04151B1A),
-                    ],
-                    stops: [0, 0.58, 1],
-                  ),
-                ),
-              ),
-            ),
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.center,
-                    colors: [Color(0x66151B1A), Colors.transparent],
-                  ),
+            Positioned(
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: 150,
+              child: ShaderMask(
+                // Fade the photo into the card so the text side stays solid.
+                shaderCallback: (rect) => const LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Colors.transparent, Colors.black],
+                  stops: [0, 0.55],
+                ).createShader(rect),
+                blendMode: BlendMode.dstIn,
+                child: Image.asset(
+                  'assets/motoscan-new-front-page.png',
+                  cacheWidth: 400,
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(0.2, 0.3),
+                  excludeFromSemantics: true,
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(17),
-              child: SizedBox(
-                width: double.infinity,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'YOUR MOTORCYCLE PARTS GUIDE',
-                      style: TextStyle(
-                        color: Color(0xFFA8DDD4),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.15,
-                      ),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                110,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Find parts for your motorcycle',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: AppType.section,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
                     ),
-                    const SizedBox(height: 44),
-                    const Text(
-                      'Ride ready.\nPart certain.',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        height: 0.98,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.8,
-                      ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  const Text(
+                    'Pick your brand and model to see the parts it uses.',
+                    style: TextStyle(
+                      color: Color(0xD9FFFFFF),
+                      fontSize: AppType.caption + 1,
+                      height: 1.4,
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Find components, compare options, and get back on the road.',
-                      style: TextStyle(
-                        color: Color(0xFFE5EEEA),
-                        fontSize: 11,
-                        height: 1.4,
-                      ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton.icon(
+                    onPressed: onViewMotorcycles,
+                    icon: const Icon(Icons.two_wheeler, size: 18),
+                    label: const Text('View motorcycles'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.orange,
+                      foregroundColor: AppColors.ink,
+                      minimumSize: const Size(0, 44),
                     ),
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FilledButton.icon(
-                        onPressed: onViewMotorcycles,
-                        icon: const Icon(Icons.two_wheeler, size: 17),
-                        label: const Text('View motorcycles'),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(0, 44),
-                          backgroundColor: AppColors.teal,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          textStyle: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(11),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],

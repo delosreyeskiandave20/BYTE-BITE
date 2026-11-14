@@ -19,7 +19,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
             width: isCompact ? 34 : 36,
             height: isCompact ? 34 : 36,
             decoration: BoxDecoration(
-              color: AppColors.teal,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(11),
             ),
             child: const Icon(Icons.two_wheeler, color: Colors.white, size: 20),
@@ -38,7 +38,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                   TextSpan(text: 'Moto'),
                   TextSpan(
                     text: 'Scan',
-                    style: TextStyle(color: AppColors.teal),
+                    style: TextStyle(color: AppColors.primary),
                   ),
                 ],
               ),

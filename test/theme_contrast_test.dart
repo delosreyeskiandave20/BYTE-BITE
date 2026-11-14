@@ -39,10 +39,32 @@ void main() {
   });
 
   test('primary button labels are readable', () {
-    expect(_contrast(Colors.white, AppColors.teal), greaterThanOrEqualTo(4.5));
+    expect(
+      _contrast(Colors.white, AppColors.primary),
+      greaterThanOrEqualTo(4.5),
+    );
+    // Dark text on the bright accent, as on the welcome and hero buttons.
+    expect(
+      _contrast(AppColors.ink, AppColors.orange),
+      greaterThanOrEqualTo(4.5),
+    );
+  });
+
+  test('brand colour is readable as text on every surface', () {
+    for (final background in [...surfaces.values, AppColors.primarySoft]) {
+      expect(
+        _contrast(AppColors.primary, background),
+        greaterThanOrEqualTo(4.5),
+        reason: 'primary on $background',
+      );
+    }
   });
 
   test('status colours meet AA on their soft backgrounds', () {
+    expect(
+      _contrast(AppColors.notice, AppColors.noticeSoft),
+      greaterThanOrEqualTo(4.5),
+    );
     expect(
       _contrast(AppColors.success, AppColors.successSoft),
       greaterThanOrEqualTo(4.5),

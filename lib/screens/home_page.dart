@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/design_catalog.dart';
+import '../data/catalog_images.dart';
 import '../data/home_catalog.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
@@ -34,6 +35,8 @@ class MotoScanHomePage extends StatefulWidget {
 }
 
 class _MotoScanHomePageState extends State<MotoScanHomePage> {
+  late final Future<Map<String, String>> _designImages = loadDesignImages();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,41 +45,48 @@ class _MotoScanHomePageState extends State<MotoScanHomePage> {
       body: SafeArea(
         child: SingleChildScrollView(
           controller: widget.scrollController,
-          padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.xxl,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               VehicleLookupCard(onViewMotorcycles: widget.onViewMotorcycles),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Browse parts',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.xxl),
+              const _SectionTitle('Browse parts'),
+              const SizedBox(height: AppSpacing.md),
               PartCategoryGrid(
                 categories: homeCategories,
                 onCategorySelected: (category) =>
                     widget.onCategorySelected(category.id),
               ),
-              const SizedBox(height: 22),
-              _DesignSection(
-                shopStore: widget.shopStore,
-                onOwnerSignIn: widget.onOwnerSignIn,
+              const SizedBox(height: AppSpacing.xxl),
+              const _SectionTitle('Design ideas'),
+              const SizedBox(height: AppSpacing.xs),
+              const Text(
+                'Lighting, paint, decals and more. Swipe to see each group.',
+                style: TextStyle(
+                  color: AppColors.muted,
+                  fontSize: AppType.caption + 1,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FutureBuilder<Map<String, String>>(
+                future: _designImages,
+                builder: (context, snapshot) => Column(
+                  children: [
+                    for (final group in designGroups)
+                      _DesignGroupRow(
+                        group: group,
+                        images: snapshot.data ?? const {},
+                        shopStore: widget.shopStore,
+                        onOwnerSignIn: widget.onOwnerSignIn,
+                      ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -86,246 +96,119 @@ class _MotoScanHomePageState extends State<MotoScanHomePage> {
   }
 }
 
-class _DesignSection extends StatelessWidget {
-  const _DesignSection({required this.shopStore, required this.onOwnerSignIn});
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
 
-  final ShopStore shopStore;
-  final VoidCallback onOwnerSignIn;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'DISCOVER / VISUAL GUIDE',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.teal,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.25,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Design',
-                    style: TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    return Semantics(
+      header: true,
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: AppColors.ink,
+          fontSize: AppType.section,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.3,
         ),
-        const SizedBox(height: 12),
-        ...designGroups.asMap().entries.map((entry) {
-          final groupIndex = entry.key;
-          final group = entry.value;
-          return _DesignGroupCard(
-            group: group,
-            groupIndex: groupIndex,
-            shopStore: shopStore,
-            onOwnerSignIn: onOwnerSignIn,
-          );
-        }),
-      ],
+      ),
     );
   }
 }
 
-class _DesignGroupCard extends StatelessWidget {
-  const _DesignGroupCard({
+/// One design group as a heading plus a sideways-scrolling row of cards, so
+/// Home stays short instead of listing every design item vertically.
+class _DesignGroupRow extends StatelessWidget {
+  const _DesignGroupRow({
     required this.group,
-    required this.groupIndex,
+    required this.images,
     required this.shopStore,
     required this.onOwnerSignIn,
   });
 
   final DesignGroup group;
-  final int groupIndex;
+
+  /// Bundled photos keyed by [designImageSlug].
+  final Map<String, String> images;
   final ShopStore shopStore;
   final VoidCallback onOwnerSignIn;
 
-  static const _imageColors = [
-    Color(0xFFFCE7DA),
-    AppColors.tealSoft,
-    AppColors.warningSoft,
-    Color(0xFFE3EAF6),
-  ];
-  static const _imageAssets = {
-    'LED Headlight': 'assets/design/lighting_led_headlight.png',
-    'LED Tail Light': 'assets/design/lighting_led_tail_light.png',
-    'LED Signal Light': 'assets/design/lighting_led_signal_light.png',
-    'LED Turn Signal': 'assets/design/lighting_led_turn_signal.png',
-    'LED Daytime Running Light (DRL)': 'assets/design/lighting_led_drl.png',
+  /// Shown on cards that have no photo yet, so each group looks distinct.
+  static const _groupIcons = {
+    'Lighting Designs': Icons.lightbulb_outline,
+    'Stickers and Decals': Icons.sell_outlined,
+    'Paint Designs': Icons.format_paint_outlined,
+    'Vinyl Wrap Designs': Icons.layers_outlined,
+    'Graphic and Pattern Designs': Icons.texture,
+    'Seat Designs': Icons.event_seat_outlined,
+    'Rim and Wheel Designs': Icons.trip_origin,
+    'Mirror and Handlebar Designs': Icons.compare_arrows,
+    'Decorative Designs': Icons.auto_awesome_outlined,
+    'Windshield and Visor Designs': Icons.shield_outlined,
+    'Motorcycle Style Themes': Icons.two_wheeler,
   };
+
+  static const _cardWidth = 156.0;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: AppColors.lineStrong, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF39342D).withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+    // Card text grows with the user's text size, so the row grows with it.
+    final textScaler = MediaQuery.textScalerOf(context);
+    // Image (112) + up to two lines of name + Buy button + padding.
+    final rowHeight = 114 + textScaler.scale(98);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFCE7DA),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${groupIndex + 1}'.padLeft(2, '0'),
-                    style: const TextStyle(
-                      color: AppColors.inkSoft,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: Text(
+                  group.title,
+                  style: const TextStyle(
+                    color: AppColors.ink,
+                    fontSize: AppType.cardTitle + 1,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        group.title,
-                        style: const TextStyle(
-                          color: AppColors.ink,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        '${group.items.length} design options',
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+              Text(
+                '${group.items.length} options',
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: AppType.caption,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
-              color: AppColors.paper,
-              border: Border(top: BorderSide(color: AppColors.line)),
-            ),
-            child: Column(
-              children: group.items.asMap().entries.map((entry) {
-                final itemIndex = entry.key;
-                final item = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 5),
-                  child: Material(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(13),
-                    child: Container(
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(13),
-                        border: Border.all(
-                          color: AppColors.tealBorder,
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _DesignItemThumbnail(
-                            key: ValueKey('design-image-$item'),
-                            color:
-                                _imageColors[itemIndex % _imageColors.length],
-                            imageAsset: _imageAssets[item],
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        item,
-                                        style: const TextStyle(
-                                          color: AppColors.ink,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w900,
-                                          height: 1.3,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.chevron_right,
-                                      size: 18,
-                                      color: AppColors.teal,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  '$item option. Browse visual references and check product measurements before buying.',
-                                  key: ValueKey('design-description-$item'),
-                                  style: const TextStyle(
-                                    color: AppColors.muted,
-                                    fontSize: 11,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 7),
-                                BuyOptionsButton(
-                                  store: shopStore,
-                                  productQuery: item,
-                                  onOwnerSignIn: onOwnerSignIn,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            height: rowHeight,
+            child: ListView.separated(
+              key: ValueKey('design-row-${group.title}'),
+              // Let cards run to the screen edge so the row reads as
+              // scrollable.
+              clipBehavior: Clip.none,
+              scrollDirection: Axis.horizontal,
+              itemCount: group.items.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+              itemBuilder: (context, index) => SizedBox(
+                width: _cardWidth,
+                child: _DesignItemCard(
+                  item: group.items[index],
+                  imageAsset: images[designImageSlug(group.items[index])],
+                  fallbackIcon:
+                      _groupIcons[group.title] ?? Icons.auto_awesome_outlined,
+                  shopStore: shopStore,
+                  onOwnerSignIn: onOwnerSignIn,
+                ),
+              ),
             ),
           ),
         ],
@@ -334,60 +217,87 @@ class _DesignGroupCard extends StatelessWidget {
   }
 }
 
-class _DesignItemThumbnail extends StatelessWidget {
-  const _DesignItemThumbnail({required this.color, this.imageAsset, super.key});
+class _DesignItemCard extends StatelessWidget {
+  const _DesignItemCard({
+    required this.item,
+    required this.imageAsset,
+    required this.fallbackIcon,
+    required this.shopStore,
+    required this.onOwnerSignIn,
+  });
 
-  final Color color;
+  final String item;
   final String? imageAsset;
+  final IconData fallbackIcon;
+  final ShopStore shopStore;
+  final VoidCallback onOwnerSignIn;
 
   @override
   Widget build(BuildContext context) {
-    final image = imageAsset;
+    final imageAsset = this.imageAsset;
+    final placeholder = ColoredBox(
+      key: const ValueKey('design-image-placeholder'),
+      color: AppColors.primarySoft,
+      child: Icon(fallbackIcon, color: AppColors.primary, size: 30),
+    );
 
-    // Fixed 92x112 tile for images, but the text-only placeholder grows with
-    // the user's text scale instead of clipping its label.
-    if (image != null) {
-      return Container(
-        width: 92,
-        height: 112,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: Image.asset(
-          image,
-          width: 92,
-          height: 112,
-          cacheWidth: 184,
-          fit: BoxFit.cover,
-        ),
-      );
-    }
-
-    return Container(
-      width: 92,
-      constraints: const BoxConstraints(minHeight: 112),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.line),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(Icons.add_a_photo_outlined, size: 23, color: color),
-          const SizedBox(height: 6),
-          const Text(
-            'Add an image to this choice',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.muted,
-              fontSize: 11,
-              height: 1.25,
+          SizedBox(
+            key: ValueKey('design-image-$item'),
+            height: 112,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.md - 1),
+              ),
+              child: imageAsset == null
+                  // No photo yet: the group's icon, not a note to the owner.
+                  ? placeholder
+                  : ColoredBox(
+                      color: Colors.white,
+                      child: Image.asset(
+                        imageAsset,
+                        cacheWidth: 312,
+                        fit: BoxFit.cover,
+                        excludeFromSemantics: true,
+                        errorBuilder: (_, _, _) => placeholder,
+                      ),
+                    ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm + 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: AppType.body - 1,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                  BuyOptionsButton(
+                    store: shopStore,
+                    productQuery: item,
+                    onOwnerSignIn: onOwnerSignIn,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/price_format.dart';
 import '../data/accessories_maintenance_catalog.dart';
 import '../data/parts_catalog.dart';
 import '../data/shop_store.dart';
@@ -139,16 +140,6 @@ class _SearchPageState extends State<SearchPage> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             children: [
               const Text(
-                'MOTOSCAN / LIBRARY',
-                style: TextStyle(
-                  color: AppColors.teal,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
                 'Search parts',
                 style: TextStyle(
                   color: AppColors.ink,
@@ -175,7 +166,10 @@ class _SearchPageState extends State<SearchPage> {
                 }),
                 decoration: InputDecoration(
                   hintText: 'Try "brake", "MS-BRK", or a shop name',
-                  prefixIcon: const Icon(Icons.search, color: AppColors.teal),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppColors.primary,
+                  ),
                   suffixIcon: _query.isEmpty
                       ? null
                       : IconButton(
@@ -216,13 +210,13 @@ class _SearchPageState extends State<SearchPage> {
                           _selectedCategory = filter.$2;
                           _expandedProductId = null;
                         }),
-                        selectedColor: AppColors.tealSoft,
+                        selectedColor: AppColors.primarySoft,
                         backgroundColor: AppColors.surface,
                         side: BorderSide(
-                          color: selected ? AppColors.teal : AppColors.line,
+                          color: selected ? AppColors.primary : AppColors.line,
                         ),
                         labelStyle: TextStyle(
-                          color: selected ? AppColors.teal : AppColors.muted,
+                          color: selected ? AppColors.primary : AppColors.muted,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -236,20 +230,19 @@ class _SearchPageState extends State<SearchPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.tealSoft,
+                  color: AppColors.noticeSoft,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(color: AppColors.tealBorder),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.info_outline, color: AppColors.teal, size: 18),
+                    Icon(Icons.info_outline, color: AppColors.notice, size: 18),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Parts library entries are sample data. Shop listings '
                         'come from local sellers — confirm details before buying.',
                         style: TextStyle(
-                          color: AppColors.teal,
+                          color: AppColors.notice,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           height: 1.45,
@@ -263,8 +256,8 @@ class _SearchPageState extends State<SearchPage> {
                 const SizedBox(height: 12),
                 const LinearProgressIndicator(
                   minHeight: 3,
-                  color: AppColors.teal,
-                  backgroundColor: AppColors.tealSoft,
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.primarySoft,
                 ),
               ],
               if (hasQuery && _shopStore.lastErrorMessage != null) ...[
@@ -403,7 +396,7 @@ class _SearchResultCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(17),
         side: BorderSide(
-          color: expanded ? AppColors.teal : AppColors.line,
+          color: expanded ? AppColors.primary : AppColors.line,
           width: expanded ? 1.4 : 1,
         ),
       ),
@@ -418,10 +411,10 @@ class _SearchResultCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: AppColors.tealSoft,
+                  color: AppColors.primarySoft,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(product.icon, color: AppColors.teal),
+                child: Icon(product.icon, color: AppColors.primary),
               ),
               const SizedBox(width: 11),
               Expanded(
@@ -440,7 +433,7 @@ class _SearchResultCard extends StatelessWidget {
                     Text(
                       '${categoryNames[product.categoryId]} · ${product.code}',
                       style: const TextStyle(
-                        color: AppColors.teal,
+                        color: AppColors.primary,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
@@ -478,7 +471,7 @@ class _SearchResultCard extends StatelessWidget {
               AnimatedRotation(
                 turns: expanded ? 0.5 : 0,
                 duration: const Duration(milliseconds: 220),
-                child: const Icon(Icons.expand_more, color: AppColors.teal),
+                child: const Icon(Icons.expand_more, color: AppColors.primary),
               ),
             ],
           ),
@@ -550,9 +543,9 @@ class _ShopListingCard extends StatelessWidget {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
-                          '₱${product.price.toStringAsFixed(2)}',
+                          formatPeso(product.price),
                           style: const TextStyle(
-                            color: AppColors.teal,
+                            color: AppColors.primary,
                             fontSize: 14,
                             fontWeight: FontWeight.w800,
                           ),
@@ -567,7 +560,7 @@ class _ShopListingCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.teal),
+              const Icon(Icons.chevron_right, color: AppColors.primary),
             ],
           ),
         ),
@@ -587,12 +580,12 @@ class _ShopProductThumb extends StatelessWidget {
       width: 52,
       height: 52,
       decoration: BoxDecoration(
-        color: AppColors.tealSoft,
+        color: AppColors.primarySoft,
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: const Icon(
         Icons.inventory_2_outlined,
-        color: AppColors.teal,
+        color: AppColors.primary,
         size: 24,
       ),
     );

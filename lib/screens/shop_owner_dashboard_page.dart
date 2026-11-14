@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import '../data/price_format.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/load_error_banner.dart';
@@ -594,9 +595,9 @@ class _VerificationBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.tealSoft,
+        color: AppColors.primarySoft,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.tealBorder),
+        border: Border.all(color: AppColors.primaryBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -606,7 +607,7 @@ class _VerificationBanner extends StatelessWidget {
             children: [
               const Icon(
                 Icons.mark_email_unread_outlined,
-                color: AppColors.teal,
+                color: AppColors.primary,
                 size: 20,
               ),
               const SizedBox(width: 9),
@@ -694,12 +695,12 @@ class _OwnerProductTile extends StatelessWidget {
               product.isAvailable
                   ? Icons.inventory_2_outlined
                   : Icons.remove_shopping_cart_outlined,
-              color: product.isAvailable ? AppColors.teal : AppColors.danger,
+              color: product.isAvailable ? AppColors.primary : AppColors.danger,
             ),
       title: Text(product.name),
       subtitle: Text(
         '${product.category} · '
-        '${product.price > 0 ? '₱${product.price.toStringAsFixed(2)}' : 'No price'} · '
+        '${product.price > 0 ? formatPeso(product.price) : 'No price'} · '
         '${product.quantity} in stock · '
         '${product.isAvailable ? 'Available' : 'Unavailable'}',
       ),

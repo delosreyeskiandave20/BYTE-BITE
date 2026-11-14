@@ -1,3 +1,5 @@
+export 'image_slug.dart' show designImageSlug;
+
 class DesignGroup {
   const DesignGroup({required this.title, required this.items});
 

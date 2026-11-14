@@ -112,7 +112,7 @@ class _PartsCatalogPageState extends State<PartsCatalogPage> {
                         key: ValueKey('motorcycle-parts-category-$category'),
                         leading: const Icon(
                           Icons.build_outlined,
-                          color: AppColors.teal,
+                          color: AppColors.primary,
                         ),
                         title: Text(
                           category,
@@ -124,7 +124,7 @@ class _PartsCatalogPageState extends State<PartsCatalogPage> {
                         ),
                         trailing: const Icon(
                           Icons.chevron_right,
-                          color: AppColors.teal,
+                          color: AppColors.primary,
                         ),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
@@ -195,10 +195,10 @@ class _ProductCard extends StatelessWidget {
               width: 43,
               height: 43,
               decoration: BoxDecoration(
-                color: AppColors.tealSoft,
+                color: AppColors.primarySoft,
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(product.icon, color: AppColors.teal),
+              child: Icon(product.icon, color: AppColors.primary),
             ),
             title: Text(
               product.name,
@@ -214,7 +214,7 @@ class _ProductCard extends StatelessWidget {
             ),
             trailing: Icon(
               expanded ? Icons.expand_less : Icons.expand_more,
-              color: AppColors.teal,
+              color: AppColors.primary,
             ),
           ),
           if (expanded)

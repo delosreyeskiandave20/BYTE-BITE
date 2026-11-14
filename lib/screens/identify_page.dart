@@ -152,7 +152,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
       label: const Text('Upload', maxLines: 1, softWrap: false),
       style: OutlinedButton.styleFrom(
         backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.teal,
+        foregroundColor: AppColors.primary,
         minimumSize: const Size.fromHeight(46),
         padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16),
       ),
@@ -163,10 +163,14 @@ class _IdentifyPageState extends State<IdentifyPage> {
       height: isCompact ? 96 : 132,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.tealSoft,
+        color: AppColors.primarySoft,
       ),
       child: const Center(
-        child: Icon(Icons.center_focus_strong, size: 48, color: AppColors.teal),
+        child: Icon(
+          Icons.center_focus_strong,
+          size: 48,
+          color: AppColors.primary,
+        ),
       ),
     );
 
@@ -200,7 +204,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
               icon: const Icon(Icons.close, size: 16),
               label: const Text('Remove'),
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.teal,
+                foregroundColor: AppColors.primary,
                 visualDensity: VisualDensity.compact,
               ),
             ),
@@ -220,53 +224,6 @@ class _IdentifyPageState extends State<IdentifyPage> {
           24,
         ),
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'MOTOSCAN / INTELLIGENCE',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.teal,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.tealSoft,
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(
-                      Icons.visibility_outlined,
-                      size: 16,
-                      color: AppColors.teal,
-                    ),
-                    SizedBox(width: 5),
-                    Text(
-                      'Preview only',
-                      style: TextStyle(
-                        color: AppColors.teal,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
           Text(
             'Identify a part',
             style: TextStyle(
@@ -284,19 +241,18 @@ class _IdentifyPageState extends State<IdentifyPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.tealSoft,
+              color: AppColors.noticeSoft,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.tealBorder),
             ),
             child: const Row(
               children: [
-                Icon(Icons.info_outline, color: AppColors.teal, size: 18),
+                Icon(Icons.info_outline, color: AppColors.notice, size: 18),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Photo preview works here. AI part recognition still needs a service connection.',
                     style: TextStyle(
-                      color: AppColors.teal,
+                      color: AppColors.notice,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
@@ -382,7 +338,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
                     icon: const Icon(Icons.search, size: 18),
                     label: const Text('Search the parts library'),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.teal,
+                      foregroundColor: AppColors.primary,
                       minimumSize: const Size.fromHeight(44),
                     ),
                   ),
@@ -403,7 +359,11 @@ class _IdentifyPageState extends State<IdentifyPage> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.route_outlined, color: AppColors.teal, size: 20),
+                    Icon(
+                      Icons.route_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -440,7 +400,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.lightbulb, color: AppColors.teal),
+                Icon(Icons.lightbulb, color: AppColors.primary),
                 SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -497,13 +457,13 @@ class _StepChip extends StatelessWidget {
             height: 20,
             alignment: Alignment.center,
             decoration: const BoxDecoration(
-              color: AppColors.tealSoft,
+              color: AppColors.primarySoft,
               shape: BoxShape.circle,
             ),
             child: Text(
               number,
               style: const TextStyle(
-                color: AppColors.teal,
+                color: AppColors.primary,
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
               ),

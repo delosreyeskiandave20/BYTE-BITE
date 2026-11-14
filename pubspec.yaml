@@ -116,6 +116,7 @@ flutter:
     - assets/categories/accessories/
     - assets/categories/maintenance/
     - assets/design/
+    - assets/maintenance/
     - assets/motorcycles/
     - assets/motoscan-new-front-page.png
 

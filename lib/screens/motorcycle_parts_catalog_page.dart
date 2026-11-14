@@ -132,7 +132,7 @@ class _MotorcyclePartsCatalogPageState
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: AppColors.tealBorder),
+            border: Border.all(color: AppColors.primaryBorder),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,7 +147,7 @@ class _MotorcyclePartsCatalogPageState
                           color: AppColors.paper,
                           child: Icon(
                             Icons.two_wheeler,
-                            color: AppColors.teal,
+                            color: AppColors.primary,
                             size: 36,
                           ),
                         )
@@ -308,7 +308,7 @@ class _VehiclePartTile extends StatelessWidget {
                   icon: const Icon(Icons.storefront_outlined, size: 17),
                   label: const Text('Go to shop'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.teal,
+                    backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(0, 44),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -418,7 +418,7 @@ class _VehiclePartImage extends StatelessWidget {
       child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.add_a_photo_outlined, size: 19, color: AppColors.teal),
+          Icon(Icons.add_a_photo_outlined, size: 19, color: AppColors.primary),
           SizedBox(height: 3),
           Text(
             'Add image',
@@ -558,14 +558,14 @@ class _VehicleChoiceGroup extends StatelessWidget {
                   selected: isSelected,
                   onSelected: (_) => onSelected(choice),
                   showCheckmark: false,
-                  selectedColor: AppColors.tealSoft,
+                  selectedColor: AppColors.primarySoft,
                   backgroundColor: Colors.white,
                   side: BorderSide(
-                    color: isSelected ? AppColors.teal : AppColors.line,
+                    color: isSelected ? AppColors.primary : AppColors.line,
                     width: isSelected ? 1.5 : 1,
                   ),
                   labelStyle: TextStyle(
-                    color: isSelected ? AppColors.teal : AppColors.muted,
+                    color: isSelected ? AppColors.primary : AppColors.muted,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -627,7 +627,9 @@ class _BrandChoiceGrid extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(13),
                         side: BorderSide(
-                          color: isSelected ? AppColors.teal : AppColors.line,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.line,
                           width: isSelected ? 1.5 : 1,
                         ),
                       ),
@@ -644,7 +646,7 @@ class _BrandChoiceGrid extends StatelessWidget {
                             errorBuilder: (context, error, stackTrace) =>
                                 const Icon(
                                   Icons.two_wheeler,
-                                  color: AppColors.teal,
+                                  color: AppColors.primary,
                                   size: 28,
                                 ),
                           ),

@@ -74,9 +74,7 @@ void main() {
     expect(find.text('Browse parts').hitTestable(), findsOneWidget);
   });
 
-  testWidgets('app-bar shortcut opens search', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('app-bar shortcut opens search', (WidgetTester tester) async {
     await _pumpApp(tester);
 
     await tester.tap(find.byTooltip('Search parts'));

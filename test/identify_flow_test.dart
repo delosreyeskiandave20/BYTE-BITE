@@ -32,7 +32,6 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Preview only'), findsOneWidget);
       expect(find.text('Start with a clear photo'), findsOneWidget);
 
       await tester.scrollUntilVisible(

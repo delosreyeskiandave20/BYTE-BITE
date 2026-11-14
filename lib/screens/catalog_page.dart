@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/accessories_maintenance_catalog.dart';
+import '../data/catalog_images.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/buy_options_button.dart';
@@ -25,7 +26,20 @@ class _CatalogPageState extends State<CatalogPage> {
   late final _shopStore = widget.shopStore ?? ShopStore.shared;
   String? _expandedGroup;
 
+  /// Bundled maintenance photos keyed by [maintenanceImageSlug].
+  Map<String, String> _photos = const {};
+
   bool get _isMaintenance => widget.type == 'maintenance';
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isMaintenance) {
+      loadMaintenanceImages().then((photos) {
+        if (mounted) setState(() => _photos = photos);
+      });
+    }
+  }
 
   List<CatalogGroup> get _groups =>
       _isMaintenance ? maintenanceGroups : accessoryGroups;
@@ -54,18 +68,6 @@ class _CatalogPageState extends State<CatalogPage> {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         children: [
           Text(
-            _isMaintenance
-                ? 'MOTOSCAN / SERVICE GUIDE'
-                : 'MOTOSCAN / ACCESSORY LIBRARY',
-            style: const TextStyle(
-              color: AppColors.teal,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.3,
-            ),
-          ),
-          const SizedBox(height: 7),
-          Text(
             title,
             style: const TextStyle(
               color: AppColors.ink,
@@ -86,7 +88,7 @@ class _CatalogPageState extends State<CatalogPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.tealSoft,
+              color: AppColors.primarySoft,
               borderRadius: BorderRadius.circular(13),
             ),
             child: Row(
@@ -94,7 +96,7 @@ class _CatalogPageState extends State<CatalogPage> {
                 Icon(
                   _isMaintenance ? Icons.build : Icons.extension,
                   size: 19,
-                  color: AppColors.teal,
+                  color: AppColors.primary,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -103,7 +105,7 @@ class _CatalogPageState extends State<CatalogPage> {
                         ? '$maintenanceItemCount maintenance items · $count choices'
                         : '$accessoryItemCount accessory groups · $count choices',
                     style: const TextStyle(
-                      color: AppColors.teal,
+                      color: AppColors.primary,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
@@ -133,6 +135,7 @@ class _CatalogPageState extends State<CatalogPage> {
               index: index,
               expanded: expanded,
               isMaintenance: _isMaintenance,
+              photos: _photos,
               shopStore: _shopStore,
               onOwnerSignIn: widget.onOwnerSignIn,
               onToggle: () => setState(() {
@@ -156,6 +159,7 @@ class _CatalogGroupCard extends StatelessWidget {
     required this.index,
     required this.expanded,
     required this.isMaintenance,
+    required this.photos,
     required this.shopStore,
     required this.onOwnerSignIn,
     required this.onToggle,
@@ -165,13 +169,68 @@ class _CatalogGroupCard extends StatelessWidget {
   final int index;
   final bool expanded;
   final bool isMaintenance;
+
+  /// Bundled maintenance photos keyed by [maintenanceImageSlug].
+  final Map<String, String> photos;
   final ShopStore shopStore;
+
+  /// Shown on maintenance choices that have no photo yet, so each group
+  /// looks distinct.
+  static const _maintenanceIcons = {
+    'Engine Oil': Icons.oil_barrel_outlined,
+    'Oil Filter or Oil Strainer': Icons.filter_alt_outlined,
+    'Gear Oil or Final-Drive Oil': Icons.settings_outlined,
+    'Air Filter': Icons.air,
+    'Spark Plug': Icons.bolt,
+    'Coolant': Icons.ac_unit,
+    'Brake Fluid': Icons.water_drop_outlined,
+    'Brake Pads and Brake Shoes': Icons.album_outlined,
+    'Drive Chain': Icons.link,
+    'Sprockets': Icons.settings_suggest_outlined,
+    'Chain Lubricant': Icons.opacity,
+    'Scooter CVT Parts': Icons.moped_outlined,
+    'Tires': Icons.tire_repair,
+    'Battery': Icons.battery_charging_full,
+    'Fork and Suspension Items': Icons.height,
+    'Fuel-System Cleaners': Icons.local_gas_station_outlined,
+    'Electrical Maintenance Items': Icons.electrical_services,
+    'Grease and Protective Chemicals': Icons.science_outlined,
+    'Cleaning Products': Icons.cleaning_services_outlined,
+    'Electric Motorcycle Maintenance Items': Icons.ev_station_outlined,
+  };
+
+  /// Choice details with bundled photos filled in where the catalog has none.
+  Map<String, CatalogChoiceDetails> _detailsWithPhotos(List<String> choices) {
+    final base = isMaintenance
+        ? maintenanceChoiceDetailsByGroup[group.title] ??
+              const <String, CatalogChoiceDetails>{}
+        : accessoryChoiceDetailsByGroup[group.title] ??
+              const <String, CatalogChoiceDetails>{};
+    if (!isMaintenance || photos.isEmpty) return base;
+
+    return {
+      for (final choice in choices)
+        choice: () {
+          final details = base[choice];
+          final photo = photos[maintenanceImageSlug(group.title, choice)];
+          if (photo == null || details?.imageAsset?.isNotEmpty == true) {
+            return details ?? const CatalogChoiceDetails();
+          }
+          return CatalogChoiceDetails(
+            description: details?.description,
+            imageAsset: photo,
+            imageUrl: details?.imageUrl,
+          );
+        }(),
+    };
+  }
+
   final VoidCallback? onOwnerSignIn;
   final VoidCallback onToggle;
 
   static const _itemColors = [
     Color(0xFFFCE7DA),
-    AppColors.tealSoft,
+    AppColors.primarySoft,
     AppColors.warningSoft,
     Color(0xFFE3EAF6),
   ];
@@ -186,7 +245,7 @@ class _CatalogGroupCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: expanded ? AppColors.teal : AppColors.line,
+          color: expanded ? AppColors.primary : AppColors.line,
           width: expanded ? 1.4 : 1,
         ),
       ),
@@ -204,13 +263,13 @@ class _CatalogGroupCard extends StatelessWidget {
                     height: 37,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppColors.tealSoft,
+                      color: AppColors.primarySoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${index + 1}'.padLeft(2, '0'),
                       style: const TextStyle(
-                        color: AppColors.teal,
+                        color: AppColors.primary,
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                       ),
@@ -243,7 +302,10 @@ class _CatalogGroupCard extends StatelessWidget {
                   AnimatedRotation(
                     turns: expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 220),
-                    child: const Icon(Icons.expand_more, color: AppColors.teal),
+                    child: const Icon(
+                      Icons.expand_more,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ],
               ),
@@ -266,12 +328,14 @@ class _CatalogGroupCard extends StatelessWidget {
                             choices: group.itemChoices[group.title]!,
                             shopStore: shopStore,
                             onOwnerSignIn: onOwnerSignIn,
-                            details: isMaintenance
-                                ? maintenanceChoiceDetailsByGroup[group
-                                          .title] ??
-                                      const <String, CatalogChoiceDetails>{}
-                                : accessoryChoiceDetailsByGroup[group.title] ??
-                                      const <String, CatalogChoiceDetails>{},
+                            details: _detailsWithPhotos(
+                              group.itemChoices[group.title]!,
+                            ),
+                            fallbackIcon:
+                                (isMaintenance
+                                    ? _maintenanceIcons[group.title]
+                                    : null) ??
+                                Icons.image_outlined,
                           )
                         : Column(
                             children: group.items
@@ -311,7 +375,7 @@ class _CatalogGroupCard extends StatelessWidget {
                                                   child: Text(
                                                     '${entry.key + 1}',
                                                     style: const TextStyle(
-                                                      color: AppColors.teal,
+                                                      color: AppColors.primary,
                                                       fontSize: 11,
                                                       fontWeight:
                                                           FontWeight.w900,
@@ -382,7 +446,7 @@ class _CatalogItemThumbnail extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Center(child: Icon(icon, size: 42, color: AppColors.teal)),
+      child: Center(child: Icon(icon, size: 42, color: AppColors.primary)),
     );
   }
 }
@@ -391,12 +455,14 @@ class _MaintenanceChoiceList extends StatelessWidget {
   const _MaintenanceChoiceList({
     required this.choices,
     required this.details,
+    required this.fallbackIcon,
     required this.shopStore,
     required this.onOwnerSignIn,
   });
 
   final List<String> choices;
   final Map<String, CatalogChoiceDetails> details;
+  final IconData fallbackIcon;
   final ShopStore shopStore;
   final VoidCallback? onOwnerSignIn;
 
@@ -421,6 +487,7 @@ class _MaintenanceChoiceList extends StatelessWidget {
             child: _MaintenanceChoiceCard(
               name: entry.value,
               details: details[entry.value] ?? const CatalogChoiceDetails(),
+              fallbackIcon: fallbackIcon,
               shopStore: shopStore,
               onOwnerSignIn: onOwnerSignIn,
             ),
@@ -435,12 +502,14 @@ class _MaintenanceChoiceCard extends StatelessWidget {
   const _MaintenanceChoiceCard({
     required this.name,
     required this.details,
+    required this.fallbackIcon,
     required this.shopStore,
     required this.onOwnerSignIn,
   });
 
   final String name;
   final CatalogChoiceDetails details;
+  final IconData fallbackIcon;
   final ShopStore shopStore;
   final VoidCallback? onOwnerSignIn;
 
@@ -457,7 +526,7 @@ class _MaintenanceChoiceCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _MaintenanceChoiceImage(details: details),
+          _MaintenanceChoiceImage(details: details, fallbackIcon: fallbackIcon),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -480,7 +549,7 @@ class _MaintenanceChoiceCard extends StatelessWidget {
                     const Icon(
                       Icons.chevron_right,
                       size: 19,
-                      color: AppColors.teal,
+                      color: AppColors.primary,
                     ),
                   ],
                 ),
@@ -512,9 +581,13 @@ class _MaintenanceChoiceCard extends StatelessWidget {
 }
 
 class _MaintenanceChoiceImage extends StatelessWidget {
-  const _MaintenanceChoiceImage({required this.details});
+  const _MaintenanceChoiceImage({
+    required this.details,
+    required this.fallbackIcon,
+  });
 
   final CatalogChoiceDetails details;
+  final IconData fallbackIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -548,34 +621,18 @@ class _MaintenanceChoiceImage extends StatelessWidget {
     return _placeholder();
   }
 
+  /// Shown when a choice has no photo yet. Shoppers see a quiet icon tile,
+  /// not a note meant for whoever maintains the catalog.
   Widget _placeholder() {
     return Container(
+      key: const ValueKey('choice-image-placeholder'),
       width: 96,
       height: 126,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.primarySoft,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFF0EFED)),
       ),
-      child: const Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.add_a_photo_outlined, size: 23, color: AppColors.teal),
-          SizedBox(height: 5),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 5),
-            child: Text(
-              'Add an image to this choice',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.muted,
-                fontSize: 11,
-                height: 1.3,
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: Icon(fallbackIcon, size: 28, color: AppColors.primary),
     );
   }
 }

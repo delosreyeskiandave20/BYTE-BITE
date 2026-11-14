@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'package:flutter_application_1/data/accessories_maintenance_catalog.dart';
 import 'package:flutter_application_1/data/design_catalog.dart';
+import 'package:flutter_application_1/data/catalog_images.dart';
 import 'package:flutter_application_1/data/parts_catalog.dart';
 import 'package:flutter_application_1/data/temporary_shop_store.dart';
 import 'package:flutter_application_1/data/vehicle_images.dart';
@@ -20,6 +21,7 @@ import 'package:flutter_application_1/screens/motorcycle_parts_catalog_page.dart
 import 'package:flutter_application_1/screens/parts_catalog_page.dart';
 import 'package:flutter_application_1/screens/shop_page.dart';
 import 'package:flutter_application_1/screens/shop_owner_dashboard_page.dart';
+import 'package:flutter_application_1/theme/app_theme.dart';
 import 'package:flutter_application_1/widgets/buy_options_button.dart';
 import 'package:flutter_application_1/widgets/desktop_phone_frame.dart';
 import 'package:flutter_application_1/widgets/vehicle_variant_carousel.dart';
@@ -356,7 +358,7 @@ void main() {
     expect(find.text('View motorcycles'), findsOneWidget);
     expect(find.text('Accessories'), findsOneWidget);
     expect(find.text('Maintenance'), findsOneWidget);
-    expect(find.text('Design'), findsOneWidget);
+    expect(find.text('Design ideas'), findsOneWidget);
   });
 
   testWidgets('shop owners have a separate sign-in route', (
@@ -392,9 +394,21 @@ void main() {
     expect(find.text('Quezon City, Metro Manila'), findsOneWidget);
     expect(find.text('Universal phone holder'), findsOneWidget);
     expect(find.text('₱450.00'), findsOneWidget);
+    expect(find.text('₱1,850.00'), findsOneWidget);
     expect(find.textContaining('Temporary demo:'), findsNothing);
-    expect(find.text('Shopee'), findsOneWidget);
+
+    // Online marketplaces are a fallback listed after the local shops.
+    await tester.scrollUntilVisible(
+      find.text('Shopee'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Shop online'), findsOneWidget);
     expect(find.text('Lazada'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Shopee')).dy,
+      greaterThan(tester.getTopLeft(find.text('MotoScan Demo Parts')).dy),
+    );
   });
 
   testWidgets('new owner products appear in the public shop list', (
@@ -665,36 +679,126 @@ void main() {
     expect(find.text('Burgman Street 125 EX'), findsOneWidget);
   });
 
+  test('design photos are found by item file name', () async {
+    expect(
+      designImageSlug('LED Daytime Running Light (DRL)'),
+      'led_daytime_running_light_drl',
+    );
+    expect(designImageSlug('Body Stickers'), 'body_stickers');
+
+    final images = await loadDesignImages(rootBundle);
+    expect(images['led_headlight'], 'assets/design/led_headlight.png');
+    expect(images, hasLength(greaterThanOrEqualTo(5)));
+    final allSlugs = designGroups
+        .expand((group) => group.items)
+        .map(designImageSlug)
+        .toList();
+    // Every photo must belong to an item, and no two items share a name.
+    expect(allSlugs.toSet(), hasLength(allSlugs.length));
+    expect(allSlugs, containsAll(images.keys));
+  });
+
+  test('maintenance photos are named by group and choice', () async {
+    expect(
+      maintenanceImageSlug('Air Filter', 'Paper filter'),
+      'air_filter-paper_filter',
+    );
+    expect(
+      maintenanceImageSlug('Oil Filter or Oil Strainer', 'Paper filter'),
+      'oil_filter_or_oil_strainer-paper_filter',
+    );
+
+    final allSlugs = [
+      for (final group in maintenanceGroups)
+        for (final choice in group.itemChoices.values.expand((c) => c))
+          maintenanceImageSlug(group.title, choice),
+    ];
+    expect(allSlugs, hasLength(maintenanceChoiceCount));
+    expect(allSlugs.toSet(), hasLength(allSlugs.length));
+
+    // Every bundled photo must belong to a choice, so a typo fails here
+    // instead of silently showing an icon.
+    final photos = await loadMaintenanceImages(rootBundle);
+    expect(allSlugs, containsAll(photos.keys));
+  });
+
+  testWidgets('design items without a photo show their group icon', (
+    WidgetTester tester,
+  ) async {
+    await _pumpIntoMotoScan(tester);
+
+    final seatRow = find.byKey(const ValueKey('design-row-Seat Designs'));
+    await tester.scrollUntilVisible(
+      seatRow,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: seatRow,
+        matching: find.byIcon(Icons.event_seat_outlined),
+      ),
+      findsWidgets,
+    );
+    expect(find.text('Add an image to this choice'), findsNothing);
+  });
+
   testWidgets('design buy buttons show shops without a detail panel', (
     WidgetTester tester,
   ) async {
     await _pumpIntoMotoScan(tester);
 
-    for (final item in designGroups.expand((group) => group.items)) {
+    // Each design group is a sideways row on Home; its first card is built.
+    expect(find.text('Design ideas'), findsOneWidget);
+    for (final group in designGroups) {
+      final item = group.items.first;
+      expect(find.text(group.title), findsOneWidget);
       expect(find.byKey(ValueKey('design-image-$item')), findsOneWidget);
-      expect(find.byKey(ValueKey('design-description-$item')), findsOneWidget);
       expect(find.byKey(ValueKey('buy-$item')), findsOneWidget);
     }
+    expect(find.text('Add an image to this choice'), findsNothing);
 
     await tester.ensureVisible(find.text('LED Headlight'));
     await tester.pumpAndSettle();
-    for (final imageAsset in [
-      'assets/design/lighting_led_headlight.png',
-      'assets/design/lighting_led_tail_light.png',
-      'assets/design/lighting_led_signal_light.png',
-      'assets/design/lighting_led_turn_signal.png',
-      'assets/design/lighting_led_drl.png',
-    ]) {
+    final lightingRow = find.descendant(
+      of: find.byKey(const ValueKey('design-row-Lighting Designs')),
+      matching: find.byType(Scrollable),
+    );
+    for (final entry in {
+      'LED Headlight': 'assets/design/led_headlight.png',
+      'LED Tail Light': 'assets/design/led_tail_light.png',
+      'LED Signal Light': 'assets/design/led_signal_light.png',
+      'LED Turn Signal': 'assets/design/led_turn_signal.png',
+      'LED Daytime Running Light (DRL)':
+          'assets/design/led_daytime_running_light_drl.png',
+    }.entries) {
+      final card = find.byKey(ValueKey('design-image-${entry.key}'));
+      await tester.scrollUntilVisible(card, 120, scrollable: lightingRow);
       expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Image && _assetNameOf(widget.image) == imageAsset,
+        find.descendant(
+          of: card,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Image && _assetNameOf(widget.image) == entry.value,
+          ),
         ),
         findsOneWidget,
       );
     }
-    expect(find.text('Add an image to this choice'), findsWidgets);
-    await tester.tap(find.byKey(const ValueKey('buy-LED Headlight')));
+    final headlightBuy = find.byKey(const ValueKey('buy-LED Headlight'));
+    await tester.scrollUntilVisible(
+      headlightBuy,
+      -120,
+      scrollable: lightingRow,
+    );
+    // Centre the button so the bottom navigation bar cannot cover it.
+    await Scrollable.ensureVisible(
+      tester.element(headlightBuy),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(headlightBuy);
     await tester.pumpAndSettle();
 
     expect(find.text('Where to buy LED Headlight'), findsOneWidget);
@@ -860,7 +964,7 @@ void main() {
     expect(brandTile.color, Colors.white);
     expect(
       (brandTile.shape! as RoundedRectangleBorder).side.color,
-      const Color(0xFF277C78),
+      AppColors.primary,
     );
     expect(find.text('Honda Beat Playful'), findsOneWidget);
     expect(find.text('3 listed parts across 2 categories'), findsNothing);
@@ -1238,14 +1342,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Full-face helmet'), findsOneWidget);
     expect(find.textContaining('compatibility'), findsNothing);
-    expect(find.text('Add an image to this choice'), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('choice-image-placeholder')),
+      findsWidgets,
+    );
     final helmetCard = find.byKey(
       const ValueKey('catalog-choice-Full-face helmet'),
     );
     expect(helmetCard, findsOneWidget);
     final helmetPlaceholder = find.descendant(
       of: helmetCard,
-      matching: find.text('Add an image to this choice'),
+      matching: find.byKey(const ValueKey('choice-image-placeholder')),
     );
     final helmetName = find.descendant(
       of: helmetCard,
@@ -1280,7 +1387,18 @@ void main() {
     expect(find.text('Mineral oil'), findsOneWidget);
     expect(find.text('JASO MB'), findsOneWidget);
     expect(find.textContaining('compatibility'), findsNothing);
-    expect(find.text('Add an image to this choice'), findsNWidgets(13));
+    expect(
+      find.byKey(const ValueKey('choice-image-placeholder')),
+      findsNWidgets(13),
+    );
+    // Choices without a photo show their group's icon.
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('choice-image-placeholder')),
+        matching: find.byIcon(Icons.oil_barrel_outlined),
+      ),
+      findsNWidgets(13),
+    );
     expect(find.text('Buy'), findsWidgets);
     expect(find.text('Maintenance record fields'), findsNothing);
     expect(

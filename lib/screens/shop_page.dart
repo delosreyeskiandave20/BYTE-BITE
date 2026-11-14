@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/price_format.dart';
 import '../data/marketplace.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
@@ -111,7 +112,7 @@ class _ShopPageState extends State<ShopPage> {
             }
 
             return RefreshIndicator(
-              color: AppColors.teal,
+              color: AppColors.primary,
               onRefresh: () {
                 widget.store.retry();
                 return Future<void>.value();
@@ -235,7 +236,7 @@ class _ShopContent extends StatelessWidget {
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             hintText: 'Search shops, parts, or locations',
-            prefixIcon: const Icon(Icons.search, color: AppColors.teal),
+            prefixIcon: const Icon(Icons.search, color: AppColors.primary),
             suffixIcon: searchQuery.isEmpty
                 ? null
                 : IconButton(
@@ -255,29 +256,7 @@ class _ShopContent extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        if (query == null) ...[
-          Row(
-            children: [
-              Expanded(
-                child: _MarketplaceCard(
-                  name: Marketplaces.shopee,
-                  icon: Icons.shopping_bag_outlined,
-                  onTap: () => onOpenMarketplace(Marketplaces.shopee),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _MarketplaceCard(
-                  name: Marketplaces.lazada,
-                  icon: Icons.local_mall_outlined,
-                  onTap: () => onOpenMarketplace(Marketplaces.lazada),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-        ],
+        const SizedBox(height: 20),
         _SectionHeading(
           title: activeQuery.isEmpty
               ? 'Available shops'
@@ -311,13 +290,13 @@ class _ShopContent extends StatelessWidget {
                     label: Text(category),
                     selected: selected,
                     onSelected: (_) => onCategorySelected(category),
-                    selectedColor: AppColors.tealSoft,
+                    selectedColor: AppColors.primarySoft,
                     backgroundColor: AppColors.surface,
                     side: BorderSide(
-                      color: selected ? AppColors.teal : AppColors.line,
+                      color: selected ? AppColors.primary : AppColors.line,
                     ),
                     labelStyle: TextStyle(
-                      color: selected ? AppColors.teal : AppColors.muted,
+                      color: selected ? AppColors.primary : AppColors.muted,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
@@ -342,6 +321,35 @@ class _ShopContent extends StatelessWidget {
               child: _ShopCard(shop: entry.shop, products: products),
             );
           }),
+        ],
+        // Local shops are the point of MotoScan, so online marketplaces come
+        // after them as a fallback.
+        if (query == null) ...[
+          const SizedBox(height: 22),
+          const _SectionHeading(
+            title: 'Shop online',
+            subtitle: 'Not near a shop? Search these marketplaces.',
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _MarketplaceCard(
+                  name: Marketplaces.shopee,
+                  icon: Icons.shopping_bag_outlined,
+                  onTap: () => onOpenMarketplace(Marketplaces.shopee),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MarketplaceCard(
+                  name: Marketplaces.lazada,
+                  icon: Icons.local_mall_outlined,
+                  onTap: () => onOpenMarketplace(Marketplaces.lazada),
+                ),
+              ),
+            ],
+          ),
         ],
       ],
     );
@@ -383,7 +391,7 @@ class _ShopStatus extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: AppColors.teal, size: 34),
+                Icon(icon, color: AppColors.primary, size: 34),
                 const SizedBox(height: 12),
                 if (title != null) ...[
                   Text(
@@ -487,10 +495,10 @@ class _MarketplaceCard extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.tealSoft,
+                  color: AppColors.primarySoft,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: AppColors.teal, size: 20),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
               const SizedBox(width: 9),
               Expanded(
@@ -546,12 +554,12 @@ class _ShopCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: AppColors.tealSoft,
+                  color: AppColors.primarySoft,
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: const Icon(
                   Icons.storefront_outlined,
-                  color: AppColors.teal,
+                  color: AppColors.primary,
                 ),
               ),
               const SizedBox(width: 11),
@@ -618,7 +626,7 @@ class _ShopCard extends StatelessWidget {
                         Text(
                           product.category,
                           style: const TextStyle(
-                            color: AppColors.teal,
+                            color: AppColors.primary,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
@@ -643,7 +651,7 @@ class _ShopCard extends StatelessWidget {
                     children: [
                       Text(
                         product.price > 0
-                            ? '₱${product.price.toStringAsFixed(2)}'
+                            ? formatPeso(product.price)
                             : 'Price not set',
                         style: const TextStyle(
                           color: AppColors.ink,
@@ -658,7 +666,7 @@ class _ShopCard extends StatelessWidget {
                             : 'Unavailable',
                         style: TextStyle(
                           color: product.isAvailable
-                              ? AppColors.teal
+                              ? AppColors.success
                               : AppColors.danger,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -686,7 +694,7 @@ class _ProductThumbnail extends StatelessWidget {
     if (!product.hasImage) {
       return const Icon(
         Icons.inventory_2_outlined,
-        color: AppColors.teal,
+        color: AppColors.primary,
         size: 19,
       );
     }
@@ -702,10 +710,10 @@ class _ProductThumbnail extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => Container(
             width: 48,
             height: 48,
-            color: AppColors.tealSoft,
+            color: AppColors.primarySoft,
             child: const Icon(
               Icons.broken_image_outlined,
-              color: AppColors.teal,
+              color: AppColors.primary,
               size: 19,
             ),
           ),

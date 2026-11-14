@@ -9,7 +9,15 @@
       "ClaudeInChromeDomain(www.ebay.com)",
       "Bash(flutter test *)",
       "Bash(grep -v \"^\\\\s*$\")",
-      "Bash(flutter analyze *)"
+      "Bash(flutter analyze *)",
+      "ClaudeInChromeDomain(localhost:8765)",
+      "Bash(ls /c/src/flutter/bin/cache/artifacts/material_fonts/ | head; ls /c/src/flutter/bin/cache/artifacts/material_fonts/ | grep -i icon)",
+      "Read(//c/src/flutter/bin/cache/artifacts/material_fonts//**)",
+      "Bash(perl -0pi -e \"s/              const Expanded\\\\\\(\\\\n                child: Text\\\\\\(\\\\n                  'MOTOSCAN \\\\/ INTELLIGENCE',.*?\\\\n                \\\\\\),\\\\n              \\\\\\),\\\\n              const SizedBox\\\\\\(width: 8\\\\\\),\\\\n/              const Spacer\\(\\),\\\\n/s\" lib/screens/identify_page.dart)",
+      "Bash(perl -0pi -e \"s/              const Text\\\\\\(\\\\n                'MOTOSCAN \\\\/ LIBRARY',.*?\\\\n              \\\\\\),\\\\n              const SizedBox\\\\\\(height: 6\\\\\\),\\\\n//s\" lib/screens/search_page.dart)",
+      "Bash(perl -0pi -e \"s/                  Text\\\\\\(\\\\n                    'MOTOSCAN \\\\/ VEHICLE GUIDE',.*?\\\\n                  \\\\\\),\\\\n                  SizedBox\\\\\\(height: 5\\\\\\),\\\\n//s\" lib/widgets/vehicle_variant_carousel.dart)",
+      "Bash(perl -0pi -e \"s/          Text\\\\\\(\\\\n            _isMaintenance\\\\n                \\\\? 'MOTOSCAN \\\\/ SERVICE GUIDE'.*?\\\\n          \\\\\\),\\\\n          const SizedBox\\\\\\(height: 7\\\\\\),\\\\n//s\" lib/screens/catalog_page.dart)",
+      "Bash(perl -0pi -e \"s/          Row\\\\\\(\\\\n            children: \\\\[\\\\n              const Spacer\\\\\\(\\\\\\),\\\\n.*?'Preview only',.*?\\\\n          \\\\\\),\\\\n          const SizedBox\\\\\\(height: 8\\\\\\),\\\\n//s\" lib/screens/identify_page.dart)"
     ]
   }
 }

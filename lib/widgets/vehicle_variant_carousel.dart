@@ -80,16 +80,6 @@ class _VehicleVariantCarouselState extends State<VehicleVariantCarousel> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'MOTOSCAN / VEHICLE GUIDE',
-                    style: TextStyle(
-                      color: AppColors.teal,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  SizedBox(height: 5),
-                  Text(
                     'Browse motorcycle variants',
                     style: TextStyle(
                       color: AppColors.ink,
@@ -137,14 +127,14 @@ class _VehicleVariantCarouselState extends State<VehicleVariantCarousel> {
                   selected: selected,
                   onSelected: (_) => _selectBrand(brand),
                   showCheckmark: false,
-                  selectedColor: AppColors.tealSoft,
+                  selectedColor: AppColors.primarySoft,
                   backgroundColor: Colors.white,
                   side: BorderSide(
-                    color: selected ? AppColors.teal : AppColors.line,
+                    color: selected ? AppColors.primary : AppColors.line,
                     width: selected ? 1.5 : 1,
                   ),
                   labelStyle: TextStyle(
-                    color: selected ? AppColors.teal : AppColors.muted,
+                    color: selected ? AppColors.primary : AppColors.muted,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
@@ -182,7 +172,7 @@ class _VehicleVariantCarouselState extends State<VehicleVariantCarousel> {
                       ? null
                       : () => _showZoomedImage(context, imageAsset),
                   icon: const Icon(Icons.zoom_in),
-                  color: AppColors.teal,
+                  color: AppColors.primary,
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.paper,
                     minimumSize: const Size(44, 44),
@@ -277,7 +267,7 @@ class _VehiclePlaceholder extends StatelessWidget {
           const Icon(
             Icons.image_not_supported_outlined,
             size: 44,
-            color: AppColors.teal,
+            color: AppColors.primary,
           ),
           const SizedBox(height: 10),
           Text(
@@ -316,7 +306,7 @@ class _CarouselArrow extends StatelessWidget {
           tooltip: tooltip,
           onPressed: onPressed,
           icon: Icon(icon),
-          color: AppColors.teal,
+          color: AppColors.primary,
           style: IconButton.styleFrom(
             minimumSize: const Size(44, 44),
             maximumSize: const Size(44, 44),
@@ -360,7 +350,7 @@ void _showZoomedImage(BuildContext context, String imageAsset) {
                 tooltip: 'Close zoomed image',
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.close),
-                color: AppColors.teal,
+                color: AppColors.primary,
                 style: IconButton.styleFrom(backgroundColor: AppColors.paper),
               ),
             ),
@@ -408,7 +398,7 @@ class _MotorcycleDetails extends StatelessWidget {
           const Text(
             'MOTORCYCLE DETAILS',
             style: TextStyle(
-              color: AppColors.teal,
+              color: AppColors.primary,
               fontSize: 11,
               fontWeight: FontWeight.w900,
               letterSpacing: 1.2,
@@ -440,7 +430,7 @@ class _MotorcycleDetails extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: variant == vehicle.variant
-                        ? AppColors.tealSoft
+                        ? AppColors.primarySoft
                         : AppColors.paper,
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -448,7 +438,7 @@ class _MotorcycleDetails extends StatelessWidget {
                     variant,
                     style: TextStyle(
                       color: variant == vehicle.variant
-                          ? AppColors.teal
+                          ? AppColors.primary
                           : const Color(0xFF4F4A44),
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
@@ -465,9 +455,9 @@ class _MotorcycleDetails extends StatelessWidget {
               icon: const Icon(Icons.open_in_new, size: 16),
               label: const Text('Find videos & details on Google'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.teal,
+                foregroundColor: AppColors.primary,
                 minimumSize: const Size.fromHeight(46),
-                side: const BorderSide(color: AppColors.tealBorder),
+                side: const BorderSide(color: AppColors.primaryBorder),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
