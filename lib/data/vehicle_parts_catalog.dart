@@ -118,8 +118,47 @@ String? vehiclePartImageAsset({
       return 'assets/vehicle_parts/beat_playful/$imageFile';
     }
   }
+  if (brand == 'Honda' && model == 'Giorno+' && variant == 'Standard') {
+    final imageFile = _giornoPlusStandardPartImages[_assetSlug(part)];
+    if (imageFile != null) {
+      return 'assets/vehicle_parts/giorno_plus_standard/$imageFile';
+    }
+  }
   return 'assets/vehicle_parts/${_assetSlug(category)}/${_assetSlug(part)}.png';
 }
+
+const _giornoPlusStandardPartImages = <String, String>{
+  'engine_oil': 'engine_oil.jpg',
+  'oil_screen_filter': 'oil_screen_filter.jpg',
+  'drain_plug_washer': 'drain_plug_washer.jpg',
+  'air_filter': 'air_filter.jpg',
+  'spark_plug': 'spark_plug.jpg',
+  'cvt_drive_belt': 'cvt_drive_belt.jpg',
+  'clutch_shoe_set': 'clutch_shoe_set.jpg',
+  'final_drive_gear_oil': 'final_drive_gear_oil.png',
+  '12_v_battery': '12_v_battery.jpg',
+  'main_fuse': 'main_fuse.jpg',
+  'regulator_rectifier': 'regulator_rectifier.jpg',
+  'stator_charging_coil': 'stator_charging_coil.webp',
+  'spark_plug_cap': 'spark_plug_cap.webp',
+  'ignition_coil': 'ignition_coil.jpg',
+  'ecu_pgm_fi_unit': 'ecu_pgm_fi_unit.jpg',
+  'oxygen_sensor': 'oxygen_sensor.jpg',
+  'brake_light_switch': 'brake_light_switch.jpg',
+  'front_fork_oil': 'front_fork_oil.png',
+  'fork_oil_seal': 'fork_oil_seal.jpg',
+  'fork_dust_seal': 'fork_dust_seal.jpg',
+  'front_fork_spring': 'front_fork_spring.jpg',
+  'rear_shock_absorber': 'rear_shock_absorber.webp',
+  'swingarm_pivot_bushing': 'swingarm_pivot_bushing.jpg',
+  'side_stand_switch': 'side_stand_switch.png',
+  'front_tire': 'front_tire.webp',
+  'rear_tire': 'rear_tire.jpg',
+  'front_wheel_bearing': 'front_wheel_bearing.jpg',
+  'rear_wheel_bearing': 'rear_wheel_bearing.jpg',
+  'front_axle_collar': 'front_axle_collar.jpg',
+  'tubeless_valve_stem': 'tubeless_valve_stem.jpg',
+};
 
 const _click125StandardPartImages = <String, String>{
   'engine_oil': 'engine_oil.png',
@@ -128,7 +167,6 @@ const _click125StandardPartImages = <String, String>{
   'air_filter': 'air_filter.png',
   'spark_plug': 'spark_plug.webp',
   'cvt_drive_belt': 'cvt_drive_belt.jpg',
-  'variator_roller_set': 'variator_roller_set.jpg',
   'cvt_slider_set': 'cvt_slider_set.png',
   'clutch_shoe_set': 'clutch_shoe_set.png',
   'final_drive_gear_oil': 'final_drive_gear_oil.png',
@@ -155,7 +193,6 @@ const _click125StandardPartImages = <String, String>{
   'rear_tire': 'rear_tire.png',
   'front_wheel_bearing': 'front_wheel_bearing.jpg',
   'rear_wheel_bearing': 'rear_wheel_bearing.png',
-  'wheel_oil_seal': 'wheel_oil_seal.jpg',
   'front_axle_collar': 'front_axle_collar.png',
   'rear_axle_collar': 'rear_axle_collar.png',
   'tubeless_valve_stem': 'tubeless_valve_stem.jpg',
@@ -180,12 +217,10 @@ const _beatPlayfulPartImages = <String, String>{
   'spark_plug': 'spark_plug.jpg',
   'cvt_drive_belt': 'cvt_drive_belt.png',
   'variator_roller_set': 'variator_roller_set.png',
-  'cvt_slider_set': 'cvt_slider_set.jpg',
   'clutch_shoe_set': 'clutch_shoe_set.png',
   'final_drive_gear_oil': 'final_drive_gear_oil.png',
   '12_v_battery': '12_v_battery.jpg',
   'main_fuse': 'main_fuse.jpg',
-  'starter_relay': 'starter_relay.jpg',
   'regulator_rectifier': 'regulator_rectifier.jpg',
   'spark_plug_cap': 'spark_plug_cap.png',
   'ignition_coil': 'ignition_coil.png',
@@ -198,7 +233,6 @@ const _beatPlayfulPartImages = <String, String>{
   'fork_bushing': 'fork_bushing.jpg',
   'front_fork_spring': 'front_fork_spring.jpg',
   'rear_shock_absorber': 'rear_shock_absorber.webp',
-  'rear_shock_bushing': 'rear_shock_bushing.jpg',
   'steering_head_bearing': 'steering_head_bearing.png',
   'swingarm_pivot_bushing': 'swingarm_pivot_bushing.jpg',
   'side_stand_switch': 'side_stand_switch.jpg',
@@ -206,7 +240,6 @@ const _beatPlayfulPartImages = <String, String>{
   'rear_tire': 'rear_tire.png',
   'front_wheel_bearing': 'front_wheel_bearing.jpg',
   'rear_wheel_bearing': 'rear_wheel_bearing.webp',
-  'wheel_oil_seal': 'wheel_oil_seal.jpg',
   'front_axle_collar': 'front_axle_collar.jpg',
   'rear_axle_collar': 'rear_axle_collar.png',
   'tubeless_valve_stem': 'tubeless_valve_stem.jpg',

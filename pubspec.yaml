@@ -72,6 +72,7 @@ flutter:
     - assets/vehicle_parts/click125_standard/
     - assets/vehicle_parts/click125_smart_edition/
     - assets/vehicle_parts/click125_street/
+    - assets/vehicle_parts/giorno_plus_standard/
     - assets/brands/
     - assets/categories/engine/
     - assets/categories/electrical/
