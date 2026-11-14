@@ -73,6 +73,27 @@ flutter:
     - assets/vehicle_parts/click125_smart_edition/
     - assets/vehicle_parts/click125_street/
     - assets/vehicle_parts/giorno_plus_standard/
+    - assets/vehicle_parts/click160_standard/
+    - assets/vehicle_parts/pcx160_standard/
+    - assets/vehicle_parts/pcx160_roadsync/
+    - assets/vehicle_parts/adv160_abs/
+    - assets/vehicle_parts/adv160_roadsync/
+    - assets/vehicle_parts/adv350_standard/
+    - assets/vehicle_parts/wave_rsx_drum/
+    - assets/vehicle_parts/wave_rsx_disc/
+    - assets/vehicle_parts/xrm125_ds/
+    - assets/vehicle_parts/xrm125_dsx/
+    - assets/vehicle_parts/xrm125_motard/
+    - assets/vehicle_parts/winner_x_standard/
+    - assets/vehicle_parts/winner_x_abs_premium/
+    - assets/vehicle_parts/winner_x_abs_racing/
+    - assets/vehicle_parts/tmx125_alpha/
+    - assets/vehicle_parts/tmx125_supremo/
+    - assets/vehicle_parts/cbr150r_standard/
+    - assets/vehicle_parts/xr150l_standard/
+    - assets/vehicle_parts/crf150l_standard/
+    - assets/vehicle_parts/rebel_500/
+    - assets/vehicle_parts/rebel_1100/
     - assets/brands/
     - assets/categories/engine/
     - assets/categories/electrical/
