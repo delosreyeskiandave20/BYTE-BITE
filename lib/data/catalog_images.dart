@@ -9,6 +9,10 @@ const designImageFolder = 'assets/design/';
 /// [maintenanceImageSlug].
 const maintenanceImageFolder = 'assets/maintenance/';
 
+/// Folder that holds Accessories choice photos, named by
+/// [accessoryImageSlug].
+const accessoryImageFolder = 'assets/accessories/';
+
 const _imageExtensions = {'.png', '.jpg', '.jpeg', '.webp'};
 
 /// Photos bundled in [designImageFolder], keyed by file name without extension.
@@ -19,6 +23,11 @@ Future<Map<String, String>> loadDesignImages([AssetBundle? bundle]) =>
 /// extension.
 Future<Map<String, String>> loadMaintenanceImages([AssetBundle? bundle]) =>
     loadFolderImages(maintenanceImageFolder, bundle);
+
+/// Photos bundled in [accessoryImageFolder], keyed by file name without
+/// extension.
+Future<Map<String, String>> loadAccessoryImages([AssetBundle? bundle]) =>
+    loadFolderImages(accessoryImageFolder, bundle);
 
 /// Maps each photo directly inside [folder] to its asset path, keyed by file
 /// name without extension.

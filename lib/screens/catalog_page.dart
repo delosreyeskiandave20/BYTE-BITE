@@ -26,7 +26,7 @@ class _CatalogPageState extends State<CatalogPage> {
   late final _shopStore = widget.shopStore ?? ShopStore.shared;
   String? _expandedGroup;
 
-  /// Bundled maintenance photos keyed by [maintenanceImageSlug].
+  /// Bundled photos keyed by [maintenanceImageSlug] or [accessoryImageSlug].
   Map<String, String> _photos = const {};
 
   bool get _isMaintenance => widget.type == 'maintenance';
@@ -34,11 +34,11 @@ class _CatalogPageState extends State<CatalogPage> {
   @override
   void initState() {
     super.initState();
-    if (_isMaintenance) {
-      loadMaintenanceImages().then((photos) {
-        if (mounted) setState(() => _photos = photos);
-      });
-    }
+    (_isMaintenance ? loadMaintenanceImages() : loadAccessoryImages()).then((
+      photos,
+    ) {
+      if (mounted) setState(() => _photos = photos);
+    });
   }
 
   List<CatalogGroup> get _groups =>
@@ -170,7 +170,7 @@ class _CatalogGroupCard extends StatelessWidget {
   final bool expanded;
   final bool isMaintenance;
 
-  /// Bundled maintenance photos keyed by [maintenanceImageSlug].
+  /// Bundled photos keyed by [maintenanceImageSlug] or [accessoryImageSlug].
   final Map<String, String> photos;
   final ShopStore shopStore;
 
@@ -206,13 +206,16 @@ class _CatalogGroupCard extends StatelessWidget {
               const <String, CatalogChoiceDetails>{}
         : accessoryChoiceDetailsByGroup[group.title] ??
               const <String, CatalogChoiceDetails>{};
-    if (!isMaintenance || photos.isEmpty) return base;
+    if (photos.isEmpty) return base;
 
     return {
       for (final choice in choices)
         choice: () {
           final details = base[choice];
-          final photo = photos[maintenanceImageSlug(group.title, choice)];
+          final photo =
+              photos[isMaintenance
+                  ? maintenanceImageSlug(group.title, choice)
+                  : accessoryImageSlug(group.title, choice)];
           if (photo == null || details?.imageAsset?.isNotEmpty == true) {
             return details ?? const CatalogChoiceDetails();
           }

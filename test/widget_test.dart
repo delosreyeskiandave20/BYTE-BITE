@@ -28,6 +28,14 @@ import 'package:flutter_application_1/widgets/vehicle_variant_carousel.dart';
 
 import 'fake_owner_auth.dart';
 
+/// The bundled asset an [Image] shows, unwrapping the [ResizeImage] that
+/// `cacheWidth` adds; null for non-asset images.
+String? _assetName(Image image) {
+  var provider = image.image;
+  if (provider is ResizeImage) provider = provider.imageProvider;
+  return provider is AssetImage ? provider.assetName : null;
+}
+
 Future<void> _pumpIntoMotoScan(WidgetTester tester) async {
   final logicalSize = tester.view.physicalSize / tester.view.devicePixelRatio;
   if (logicalSize == const Size(800, 600)) {
@@ -148,44 +156,45 @@ void main() {
     );
   });
 
-  test('vehicle catalog removes the final 21 motorcycle versions', () {
+  test('vehicle catalog contains the supplied 50 model records', () {
     final modelCount = vehicleCatalog.values.fold<int>(
       0,
       (count, models) => count + models.length,
     );
 
-    expect(modelCount, 33);
-    expect(vehicleCatalog.keys, ['Honda', 'Yamaha', 'Suzuki']);
-    expect(vehicleCatalog['Suzuki']!.keys, [
-      'Burgman 15',
-      'Access',
-      'Avenis',
-      'Burgman Street 125 EX',
+    expect(modelCount, 50);
+    expect(vehicleCatalog.keys, [
+      'Honda',
+      'Yamaha',
+      'Suzuki',
+      'Kawasaki',
+      'RUSI',
+      'MotorStar',
     ]);
     expect(
       vehicleCatalog.values
           .expand((models) => models.values)
           .expand((variants) => variants)
           .length,
-      53,
+      74,
     );
   });
 
-  test('parts catalog omits the removed motorcycle versions', () async {
+  test('parts catalog has a record for every catalog variant', () async {
     final catalog = await loadVehiclePartsCatalog();
+    // Model spellings differ between the two sources ("Beat" vs "BeAT"), so
+    // compare how many variants each brand has.
+    final expected = {
+      for (final brand in vehicleCatalog.entries)
+        brand.key: brand.value.values.expand((variants) => variants).length,
+    };
+    final actual = <String, int>{};
+    for (final vehicle in catalog) {
+      actual[vehicle.brand] = (actual[vehicle.brand] ?? 0) + 1;
+    }
 
-    expect(catalog, hasLength(53));
-    expect(
-      catalog.any(
-        (vehicle) =>
-            vehicle.brand == 'Kawasaki' ||
-            vehicle.brand == 'RUSI' ||
-            vehicle.brand == 'MotorStar' ||
-            (vehicle.brand == 'Suzuki' &&
-                !vehicleCatalog['Suzuki']!.containsKey(vehicle.model)),
-      ),
-      isFalse,
-    );
+    expect(catalog, hasLength(74));
+    expect(actual, expected);
   });
 
   test(
@@ -211,20 +220,20 @@ void main() {
         }
       }
 
-      expect(variantCount, 53);
-      expect(vehicleVariantImageAssets, hasLength(53));
+      expect(variantCount, 74);
+      expect(vehicleVariantImageAssets, hasLength(74));
     },
   );
 
   test(
-    'motorcycle parts catalog contains the remaining variant records',
+    'motorcycle parts catalog contains all supplied variant records',
     () async {
       final catalog = await loadVehiclePartsCatalog();
 
-      expect(catalog, hasLength(53));
+      expect(catalog, hasLength(74));
       expect(
         catalog.fold<int>(0, (total, vehicle) => total + vehicle.partCount),
-        2650,
+        3700,
       );
       final beat = catalog.firstWhere(
         (vehicle) =>
@@ -659,6 +668,22 @@ void main() {
     await advanceVariants(suzukiVariantCount);
     expect(
       tester
+          .widget<ChoiceChip>(
+            find.byKey(const ValueKey('gallery-brand-Kawasaki')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(find.text('Barako II'), findsOneWidget);
+
+    // Kawasaki, RUSI and MotorStar follow, then the carousel wraps to Honda.
+    final remainingVariantCount = ['Kawasaki', 'RUSI', 'MotorStar']
+        .expand((brand) => vehicleCatalog[brand]!.values)
+        .expand((variants) => variants)
+        .length;
+    await advanceVariants(remainingVariantCount);
+    expect(
+      tester
           .widget<ChoiceChip>(find.byKey(const ValueKey('gallery-brand-Honda')))
           .selected,
       isTrue,
@@ -671,12 +696,12 @@ void main() {
     expect(
       tester
           .widget<ChoiceChip>(
-            find.byKey(const ValueKey('gallery-brand-Suzuki')),
+            find.byKey(const ValueKey('gallery-brand-MotorStar')),
           )
           .selected,
       isTrue,
     );
-    expect(find.text('Burgman Street 125 EX'), findsOneWidget);
+    expect(find.text('Xplorer 250R'), findsOneWidget);
   });
 
   test('design photos are found by item file name', () async {
@@ -722,7 +747,7 @@ void main() {
     expect(allSlugs, containsAll(photos.keys));
   });
 
-  testWidgets('design items without a photo show their group icon', (
+  testWidgets('design items show their bundled photo, not the group icon', (
     WidgetTester tester,
   ) async {
     await _pumpIntoMotoScan(tester);
@@ -737,9 +762,20 @@ void main() {
     expect(
       find.descendant(
         of: seatRow,
-        matching: find.byIcon(Icons.event_seat_outlined),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Image &&
+              (_assetName(widget)?.startsWith('assets/design/') ?? false),
+        ),
       ),
       findsWidgets,
+    );
+    expect(
+      find.descendant(
+        of: seatRow,
+        matching: find.byIcon(Icons.event_seat_outlined),
+      ),
+      findsNothing,
     );
     expect(find.text('Add an image to this choice'), findsNothing);
   });
@@ -1342,24 +1378,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Full-face helmet'), findsOneWidget);
     expect(find.textContaining('compatibility'), findsNothing);
+    // Every accessory choice has a bundled photo in assets/accessories/.
     expect(
       find.byKey(const ValueKey('choice-image-placeholder')),
-      findsWidgets,
+      findsNothing,
     );
     final helmetCard = find.byKey(
       const ValueKey('catalog-choice-Full-face helmet'),
     );
     expect(helmetCard, findsOneWidget);
-    final helmetPlaceholder = find.descendant(
+    final helmetPhoto = find.descendant(
       of: helmetCard,
-      matching: find.byKey(const ValueKey('choice-image-placeholder')),
+      matching: find.byType(Image),
+    );
+    expect(helmetPhoto, findsOneWidget);
+    expect(
+      _assetName(tester.widget<Image>(helmetPhoto)),
+      startsWith('assets/accessories/helmet-full_face_helmet.'),
     );
     final helmetName = find.descendant(
       of: helmetCard,
       matching: find.text('Full-face helmet'),
     );
     expect(
-      tester.getTopLeft(helmetPlaceholder).dx,
+      tester.getTopLeft(helmetPhoto).dx,
       lessThan(tester.getTopLeft(helmetName).dx),
     );
     expect(find.text('Buy'), findsWidgets);
@@ -1387,15 +1429,17 @@ void main() {
     expect(find.text('Mineral oil'), findsOneWidget);
     expect(find.text('JASO MB'), findsOneWidget);
     expect(find.textContaining('compatibility'), findsNothing);
+    // Every Engine Oil choice has a bundled photo in assets/maintenance/.
     expect(
       find.byKey(const ValueKey('choice-image-placeholder')),
-      findsNWidgets(13),
+      findsNothing,
     );
-    // Choices without a photo show their group's icon.
     expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('choice-image-placeholder')),
-        matching: find.byIcon(Icons.oil_barrel_outlined),
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            (_assetName(widget)?.startsWith('assets/maintenance/engine_oil-') ??
+                false),
       ),
       findsNWidgets(13),
     );

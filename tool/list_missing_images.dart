@@ -1,10 +1,12 @@
-// Lists the photo file name every Design ideas item and Maintenance choice
+// Lists the photo file name every Design ideas item, Maintenance choice and
+// Accessories choice
 // expects, and which are still missing.
 //
 // Run from the project root:
 //   dart run tool/list_missing_images.dart              (everything)
 //   dart run tool/list_missing_images.dart design
 //   dart run tool/list_missing_images.dart maintenance
+//   dart run tool/list_missing_images.dart accessories
 import 'dart:io';
 
 import 'package:flutter_application_1/data/accessories_maintenance_catalog.dart';
@@ -35,6 +37,19 @@ void main(List<String> args) {
           group.title: {
             for (final choice in group.itemChoices.values.expand((c) => c))
               choice: maintenanceImageSlug(group.title, choice),
+          },
+      },
+    );
+  }
+  if (only == null || only == 'accessories') {
+    _report(
+      title: 'ACCESSORIES',
+      folder: 'assets/accessories',
+      groups: {
+        for (final group in accessoryGroups)
+          group.title: {
+            for (final choice in group.itemChoices.values.expand((c) => c))
+              choice: accessoryImageSlug(group.title, choice),
           },
       },
     );

@@ -20,3 +20,8 @@ String designImageSlug(String item) => imageSlug(item);
 /// `air_filter-paper_filter`.
 String maintenanceImageSlug(String group, String choice) =>
     '${imageSlug(group)}-${imageSlug(choice)}';
+
+/// File name (without extension) an accessory choice's photo must use in
+/// `assets/accessories/`, e.g. `helmet-full_face_helmet`.
+String accessoryImageSlug(String group, String choice) =>
+    '${imageSlug(group)}-${imageSlug(choice)}';
