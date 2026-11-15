@@ -13,7 +13,7 @@ class PartCategoryGrid extends StatelessWidget {
   final List<PartCategory> categories;
   final ValueChanged<PartCategory> onCategorySelected;
 
-  static const _gap = 10.0;
+  static const _gap = 12.0;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +22,7 @@ class PartCategoryGrid extends StatelessWidget {
         final tileWidth = (constraints.maxWidth - _gap) / 2;
         // Two-column tiles; text space grows with the user's text size.
         final tileHeight =
-            tileWidth * 0.78 + MediaQuery.textScalerOf(context).scale(52);
+            tileWidth * 0.82 + MediaQuery.textScalerOf(context).scale(24);
 
         Widget card(PartCategory category) =>
             _CategoryCard(category: category, onSelected: onCategorySelected);
@@ -61,54 +61,98 @@ class _CategoryCard extends StatelessWidget {
   final PartCategory category;
   final ValueChanged<PartCategory> onSelected;
 
+  static const _radius = 18.0;
+
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => onSelected(category),
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.line),
+    // Full-bleed photo with the name on a dark fade, so every card reads as
+    // one picture instead of a photo stacked on a text box.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_radius),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F22201E),
+            blurRadius: 14,
+            offset: Offset(0, 6),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        ],
+      ),
+      child: Material(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(_radius),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => onSelected(category),
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Expanded(
-                child: Image.asset(
-                  category.imageAsset,
-                  cacheWidth: 420,
-                  fit: BoxFit.cover,
-                  excludeFromSemantics: true,
+              Ink.image(
+                image: ResizeImage(AssetImage(category.imageAsset), width: 420),
+                fit: BoxFit.cover,
+              ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x00000000),
+                      Color(0x14000000),
+                      Color(0xD9161412),
+                    ],
+                    stops: [0, 0.45, 1],
+                  ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 11,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      category.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.ink,
-                        fontSize: AppType.body,
-                        fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            category.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: AppType.cardTitle + 1,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            category.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xD9FFFFFF),
+                              fontSize: AppType.caption,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      category.subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: AppType.caption,
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: const BoxDecoration(
+                        color: AppColors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward,
+                        size: 16,
+                        color: AppColors.ink,
                       ),
                     ),
                   ],

@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_1/data/accessories_maintenance_catalog.dart';
 import 'package:flutter_application_1/data/design_catalog.dart';
 import 'package:flutter_application_1/data/catalog_images.dart';
+import 'package:flutter_application_1/data/choice_descriptions.dart';
+import 'package:flutter_application_1/data/part_descriptions.dart';
 import 'package:flutter_application_1/data/motorcycle_specs.dart';
 import 'package:flutter_application_1/data/online_stores.dart';
 import 'package:flutter_application_1/data/parts_catalog.dart';
@@ -35,6 +37,10 @@ import 'fake_owner_auth.dart';
 
 /// The bundled asset an [Image] shows, unwrapping the [ResizeImage] that
 /// `cacheWidth` adds; null for non-asset images.
+/// The size shown in the Sizes page's result card.
+String? _specValue(WidgetTester tester) =>
+    tester.widget<Text>(find.byKey(const ValueKey('spec-value'))).data;
+
 String? _assetName(Image image) {
   var provider = image.image;
   if (provider is ResizeImage) provider = provider.imageProvider;
@@ -406,14 +412,14 @@ void main() {
 
     // Online marketplaces are a fallback listed after the local shops.
     await tester.scrollUntilVisible(
-      find.text('Shopee'),
+      find.byKey(const ValueKey('marketplace-Shopee')),
       200,
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Shop online'), findsOneWidget);
-    expect(find.text('Lazada'), findsOneWidget);
+    expect(find.byKey(const ValueKey('marketplace-Lazada')), findsOneWidget);
     expect(
-      tester.getTopLeft(find.text('Shopee')).dy,
+      tester.getTopLeft(find.byKey(const ValueKey('marketplace-Shopee'))).dy,
       greaterThan(tester.getTopLeft(find.text('MotoScan Demo Parts')).dy),
     );
   });
@@ -840,8 +846,8 @@ void main() {
 
     expect(find.text('Where to buy LED Headlight'), findsOneWidget);
     expect(find.text('No local shop has this item in stock.'), findsOneWidget);
-    expect(find.text('Shopee'), findsOneWidget);
-    expect(find.text('Lazada'), findsOneWidget);
+    expect(find.byKey(const ValueKey('marketplace-Shopee')), findsOneWidget);
+    expect(find.byKey(const ValueKey('marketplace-Lazada')), findsOneWidget);
     expect(find.text('WHERE TO FIND THIS PRODUCT'), findsNothing);
   });
 
@@ -909,8 +915,8 @@ void main() {
       find.text('Where to buy MotoScan clutch friction plate'),
       findsOneWidget,
     );
-    expect(find.text('Shopee'), findsOneWidget);
-    expect(find.text('Lazada'), findsOneWidget);
+    expect(find.byKey(const ValueKey('marketplace-Shopee')), findsOneWidget);
+    expect(find.byKey(const ValueKey('marketplace-Lazada')), findsOneWidget);
   });
 
   testWidgets('Buy shows matching in-stock local shops first', (
@@ -938,7 +944,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('₱450.00'), findsOneWidget);
-    expect(find.text('Shopee'), findsNothing);
+    expect(find.byKey(const ValueKey('marketplace-Shopee')), findsNothing);
 
     await tester.tap(find.text('View shop'));
     await tester.pumpAndSettle();
@@ -991,14 +997,60 @@ void main() {
     expect(uri.queryParameters['q'], store.items.first.name);
   });
 
+  testWidgets('tapping a photo opens a zoomable full-screen view', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: MotorcycleSpecsPage()));
+    await tester.pumpAndSettle();
+
+    final photo = find.byWidgetPredicate(
+      (widget) =>
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>).value.startsWith('spec-image-'),
+    );
+    await tester.ensureVisible(photo);
+    await tester.pumpAndSettle();
+    await tester.tap(photo);
+    await tester.pumpAndSettle();
+    expect(find.byType(InteractiveViewer), findsOneWidget);
+    expect(find.byKey(const ValueKey('zoomed-image')), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Close zoomed image'));
+    await tester.pumpAndSettle();
+    expect(find.byType(InteractiveViewer), findsNothing);
+  });
+
+  test(
+    'every accessory, maintenance and motorcycle part has a description',
+    () async {
+      for (final group in [...maintenanceGroups, ...accessoryGroups]) {
+        for (final choice in group.itemChoices.values.expand((c) => c)) {
+          expect(
+            choiceDescription(group.title, choice),
+            isNotNull,
+            reason: '${group.title} / $choice',
+          );
+        }
+      }
+      for (final vehicle in await loadVehiclePartsCatalog()) {
+        for (final category in vehicle.categories) {
+          for (final part in category.parts) {
+            expect(partDescription(part), isNotNull, reason: part);
+          }
+        }
+      }
+    },
+  );
+
   test('every spec motorcycle and listed value has a bundled photo', () async {
-    expect(motorcycleSpecs, hasLength(24));
+    expect(motorcycleSpecs, hasLength(37));
     for (final bike in motorcycleSpecs) {
       await rootBundle.load(bike.imageAsset);
       for (final item in SpecItem.values) {
         final value = bike.valueOf(item);
         if (value == null) continue;
-        await rootBundle.load(specImageAsset(item, value));
+        final photo = specImageAsset(item, value);
+        if (photo != null) await rootBundle.load(photo);
       }
     }
   });
@@ -1010,11 +1062,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // First motorcycle and Front tire are selected by default.
-    expect(find.text('80/90-14'), findsOneWidget);
+    expect(_specValue(tester), '80/90-14');
 
     await tester.tap(find.byKey(const ValueKey('spec-item-Spark plug')));
     await tester.pumpAndSettle();
-    expect(find.text('NGK CPR7EA-9'), findsOneWidget);
+    expect(_specValue(tester), 'NGK CPR7EA-9');
 
     final nmax = find.byKey(const ValueKey('spec-bike-Yamaha NMAX 155'));
     await tester.scrollUntilVisible(
@@ -1027,11 +1079,11 @@ void main() {
     );
     await tester.tap(nmax);
     await tester.pumpAndSettle();
-    expect(find.text('NGK CPR8EA-9'), findsOneWidget);
+    expect(_specValue(tester), 'NGK CPR8EA-9');
 
     await tester.tap(find.byKey(const ValueKey('spec-item-Engine oil')));
     await tester.pumpAndSettle();
-    expect(find.text('Capacity: 1.0 L'), findsOneWidget);
+    expect(_specValue(tester), 'Capacity: 1.0 L');
 
     // A value missing from the table says so instead of showing a photo.
     final beat = find.byKey(const ValueKey('spec-bike-Honda BeAT'));
@@ -1198,7 +1250,10 @@ void main() {
     expect(partImages.every((image) => image.fit == BoxFit.contain), isTrue);
 
     expect(find.text('Add image'), findsNothing);
-    expect(find.textContaining('Lubricates engine components'), findsOneWidget);
+    expect(
+      find.textContaining('lubricates the engine, gearbox and clutch'),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey('part-description-Engine-CVT drive belt')),
       findsOneWidget,
@@ -1636,7 +1691,7 @@ void main() {
       find.text(
         'Photo preview works here. AI part recognition still needs a service connection.',
       ),
-      findsOneWidget,
+      findsNothing,
     );
   });
 

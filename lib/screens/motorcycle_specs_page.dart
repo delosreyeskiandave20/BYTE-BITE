@@ -2,15 +2,26 @@ import 'package:flutter/material.dart';
 
 import '../data/motorcycle_specs.dart';
 import '../theme/app_theme.dart';
+import '../widgets/zoomable_image.dart';
 
-/// Lets a rider pick a motorcycle, then an item (tire, battery, plug, oil),
-/// and shows that item's size or type with a photo.
+/// Lets a rider pick a motorcycle and see its tire, battery, plug and oil
+/// sizes at a glance, with a photo of the chosen item.
 class MotorcycleSpecsPage extends StatefulWidget {
   const MotorcycleSpecsPage({super.key});
 
   @override
   State<MotorcycleSpecsPage> createState() => _MotorcycleSpecsPageState();
 }
+
+IconData _iconFor(SpecItem item) => switch (item) {
+  SpecItem.frontTire || SpecItem.rearTire => Icons.tire_repair,
+  SpecItem.battery => Icons.battery_charging_full,
+  SpecItem.sparkPlug => Icons.bolt,
+  SpecItem.engineOil => Icons.oil_barrel_outlined,
+  SpecItem.chainSprockets => Icons.link,
+  SpecItem.fuelTank => Icons.local_gas_station_outlined,
+  SpecItem.tirePressure => Icons.speed,
+};
 
 class _MotorcycleSpecsPageState extends State<MotorcycleSpecsPage> {
   MotorcycleSpec _bike = motorcycleSpecs.first;
@@ -26,15 +37,15 @@ class _MotorcycleSpecsPageState extends State<MotorcycleSpecsPage> {
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.arrow_back),
         ),
-        title: const Text('Tires, battery & oil'),
+        title: const Text('Sizes'),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 28),
         children: [
-          const _Label('1. Choose your motorcycle'),
+          const _Label('Your motorcycle'),
           const SizedBox(height: AppSpacing.sm),
           SizedBox(
-            height: 132,
+            height: 128,
             child: ListView.separated(
               key: const ValueKey('spec-bike-row'),
               scrollDirection: Axis.horizontal,
@@ -52,46 +63,56 @@ class _MotorcycleSpecsPageState extends State<MotorcycleSpecsPage> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          const _Label('2. Choose what you need'),
-          const SizedBox(height: AppSpacing.sm),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                for (final item in SpecItem.values)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      key: ValueKey('spec-item-${item.label}'),
-                      label: Text(item.label),
-                      selected: item == _item,
-                      onSelected: (_) => setState(() => _item = item),
-                      showCheckmark: false,
-                      selectedColor: AppColors.primary,
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      side: BorderSide(
-                        color: item == _item
-                            ? AppColors.primary
-                            : AppColors.line,
-                      ),
-                      labelStyle: TextStyle(
-                        color: item == _item ? Colors.white : AppColors.inkSoft,
-                        fontSize: AppType.caption,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _SpecResult(bike: _bike, item: _item),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _bike.name,
+                  style: const TextStyle(
+                    color: AppColors.ink,
+                    fontSize: AppType.screen,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Tap a size to see a photo.',
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: AppType.caption,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // Every size for this bike at a glance; the chosen one opens
+                // below with its photo.
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final width = (constraints.maxWidth - 10) / 2;
+                    return Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        for (final item in SpecItem.values)
+                          SizedBox(
+                            width: width,
+                            child: _SizeTile(
+                              item: item,
+                              value: _bike.valueOf(item),
+                              selected: item == _item,
+                              onTap: () => setState(() => _item = item),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _SpecResult(bike: _bike, item: _item),
+              ],
+            ),
           ),
         ],
       ),
@@ -121,6 +142,99 @@ class _Label extends StatelessWidget {
   }
 }
 
+/// One size in the at-a-glance grid; dark when it is the one shown below.
+class _SizeTile extends StatelessWidget {
+  const _SizeTile({
+    required this.item,
+    required this.value,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final SpecItem item;
+  final String? value;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = this.value;
+    final shown = value == null
+        ? 'Not listed'
+        : item == SpecItem.engineOil
+        ? '$value oil'
+        : value;
+    return Material(
+      key: ValueKey('spec-item-${item.label}'),
+      color: selected ? AppColors.ink : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: selected ? AppColors.ink : AppColors.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.orange : AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _iconFor(item),
+                  size: 18,
+                  color: selected ? AppColors.ink : AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: selected ? Colors.white70 : AppColors.muted,
+                        fontSize: AppType.micro,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    // A label for screen readers; the size itself is read
+                    // from the result card to avoid saying it twice.
+                    Text(
+                      shown,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      semanticsLabel: '${item.label}: $shown',
+                      style: TextStyle(
+                        color: selected
+                            ? Colors.white
+                            : value == null
+                            ? AppColors.faint
+                            : AppColors.ink,
+                        fontSize: AppType.body,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _BikeCard extends StatelessWidget {
   const _BikeCard({
     required this.bike,
@@ -136,24 +250,24 @@ class _BikeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       key: ValueKey('spec-bike-${bike.name}'),
-      color: selected ? AppColors.primarySoft : Colors.white,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
         side: BorderSide(
           color: selected ? AppColors.primary : AppColors.line,
-          width: selected ? 1.5 : 1,
+          width: selected ? 2 : 1,
         ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          width: 140,
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              children: [
-                Expanded(
+          width: 136,
+          child: Column(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
                   child: Image.asset(
                     bike.imageAsset,
                     cacheWidth: 280,
@@ -162,21 +276,25 @@ class _BikeCard extends StatelessWidget {
                         const Icon(Icons.two_wheeler, color: AppColors.primary),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
+              ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                color: selected ? AppColors.primary : AppColors.paper,
+                child: Text(
                   bike.name,
                   maxLines: 2,
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: selected ? AppColors.primary : AppColors.ink,
+                    color: selected ? Colors.white : AppColors.ink,
                     fontSize: AppType.micro,
                     height: 1.2,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -193,86 +311,112 @@ class _SpecResult extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = bike.valueOf(item);
+    final photo = value == null ? null : specImageAsset(item, value);
     return Container(
       key: const ValueKey('spec-result'),
-      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            bike.name.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: AppType.micro,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1,
-            ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1422201E),
+            blurRadius: 16,
+            offset: Offset(0, 6),
           ),
-          const SizedBox(height: 2),
-          Text(
-            item.label,
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: AppType.section,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (value == null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: AppColors.paper,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
-              child: const Text(
-                'Not listed for this motorcycle yet. Check the owner\'s '
-                'manual or ask a shop.',
-                style: TextStyle(
-                  color: AppColors.inkSoft,
-                  fontSize: AppType.body,
-                  height: 1.4,
-                ),
-              ),
-            )
-          else ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              child: Container(
-                width: double.infinity,
-                height: 200,
-                color: Colors.white,
-                child: Image.asset(
-                  specImageAsset(item, value),
-                  key: ValueKey('spec-image-${specImageAsset(item, value)}'),
-                  cacheWidth: 600,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const Icon(
-                    Icons.image_not_supported_outlined,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              item == SpecItem.engineOil ? 'Capacity: $value' : value,
-              key: const ValueKey('spec-value'),
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: AppType.screen,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
         ],
       ),
+      clipBehavior: Clip.antiAlias,
+      child: value == null
+          ? Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                children: [
+                  Icon(_iconFor(item), color: AppColors.faint),
+                  const SizedBox(width: AppSpacing.md),
+                  const Expanded(
+                    child: Text(
+                      "Not listed for this motorcycle yet. Check the owner's "
+                      'manual or ask a shop.',
+                      style: TextStyle(
+                        color: AppColors.inkSoft,
+                        fontSize: AppType.body,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (photo == null)
+                  SizedBox(
+                    height: 120,
+                    child: Icon(
+                      _iconFor(item),
+                      size: 56,
+                      color: AppColors.primary,
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 220,
+                    child: ZoomableImage(
+                      imageAsset: photo,
+                      title: '${bike.name} · ${item.label}',
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        child: Image.asset(
+                          photo,
+                          key: ValueKey('spec-image-$photo'),
+                          cacheWidth: 700,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.medium,
+                          errorBuilder: (_, _, _) => const Icon(
+                            Icons.image_not_supported_outlined,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  color: AppColors.paper,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.label.toUpperCase(),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: AppType.micro,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item == SpecItem.engineOil ? 'Capacity: $value' : value,
+                        key: const ValueKey('spec-value'),
+                        style: const TextStyle(
+                          color: AppColors.ink,
+                          fontSize: AppType.screen,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

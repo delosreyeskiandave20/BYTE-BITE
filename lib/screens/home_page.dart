@@ -9,6 +9,7 @@ import '../widgets/buy_options_button.dart';
 import '../widgets/home_app_bar.dart';
 import '../widgets/part_category_grid.dart';
 import '../widgets/vehicle_lookup_card.dart';
+import '../widgets/zoomable_image.dart';
 
 class MotoScanHomePage extends StatefulWidget {
   const MotoScanHomePage({
@@ -260,14 +261,22 @@ class _DesignItemCard extends StatelessWidget {
               child: imageAsset == null
                   // No photo yet: the group's icon, not a note to the owner.
                   ? placeholder
-                  : ColoredBox(
-                      color: Colors.white,
-                      child: Image.asset(
-                        imageAsset,
-                        cacheWidth: 312,
-                        fit: BoxFit.cover,
-                        excludeFromSemantics: true,
-                        errorBuilder: (_, _, _) => placeholder,
+                  : ZoomableImage(
+                      imageAsset: imageAsset,
+                      title: item,
+                      child: ColoredBox(
+                        color: Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Image.asset(
+                            imageAsset,
+                            cacheWidth: 480,
+                            fit: BoxFit.contain,
+                            filterQuality: FilterQuality.medium,
+                            excludeFromSemantics: true,
+                            errorBuilder: (_, _, _) => placeholder,
+                          ),
+                        ),
                       ),
                     ),
             ),

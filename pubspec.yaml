@@ -140,6 +140,7 @@ flutter:
     - assets/design/
     - assets/maintenance/
     - assets/specs/
+    - assets/marketplaces/
     - assets/accessories/
     - assets/motorcycles/
     - assets/motoscan-new-front-page.png

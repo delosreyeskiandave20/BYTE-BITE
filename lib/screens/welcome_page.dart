@@ -89,40 +89,66 @@ class _Wordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.orange,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(
-            Icons.two_wheeler_rounded,
-            color: AppColors.ink,
-            size: 22,
-          ),
+    // Frosted pill so the mark stays legible over any part of the photo, with
+    // the same two-tone "Moto/Scan" name as the Home app bar.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
+        decoration: BoxDecoration(
+          color: const Color(0x66000000),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0x33FFFFFF)),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        // Shrinks rather than overflowing on narrow phones with large text.
-        const Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'MotoScan',
-              maxLines: 1,
-              style: TextStyle(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.orange, AppColors.primary],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.two_wheeler_rounded,
                 color: Colors.white,
-                fontSize: AppType.section,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.2,
+                size: 20,
               ),
             ),
-          ),
+            const SizedBox(width: AppSpacing.sm),
+            // Shrinks rather than overflowing on narrow phones with large text.
+            const Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: 'Moto'),
+                      TextSpan(
+                        text: 'Scan',
+                        style: TextStyle(color: AppColors.orange),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: AppType.section,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
@@ -138,27 +164,56 @@ class _WelcomeCopy extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Semantics(
-          header: true,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: const Color(0x33F07A2F),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0x80F07A2F)),
+          ),
           child: const Text(
-            'The right parts for your ride.',
+            'MOTORCYCLE PARTS FINDER',
             style: TextStyle(
-              color: Colors.white,
-              fontSize: AppType.display + 4,
-              fontWeight: FontWeight.w700,
-              height: 1.15,
+              color: Color(0xFFFFB98A),
+              fontSize: AppType.micro,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        const Text(
-          'Browse parts and accessories for your motorcycle, then find '
-          'local shops that have them in stock.',
-          style: TextStyle(
-            color: Color(0xE6FFFFFF),
-            fontSize: AppType.body + 1,
-            height: 1.45,
+        Semantics(
+          header: true,
+          child: const Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: 'The right '),
+                TextSpan(
+                  text: 'parts',
+                  style: TextStyle(color: AppColors.orange),
+                ),
+                TextSpan(text: ' for your ride.'),
+              ],
+            ),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: AppType.display + 6,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+              letterSpacing: -0.6,
+              shadows: [Shadow(color: Color(0x80000000), blurRadius: 12)],
+            ),
           ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            _FeatureChip(icon: Icons.build_circle_outlined, label: 'Parts'),
+            _FeatureChip(icon: Icons.tire_repair, label: 'Sizes'),
+            _FeatureChip(icon: Icons.storefront_outlined, label: 'Shops'),
+          ],
         ),
         const SizedBox(height: AppSpacing.xxl),
         SizedBox(
@@ -184,6 +239,39 @@ class _WelcomeCopy extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _FeatureChip extends StatelessWidget {
+  const _FeatureChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0x26FFFFFF),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: AppColors.orange),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: AppType.caption,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

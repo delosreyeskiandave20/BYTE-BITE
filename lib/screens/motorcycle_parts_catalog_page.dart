@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../data/shop_store.dart';
 import '../data/vehicle_images.dart';
+import '../data/motorcycle_specs.dart';
+import '../data/part_descriptions.dart';
 import '../data/vehicle_parts_catalog.dart';
 import 'shop_page.dart';
 import '../theme/app_theme.dart';
+import '../widgets/zoomable_image.dart';
 
 class MotorcyclePartsCatalogPage extends StatefulWidget {
   const MotorcyclePartsCatalogPage({
@@ -343,6 +346,7 @@ class _VehiclePartTile extends StatelessWidget {
           _VehiclePartImage(
             key: ValueKey('part-image-$category-$part'),
             imageAsset: imageAsset,
+            title: part,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -403,59 +407,40 @@ class _VehiclePartTile extends StatelessWidget {
   }
 
   String _partDescription(String part, String category) {
-    final specificDescription = _specificPartDescriptions[part.toLowerCase()];
-    if (specificDescription != null) return specificDescription;
+    final base =
+        partDescription(part) ??
+        '$part for the ${category.toLowerCase()} system.';
+    final size = _sizeFor(part);
+    return size == null ? base : '$base $size';
+  }
 
-    final system = switch (category) {
-      'Engine' => 'engine and drivetrain',
-      'Electrical' => 'electrical system',
-      'Suspension' => 'suspension and steering system',
-      'Wheels & Tires' => 'wheel, tire, and braking system',
-      'Body' => 'body and exterior',
-      _ => category.toLowerCase(),
+  /// The exact size for this bike, from the Sizes table, where known.
+  String? _sizeFor(String part) {
+    final spec = specFor(brand: brand, model: model, variant: variant);
+    if (spec == null) return null;
+    final key = part.toLowerCase();
+    final (label, value) = switch (key) {
+      'front tire' => ('Size for this model', spec.frontTire),
+      'rear tire' => ('Size for this model', spec.rearTire),
+      '12-v battery' => ('Battery for this model', spec.battery),
+      'spark plug' ||
+      'spark-plug set' => ('Plug for this model', spec.sparkPlug),
+      'engine oil' => ('Oil capacity for this model', spec.engineOil),
+      _ => ('', null),
     };
-    return '$part is listed for the motorcycle $system. Confirm the exact '
-        'specification and fit for the selected model before ordering.';
+    return value == null ? null : '$label: $value.';
   }
 }
 
-const _specificPartDescriptions = {
-  'engine oil':
-      'Lubricates engine components and helps control heat. Match the oil '
-      'viscosity and JASO/API rating specified in the owner’s manual.',
-  'oil screen/filter':
-      'Traps debris in the engine oil system. Check the service manual to '
-      'confirm the correct screen or filter and replacement interval.',
-  'oil filter/strainer':
-      'Traps debris in the engine oil system. Check the service manual to '
-      'confirm the correct strainer or filter and replacement interval.',
-  'oil strainer/filter':
-      'Traps debris in the engine oil system. Check the service manual to '
-      'confirm the correct strainer or filter and replacement interval.',
-  'drain-plug washer':
-      'Seals the oil drain plug to help prevent leaks. Match the washer '
-      'diameter and replace it when servicing the oil.',
-  'air filter':
-      'Filters dust from the air entering the engine. Match the filter shape '
-      'and dimensions to the original part.',
-  'spark plug':
-      'Ignites the fuel-air mixture in the engine. Match the thread, reach, '
-      'heat range, and gap specified for the motorcycle.',
-  'spark-plug set':
-      'Ignites the fuel-air mixture in the engine. Match the thread, reach, '
-      'heat range, and gap specified for the motorcycle.',
-  'cvt drive belt':
-      'Transfers power through the scooter’s continuously variable transmission. '
-      'Match the belt dimensions and service specification to the model.',
-  'variator roller set':
-      'Works in the CVT variator to change the transmission ratio. Confirm the '
-      'roller dimensions and weight specified for the scooter.',
-};
-
 class _VehiclePartImage extends StatelessWidget {
-  const _VehiclePartImage({required this.imageAsset, super.key});
+  const _VehiclePartImage({
+    required this.imageAsset,
+    required this.title,
+    super.key,
+  });
 
   final String? imageAsset;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -472,12 +457,18 @@ class _VehiclePartImage extends StatelessWidget {
           color: Colors.white,
           child: imageAsset == null
               ? _placeholder()
-              : Image.asset(
-                  imageAsset,
-                  cacheWidth: 184,
-                  fit: BoxFit.contain,
-                  excludeFromSemantics: true,
-                  errorBuilder: (context, error, stackTrace) => _placeholder(),
+              : ZoomableImage(
+                  imageAsset: imageAsset,
+                  title: title,
+                  child: Image.asset(
+                    imageAsset,
+                    cacheWidth: 276,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.medium,
+                    excludeFromSemantics: true,
+                    errorBuilder: (context, error, stackTrace) =>
+                        _placeholder(),
+                  ),
                 ),
         ),
       ),
@@ -682,54 +673,62 @@ class _BrandChoiceGrid extends StatelessWidget {
             ),
           ),
         ),
-        LayoutBuilder(
-          builder: (context, constraints) => GridView.count(
-            crossAxisCount: constraints.maxWidth >= 300 ? 3 : 2,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 1.55,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: choices
-                .map((choice) {
+                .expand((choice) {
                   final isSelected = choice == selected;
-                  return Semantics(
-                    key: ValueKey('vehicle-BRAND-${choice.toLowerCase()}'),
-                    label: choice,
-                    button: true,
-                    selected: isSelected,
-                    child: Material(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(13),
-                        side: BorderSide(
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.line,
-                          width: isSelected ? 1.5 : 1,
-                        ),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () => onSelected(choice),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Image.asset(
-                            'assets/brands/${choice.toLowerCase()}.png',
-                            cacheWidth: 240,
-                            fit: BoxFit.contain,
-                            excludeFromSemantics: true,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(
-                                  Icons.two_wheeler,
-                                  color: AppColors.primary,
-                                  size: 28,
-                                ),
+                  return [
+                    if (choice != choices.first) const SizedBox(width: 8),
+                    Expanded(
+                      child: Semantics(
+                        key: ValueKey('vehicle-BRAND-${choice.toLowerCase()}'),
+                        label: choice,
+                        button: true,
+                        selected: isSelected,
+                        child: Material(
+                          color: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : AppColors.line,
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: () => onSelected(choice),
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(6, 10, 6, 8),
+                              child: Column(
+                                children: [
+                                  SizedBox(
+                                    height: 44,
+                                    child: Image.asset(
+                                      'assets/brands/${choice.toLowerCase()}.png',
+                                      cacheWidth: 200,
+                                      fit: BoxFit.contain,
+                                      filterQuality: FilterQuality.medium,
+                                      excludeFromSemantics: true,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const Icon(
+                                                Icons.two_wheeler,
+                                                color: AppColors.primary,
+                                              ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  );
+                  ];
                 })
                 .toList(growable: false),
           ),

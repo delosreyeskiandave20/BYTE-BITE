@@ -8,6 +8,7 @@ import '../data/marketplace.dart';
 import '../data/shop_store.dart';
 import '../screens/shop_page.dart';
 import '../theme/app_theme.dart';
+import 'marketplace_logo.dart';
 
 class BuyOptionsButton extends StatelessWidget {
   const BuyOptionsButton({
@@ -182,13 +183,13 @@ class _BuyOptionsDialogState extends State<_BuyOptionsDialog> {
       children: [
         const Text('No local shop has this item in stock.'),
         const SizedBox(height: 12),
-        _MarketplaceButton(
-          name: Marketplaces.shopee,
+        MarketplaceLogoButton(
+          marketplace: Marketplaces.shopee,
           onPressed: () => _openMarketplace(context, Marketplaces.shopee),
         ),
-        const SizedBox(height: 8),
-        _MarketplaceButton(
-          name: Marketplaces.lazada,
+        const SizedBox(height: 10),
+        MarketplaceLogoButton(
+          marketplace: Marketplaces.lazada,
           onPressed: () => _openMarketplace(context, Marketplaces.lazada),
         ),
       ],
@@ -208,24 +209,5 @@ class _BuyOptionsDialogState extends State<_BuyOptionsDialog> {
     } else if (context.mounted) {
       _close();
     }
-  }
-}
-
-class _MarketplaceButton extends StatelessWidget {
-  const _MarketplaceButton({required this.name, required this.onPressed});
-
-  final String name;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: const Icon(Icons.open_in_new, size: 16),
-        label: Text(name),
-      ),
-    );
   }
 }

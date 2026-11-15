@@ -4,7 +4,9 @@ import '../theme/app_theme.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/motorcycle_info.dart';
 import '../data/parts_catalog.dart';
+import '../data/price_format.dart';
 import '../data/vehicle_images.dart';
 
 Uri motorcycleGoogleSearchUri({
@@ -560,6 +562,8 @@ class _MotorcycleDetails extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
+          _SpecsAndPrice(vehicle: vehicle),
+          const SizedBox(height: AppSpacing.lg),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -577,6 +581,157 @@ class _MotorcycleDetails extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Key Specifications & Features" and "Pricing (Philippines)" for the
+/// motorcycle shown in the gallery.
+class _SpecsAndPrice extends StatelessWidget {
+  const _SpecsAndPrice({required this.vehicle});
+
+  final _VehicleVariant vehicle;
+
+  @override
+  Widget build(BuildContext context) {
+    final info = motorcycleInfo(vehicle.brand, vehicle.model);
+    final price = info?.srp[vehicle.variant];
+    final priceText = price != null
+        ? formatPeso(price).replaceAll('.00', '')
+        : info?.srpRange ?? 'Not available yet';
+    return Column(
+      key: const ValueKey('gallery-specs'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _DetailsHeading('Key Specifications & Features'),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.paper,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Column(
+            children: [
+              for (final (label, value)
+                  in info?.specRows ?? const <(String, String?)>[])
+                _SpecRow(label: label, value: value),
+              if (info == null)
+                const _SpecRow(label: 'Specifications', value: null),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        const _DetailsHeading('Pricing (Philippines)'),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Suggested Retail Price (SRP)',
+                  style: TextStyle(
+                    color: AppColors.inkSoft,
+                    fontSize: AppType.caption,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    priceText,
+                    key: const ValueKey('gallery-srp'),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: price != null || info?.srpRange != null
+                          ? AppColors.primary
+                          : AppColors.faint,
+                      fontSize: price != null
+                          ? AppType.section
+                          : AppType.caption,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  if (price != null || info?.srpRange != null)
+                    const Text(
+                      'as of $srpAsOf',
+                      style: TextStyle(
+                        color: AppColors.muted,
+                        fontSize: AppType.micro,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DetailsHeading extends StatelessWidget {
+  const _DetailsHeading(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: AppColors.ink,
+        fontSize: AppType.cardTitle,
+        fontWeight: FontWeight.w900,
+      ),
+    );
+  }
+}
+
+class _SpecRow extends StatelessWidget {
+  const _SpecRow({required this.label, required this.value});
+
+  final String label;
+  final String? value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 112,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.muted,
+                fontSize: AppType.caption,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value ?? 'Not available yet',
+              style: TextStyle(
+                color: value == null ? AppColors.faint : AppColors.ink,
+                fontSize: AppType.caption,
+                fontWeight: value == null ? FontWeight.w500 : FontWeight.w700,
+                height: 1.35,
               ),
             ),
           ),

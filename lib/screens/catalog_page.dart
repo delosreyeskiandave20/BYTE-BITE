@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../data/accessories_maintenance_catalog.dart';
 import '../data/catalog_images.dart';
+import '../data/choice_descriptions.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/zoomable_image.dart';
 import '../widgets/buy_options_button.dart';
 
 class CatalogPage extends StatefulWidget {
@@ -198,8 +200,6 @@ class _CatalogGroupCard extends StatelessWidget {
               const <String, CatalogChoiceDetails>{}
         : accessoryChoiceDetailsByGroup[group.title] ??
               const <String, CatalogChoiceDetails>{};
-    if (photos.isEmpty) return base;
-
     return {
       for (final choice in choices)
         choice: () {
@@ -208,12 +208,14 @@ class _CatalogGroupCard extends StatelessWidget {
               photos[isMaintenance
                   ? maintenanceImageSlug(group.title, choice)
                   : accessoryImageSlug(group.title, choice)];
-          if (photo == null || details?.imageAsset?.isNotEmpty == true) {
-            return details ?? const CatalogChoiceDetails();
-          }
+          final existingImage = details?.imageAsset;
           return CatalogChoiceDetails(
-            description: details?.description,
-            imageAsset: photo,
+            description: details?.description?.trim().isNotEmpty == true
+                ? details!.description
+                : choiceDescription(group.title, choice),
+            imageAsset: existingImage?.isNotEmpty == true
+                ? existingImage
+                : photo,
             imageUrl: details?.imageUrl,
           );
         }(),
@@ -524,7 +526,11 @@ class _MaintenanceChoiceCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _MaintenanceChoiceImage(details: details, fallbackIcon: fallbackIcon),
+          _MaintenanceChoiceImage(
+            title: name,
+            details: details,
+            fallbackIcon: fallbackIcon,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -580,9 +586,12 @@ class _MaintenanceChoiceCard extends StatelessWidget {
 
 class _MaintenanceChoiceImage extends StatelessWidget {
   const _MaintenanceChoiceImage({
+    required this.title,
     required this.details,
     required this.fallbackIcon,
   });
+
+  final String title;
 
   final CatalogChoiceDetails details;
   final IconData fallbackIcon;
@@ -592,15 +601,20 @@ class _MaintenanceChoiceImage extends StatelessWidget {
     final imageAsset = details.imageAsset;
     final imageUrl = details.imageUrl;
     if (imageAsset != null && imageAsset.isNotEmpty) {
-      return ColoredBox(
-        color: Colors.white,
-        child: Image.asset(
-          imageAsset,
-          width: 96,
-          height: 126,
-          cacheWidth: 192,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => _placeholder(),
+      return ZoomableImage(
+        imageAsset: imageAsset,
+        title: title,
+        child: ColoredBox(
+          color: Colors.white,
+          child: Image.asset(
+            imageAsset,
+            width: 96,
+            height: 126,
+            cacheWidth: 288,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (context, error, stackTrace) => _placeholder(),
+          ),
         ),
       );
     }

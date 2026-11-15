@@ -7,6 +7,7 @@ import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/load_error_banner.dart';
+import '../widgets/marketplace_logo.dart';
 import 'online_store_page.dart';
 
 /// Pseudo-category that shows every product in a shop.
@@ -337,18 +338,16 @@ class _ShopContent extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _MarketplaceCard(
-                  name: Marketplaces.shopee,
-                  icon: Icons.shopping_bag_outlined,
-                  onTap: () => onOpenMarketplace(Marketplaces.shopee),
+                child: MarketplaceLogoButton(
+                  marketplace: Marketplaces.shopee,
+                  onPressed: () => onOpenMarketplace(Marketplaces.shopee),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _MarketplaceCard(
-                  name: Marketplaces.lazada,
-                  icon: Icons.local_mall_outlined,
-                  onTap: () => onOpenMarketplace(Marketplaces.lazada),
+                child: MarketplaceLogoButton(
+                  marketplace: Marketplaces.lazada,
+                  onPressed: () => onOpenMarketplace(Marketplaces.lazada),
                 ),
               ),
             ],
@@ -467,67 +466,6 @@ class _SectionHeading extends StatelessWidget {
           style: const TextStyle(color: AppColors.muted, fontSize: 12),
         ),
       ],
-    );
-  }
-}
-
-class _MarketplaceCard extends StatelessWidget {
-  const _MarketplaceCard({
-    required this.name,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String name;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(15),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(15),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        color: AppColors.ink,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      'Marketplace',
-                      style: TextStyle(color: AppColors.muted, fontSize: 10),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.open_in_new, size: 15, color: AppColors.muted),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

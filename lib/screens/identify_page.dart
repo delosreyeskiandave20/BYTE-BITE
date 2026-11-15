@@ -224,44 +224,6 @@ class _IdentifyPageState extends State<IdentifyPage> {
           24,
         ),
         children: [
-          Text(
-            'Identify a part',
-            style: TextStyle(
-              color: AppColors.ink,
-              fontSize: isCompact ? 26 : 30,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Don’t know the name? A clear view of the component can help you identify it.',
-            style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.5),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.noticeSoft,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.info_outline, color: AppColors.notice, size: 18),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Photo preview works here. AI part recognition still needs a service connection.',
-                    style: TextStyle(
-                      color: AppColors.notice,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
           Container(
             padding: EdgeInsets.all(isCompact ? 14 : 22),
             decoration: BoxDecoration(
@@ -354,49 +316,6 @@ class _IdentifyPageState extends State<IdentifyPage> {
               borderRadius: BorderRadius.circular(17),
               border: Border.all(color: AppColors.line),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.route_outlined,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'How preview works',
-                        style: TextStyle(
-                          color: AppColors.ink,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                const Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _StepChip(number: '1', label: 'Frame the part'),
-                    _StepChip(number: '2', label: 'Capture or upload'),
-                    _StepChip(number: '3', label: 'Review the preview'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(15),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(17),
-              border: Border.all(color: AppColors.line),
-            ),
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -426,56 +345,6 @@ class _IdentifyPageState extends State<IdentifyPage> {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepChip extends StatelessWidget {
-  const _StepChip({required this.number, required this.label});
-
-  final String number;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: AppColors.primarySoft,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              number,
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.inkSoft,
-              fontSize: AppType.micro,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ],

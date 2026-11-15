@@ -30,18 +30,12 @@ void main() {
         find.text(
           'Photo preview works here. AI part recognition still needs a service connection.',
         ),
-        findsOneWidget,
+        findsNothing,
       );
       expect(find.text('Start with a clear photo'), findsOneWidget);
 
-      await tester.scrollUntilVisible(
-        find.text('How preview works'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Frame the part'), findsOneWidget);
-      expect(find.text('Capture or upload'), findsOneWidget);
-      expect(find.text('Review the preview'), findsOneWidget);
+      expect(find.text('How preview works'), findsNothing);
+      expect(find.text('Frame the part'), findsNothing);
 
       final searchButton = find.byKey(const ValueKey('identify-search-parts'));
       await tester.ensureVisible(searchButton);

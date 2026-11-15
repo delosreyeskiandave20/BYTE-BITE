@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/online_stores.dart';
 import '../data/price_format.dart';
 import '../theme/app_theme.dart';
+import '../widgets/marketplace_logo.dart';
 
 /// Opens [uri] in the marketplace app or browser, reporting a failure.
 Future<void> openOnlineStoreLink(BuildContext context, Uri uri) async {
@@ -45,7 +46,7 @@ class OnlineStorePage extends StatelessWidget {
           TextButton.icon(
             onPressed: () => openOnlineStoreLink(context, store.storeUri),
             icon: const Icon(Icons.open_in_new, size: 16),
-            label: Text('Open on ${store.marketplace}'),
+            label: MarketplaceLogo(store.marketplace, height: 16),
           ),
         ],
       ),
@@ -199,7 +200,19 @@ class OnlineStoresSection extends StatelessWidget {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Row(
                     children: [
-                      _MarketplaceBadge(entry.store.marketplace),
+                      Container(
+                        width: 84,
+                        height: 44,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.paper,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: MarketplaceLogo(
+                          entry.store.marketplace,
+                          height: 18,
+                        ),
+                      ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(
@@ -216,10 +229,8 @@ class OnlineStoresSection extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               tokens.isEmpty
-                                  ? '${entry.store.marketplace} · '
-                                        '${entry.store.items.length} items'
-                                  : '${entry.store.marketplace} · '
-                                        '${entry.matches} matching '
+                                  ? '${entry.store.items.length} items'
+                                  : '${entry.matches} matching '
                                         '${entry.matches == 1 ? 'item' : 'items'}',
                               style: const TextStyle(
                                 color: AppColors.muted,
@@ -237,34 +248,6 @@ class OnlineStoresSection extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _MarketplaceBadge extends StatelessWidget {
-  const _MarketplaceBadge(this.marketplace);
-
-  final String marketplace;
-
-  @override
-  Widget build(BuildContext context) {
-    final lazada = marketplace == 'Lazada';
-    return Container(
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: lazada ? const Color(0xFFE8EAFB) : const Color(0xFFFDEBE5),
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: Text(
-        lazada ? 'L' : 'S',
-        style: TextStyle(
-          color: lazada ? const Color(0xFF0F146D) : const Color(0xFFEE4D2D),
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
     );
   }
 }
