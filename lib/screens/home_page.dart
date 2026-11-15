@@ -66,15 +66,7 @@ class _MotoScanHomePageState extends State<MotoScanHomePage> {
               ),
               const SizedBox(height: AppSpacing.xxl),
               const _SectionTitle('Design ideas'),
-              const SizedBox(height: AppSpacing.xs),
-              const Text(
-                'Lighting, paint, decals and more. Swipe to see each group.',
-                style: TextStyle(
-                  color: AppColors.muted,
-                  fontSize: AppType.caption + 1,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
               FutureBuilder<Map<String, String>>(
                 future: _designImages,
                 builder: (context, snapshot) => Column(

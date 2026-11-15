@@ -128,16 +128,6 @@ class _CategoryCard extends StatelessWidget {
                               height: 1.15,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            category.subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xD9FFFFFF),
-                              fontSize: AppType.caption,
-                            ),
-                          ),
                         ],
                       ),
                     ),

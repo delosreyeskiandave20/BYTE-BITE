@@ -7,8 +7,8 @@ import '../data/marketplace.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
-import '../widgets/load_error_banner.dart';
 import '../widgets/marketplace_logo.dart';
+import '../widgets/motoscan_wordmark.dart';
 import '../data/my_motorcycle.dart';
 import '../widgets/shop_item_card.dart';
 import 'online_store_page.dart';
@@ -78,9 +78,40 @@ class _ShopPageState extends State<ShopPage> {
         backgroundColor: AppColors.paper,
         foregroundColor: AppColors.ink,
         elevation: 0,
-        title: const Text(
-          'MotoScan Shop',
-          style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w900),
+        title: Semantics(
+          label: 'MotoScan Shop',
+          header: true,
+          excludeSemantics: true,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const MotoScanWordmark(size: 21),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.ink,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'SHOP',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         actions: widget.onOwnerSignIn == null
             ? null
@@ -236,13 +267,6 @@ class _ShopContent extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
-        if (error != null) ...[
-          LoadErrorBanner(
-            message: 'Live shop data is unavailable: $error',
-            onRetry: store.retry,
-          ),
-          const SizedBox(height: 14),
-        ],
         TextField(
           controller: searchController,
           onChanged: onSearchChanged,

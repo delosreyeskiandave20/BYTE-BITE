@@ -612,14 +612,24 @@ class _SpecsAndPrice extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.paper,
-            borderRadius: BorderRadius.circular(AppRadius.sm),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: AppColors.line),
           ),
           child: Column(
             children: [
-              for (final (label, value)
-                  in info?.specRows ?? const <(String, String?)>[])
+              for (final (index, (label, value))
+                  in (info?.specRows ?? const <(String, String?)>[])
+                      .indexed) ...[
+                if (index > 0)
+                  const Divider(
+                    height: 1,
+                    indent: 60,
+                    endIndent: 14,
+                    color: AppColors.line,
+                  ),
                 _SpecRow(label: label, value: value),
+              ],
               if (info == null)
                 const _SpecRow(label: 'Specifications', value: null),
             ],
@@ -706,33 +716,68 @@ class _SpecRow extends StatelessWidget {
   final String label;
   final String? value;
 
+  /// An icon matching the spec's topic.
+  static IconData _iconFor(String label) {
+    final l = label.toLowerCase();
+    if (l.contains('engine')) return Icons.settings_suggest_outlined;
+    if (l.contains('power') || l.contains('torque')) return Icons.bolt_rounded;
+    if (l.contains('transmission')) return Icons.sync_alt_rounded;
+    if (l.contains('fuel')) return Icons.local_gas_station_outlined;
+    if (l.contains('dimension') || l.contains('weight')) {
+      return Icons.straighten_rounded;
+    }
+    if (l.contains('brake') || l.contains('wheel')) {
+      return Icons.album_outlined;
+    }
+    if (l.contains('convenience') || l.contains('feature')) {
+      return Icons.auto_awesome_outlined;
+    }
+    return Icons.info_outline_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.fromLTRB(12, 11, 14, 11),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 112,
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.muted,
-                fontSize: AppType.caption,
-                fontWeight: FontWeight.w700,
-              ),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(_iconFor(label), size: 19, color: AppColors.primary),
           ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              value ?? 'Not available yet',
-              style: TextStyle(
-                color: value == null ? AppColors.faint : AppColors.ink,
-                fontSize: AppType.caption,
-                fontWeight: value == null ? FontWeight.w500 : FontWeight.w700,
-                height: 1.35,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: AppType.micro,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value ?? 'Not available yet',
+                  style: TextStyle(
+                    color: value == null ? AppColors.faint : AppColors.ink,
+                    fontSize: AppType.body,
+                    fontWeight: value == null
+                        ? FontWeight.w500
+                        : FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

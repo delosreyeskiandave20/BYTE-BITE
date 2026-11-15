@@ -55,7 +55,7 @@ class VehicleLookupCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Find parts for your motorcycle',
+                    'Explore motorcycles',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: AppType.section,
@@ -65,7 +65,7 @@ class VehicleLookupCard extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   const Text(
-                    'Pick your brand and model to see the parts it uses.',
+                    'Browse brands, models and variants with photos and videos.',
                     style: TextStyle(
                       color: Color(0xD9FFFFFF),
                       fontSize: AppType.caption + 1,

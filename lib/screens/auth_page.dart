@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../data/owner_auth.dart';
 import '../theme/app_theme.dart';
+import '../widgets/motoscan_wordmark.dart';
 
 const _authErrorMessages = <String, String>{
   'invalid-email': 'Enter a valid email address.',
@@ -261,12 +262,10 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'MotoScan',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
+                          const Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: MotoScanWordmark(size: 28),
                             ),
                           ),
                           const SizedBox(height: 6),

@@ -116,7 +116,7 @@ void main() {
     await tester.tap(find.text('Ceramic brake pad'));
     await tester.pumpAndSettle();
 
-    expect(find.text('MotoScan Shop'), findsOneWidget);
+    expect(find.bySemanticsLabel('MotoScan Shop'), findsOneWidget);
     expect(find.text('Ceramic brake pad'), findsWidgets);
   });
 }

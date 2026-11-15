@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -6,8 +8,9 @@ import '../widgets/motoscan_wordmark.dart';
 
 /// Full-screen front page shown when the app launches.
 ///
-/// The copy sits on a dark gradient over the photo and scrolls instead of
-/// clipping when the user increases text size.
+/// The photo is softly blurred behind a dark gradient so the centred logo
+/// stands out. The content scrolls instead of clipping when the user
+/// increases text size.
 class WelcomePage extends StatelessWidget {
   const WelcomePage({required this.onGetStarted, super.key});
 
@@ -26,26 +29,32 @@ class WelcomePage extends StatelessWidget {
         body: Stack(
           children: [
             Positioned.fill(
-              child: Image.asset(
-                'assets/motoscan-new-front-page.png',
-                key: const ValueKey('welcome-hero-image'),
-                cacheWidth: 1200,
-                fit: BoxFit.cover,
-                alignment: const Alignment(0.1, 0),
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
+                child: Image.asset(
+                  'assets/motoscan-new-front-page.png',
+                  key: const ValueKey('welcome-hero-image'),
+                  cacheWidth: 1200,
+                  fit: BoxFit.cover,
+                  alignment: const Alignment(0.1, 0),
+                ),
               ),
             ),
+            // Darkens the whole photo, most strongly at the bottom where the
+            // button sits.
             const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                     colors: [
-                      Color(0xF2151B1A),
-                      Color(0xB3151B1A),
-                      Color(0x00151B1A),
+                      Color(0x99151B1A),
+                      Color(0x66151B1A),
+                      Color(0xCC151B1A),
+                      Color(0xF7151B1A),
                     ],
-                    stops: [0, 0.42, 0.75],
+                    stops: [0, 0.4, 0.72, 1],
                   ),
                 ),
               ),
@@ -68,9 +77,12 @@ class WelcomePage extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const _Wordmark(),
+                          // Equal space above and below keeps the logo
+                          // roughly in the middle of the screen.
+                          const SizedBox(height: AppSpacing.xxl),
+                          const _CenterLogo(),
                           const SizedBox(height: AppSpacing.xxxl),
-                          _WelcomeCopy(onGetStarted: onGetStarted),
+                          _WelcomeActions(onGetStarted: onGetStarted),
                         ],
                       ),
                     ),
@@ -85,67 +97,96 @@ class WelcomePage extends StatelessWidget {
   }
 }
 
-class _Wordmark extends StatelessWidget {
-  const _Wordmark();
+/// The MotoScan logo in the middle of the screen with a soft orange glow,
+/// plus a short tagline.
+class _CenterLogo extends StatelessWidget {
+  const _CenterLogo();
 
   @override
   Widget build(BuildContext context) {
-    // Frosted pill so the mark stays legible over any part of the photo, with
-    // the same two-tone "Moto/Scan" name as the Home app bar.
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 9, 18, 9),
-        decoration: BoxDecoration(
-          color: const Color(0x80000000),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0x33FFFFFF)),
-        ),
-        // Shrinks rather than overflowing on narrow phones.
-        child: const FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: MotoScanWordmark(
-            key: ValueKey('motoscan-logo'),
-            size: 24,
-            onDark: true,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.orange.withValues(alpha: 0.28),
+                blurRadius: 80,
+                spreadRadius: 10,
+              ),
+            ],
+          ),
+          // Shrinks rather than overflowing on narrow phones.
+          child: const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: MotoScanWordmark(
+              key: ValueKey('motoscan-logo'),
+              size: 44,
+              onDark: true,
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.lg),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _rule(),
+            const SizedBox(width: AppSpacing.sm),
+            const Flexible(
+              child: Text(
+                'MOTORCYCLE PARTS FINDER',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFFFFC9A3),
+                  fontSize: AppType.micro,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 2.4,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _rule(),
+          ],
+        ),
+      ],
     );
   }
+
+  Widget _rule() => Container(
+    width: 22,
+    height: 1.5,
+    decoration: BoxDecoration(
+      color: AppColors.orange.withValues(alpha: 0.7),
+      borderRadius: BorderRadius.circular(1),
+    ),
+  );
 }
 
-class _WelcomeCopy extends StatelessWidget {
-  const _WelcomeCopy({required this.onGetStarted});
+class _WelcomeActions extends StatelessWidget {
+  const _WelcomeActions({required this.onGetStarted});
 
   final VoidCallback onGetStarted;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0x33F07A2F),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: const Color(0x80F07A2F)),
-          ),
-          child: const Text(
-            'MOTORCYCLE PARTS FINDER',
-            style: TextStyle(
-              color: Color(0xFFFFB98A),
-              fontSize: AppType.micro,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-            ),
+        const Text(
+          'Find parts that fit your motorcycle, check sizes and shop '
+          'from local stores.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xD9FFFFFF),
+            fontSize: AppType.body,
+            height: 1.45,
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.lg),
         const Wrap(
+          alignment: WrapAlignment.center,
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
           children: [
@@ -155,24 +196,36 @@ class _WelcomeCopy extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.xxl),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            key: const ValueKey('welcome-get-started'),
-            onPressed: onGetStarted,
-            icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-            iconAlignment: IconAlignment.end,
-            label: const Text('Get started'),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.orange,
-              foregroundColor: AppColors.ink,
-              minimumSize: const Size.fromHeight(54),
-              textStyle: const TextStyle(
-                fontSize: AppType.cardTitle + 1,
-                fontWeight: FontWeight.w700,
+        DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.orange.withValues(alpha: 0.45),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
+            ],
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: const ValueKey('welcome-get-started'),
+              onPressed: onGetStarted,
+              icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+              iconAlignment: IconAlignment.end,
+              label: const Text('Get started'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.orange,
+                foregroundColor: AppColors.ink,
+                minimumSize: const Size.fromHeight(54),
+                textStyle: const TextStyle(
+                  fontSize: AppType.cardTitle + 1,
+                  fontWeight: FontWeight.w800,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
               ),
             ),
           ),
@@ -182,6 +235,7 @@ class _WelcomeCopy extends StatelessWidget {
   }
 }
 
+/// Frosted-glass chip naming one thing the app does.
 class _FeatureChip extends StatelessWidget {
   const _FeatureChip({required this.icon, required this.label});
 
@@ -190,26 +244,33 @@ class _FeatureChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0x26FFFFFF),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: AppColors.orange),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: AppType.caption,
-              fontWeight: FontWeight.w700,
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: const Color(0x1FFFFFFF),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0x33FFFFFF)),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: AppColors.orange),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: AppType.caption,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

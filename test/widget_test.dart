@@ -1348,7 +1348,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(shopButton);
     await tester.pumpAndSettle();
-    expect(find.text('MotoScan Shop'), findsOneWidget);
+    expect(find.bySemanticsLabel('MotoScan Shop'), findsOneWidget);
     expect(find.text('Available shops for Engine oil'), findsOneWidget);
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
@@ -1649,7 +1649,7 @@ void main() {
     await tester.tap(find.text('Shop').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('MotoScan Shop'), findsOneWidget);
+    expect(find.bySemanticsLabel('MotoScan Shop'), findsOneWidget);
   });
 
   testWidgets('accessory and maintenance cards open their catalogs', (
