@@ -2,20 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../data/part_identifier.dart';
+import '../firebase_bootstrap.dart';
 import '../theme/app_theme.dart';
 import 'camera_capture_page.dart';
 
 typedef IdentifyImagePicker = Future<XFile?> Function(ImageSource source);
 
 class IdentifyPage extends StatefulWidget {
-  const IdentifyPage({super.key, this.pickImage, this.onSearchParts});
+  const IdentifyPage({
+    super.key,
+    this.pickImage,
+    this.onSearchParts,
+    this.onSearchQuery,
+    this.identifyPart,
+  });
 
   /// Lets tests supply a fake picker instead of opening the device camera.
   final IdentifyImagePicker? pickImage;
 
-  /// Opens the parts library so shoppers can identify a part manually while
-  /// AI recognition is not connected.
+  /// Opens the parts library so shoppers can identify a part manually.
   final VoidCallback? onSearchParts;
+
+  /// Opens the parts library pre-filled with the part the AI recognized.
+  final ValueChanged<String>? onSearchQuery;
+
+  /// AI recognizer. Defaults to Gemini when Firebase is configured; when
+  /// neither is available the page works as a photo preview only.
+  final PartIdentifier? identifyPart;
 
   @override
   State<IdentifyPage> createState() => _IdentifyPageState();
@@ -26,6 +40,17 @@ class _IdentifyPageState extends State<IdentifyPage> {
   Uint8List? _photoBytes;
   String? _photoName;
   bool _isPicking = false;
+
+  late final PartIdentifier? _identifier =
+      widget.identifyPart ??
+      (FirebaseBootstrap.isInitialized ? GeminiPartIdentifier().call : null);
+  bool _isIdentifying = false;
+  PartIdentification? _result;
+  String? _identifyError;
+  String _photoMimeType = 'image/jpeg';
+
+  /// Bumped for every new photo so a slow answer for an old photo is ignored.
+  int _requestId = 0;
 
   Future<void> _takePhoto() async {
     if (_isPicking) return;
@@ -88,10 +113,57 @@ class _IdentifyPageState extends State<IdentifyPage> {
     setState(() {
       _photoBytes = bytes;
       _photoName = file.name.trim().isEmpty ? null : file.name;
+      _photoMimeType = _mimeTypeFor(file);
+      _result = null;
+      _identifyError = null;
     });
-    _showMessage(
-      'Photo preview ready. AI part recognition is not connected yet.',
-    );
+    if (_identifier == null) {
+      _showMessage(
+        'Photo preview ready. AI part recognition is not connected yet.',
+      );
+      return;
+    }
+    await _identify();
+  }
+
+  Future<void> _identify() async {
+    final identifier = _identifier;
+    final bytes = _photoBytes;
+    if (identifier == null || bytes == null) return;
+
+    final requestId = ++_requestId;
+    setState(() {
+      _isIdentifying = true;
+      _result = null;
+      _identifyError = null;
+    });
+    try {
+      final result = await identifier(bytes, _photoMimeType);
+      if (!mounted || requestId != _requestId) return;
+      setState(() => _result = result);
+    } on PartIdentificationException catch (error) {
+      if (!mounted || requestId != _requestId) return;
+      setState(() => _identifyError = error.message);
+    } catch (_) {
+      if (!mounted || requestId != _requestId) return;
+      setState(
+        () => _identifyError = 'Could not identify the part. Please try again.',
+      );
+    } finally {
+      if (mounted && requestId == _requestId) {
+        setState(() => _isIdentifying = false);
+      }
+    }
+  }
+
+  static String _mimeTypeFor(XFile file) {
+    final declared = file.mimeType;
+    if (declared != null && declared.startsWith('image/')) return declared;
+    final name = file.name.toLowerCase();
+    if (name.endsWith('.png')) return 'image/png';
+    if (name.endsWith('.webp')) return 'image/webp';
+    if (name.endsWith('.heic')) return 'image/heic';
+    return 'image/jpeg';
   }
 
   String _pickerErrorMessage(PlatformException error) {
@@ -114,9 +186,176 @@ class _IdentifyPageState extends State<IdentifyPage> {
   void _removePhoto() {
     if (_isPicking) return;
     setState(() {
+      _requestId++;
       _photoBytes = null;
       _photoName = null;
+      _result = null;
+      _identifyError = null;
+      _isIdentifying = false;
     });
+  }
+
+  void _searchFor(String term) {
+    final onSearchQuery = widget.onSearchQuery;
+    if (onSearchQuery != null) {
+      onSearchQuery(term);
+    } else {
+      widget.onSearchParts?.call();
+    }
+  }
+
+  Widget _buildAiCard() {
+    final Widget child;
+    if (_isIdentifying) {
+      child = const Row(
+        key: ValueKey('identify-ai-loading'),
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Identifying the part…',
+              style: TextStyle(
+                color: AppColors.ink,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      );
+    } else if (_identifyError != null) {
+      child = Column(
+        key: const ValueKey('identify-ai-error'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _identifyError!,
+                  style: const TextStyle(color: AppColors.ink, height: 1.4),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            key: const ValueKey('identify-ai-retry'),
+            onPressed: _identify,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Try again'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          ),
+        ],
+      );
+    } else {
+      final result = _result!;
+      if (!result.isMotorcyclePart || result.partName.isEmpty) {
+        child = const Row(
+          key: ValueKey('identify-ai-not-part'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.help_outline, color: AppColors.primary),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'This doesn\'t look like a motorcycle part. Try another photo '
+                'with the part filling most of the frame.',
+                style: TextStyle(color: AppColors.ink, height: 1.4),
+              ),
+            ),
+          ],
+        );
+      } else {
+        final term = result.searchTerm.isEmpty
+            ? result.partName
+            : result.searchTerm;
+        child = Column(
+          key: const ValueKey('identify-ai-result'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                SizedBox(width: 6),
+                Text(
+                  'AI match',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              result.partName,
+              key: const ValueKey('identify-ai-part-name'),
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${result.categoryName} · ${result.confidence} confidence',
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+            if (result.description.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                result.description,
+                style: const TextStyle(
+                  color: AppColors.ink,
+                  fontSize: 13,
+                  height: 1.45,
+                ),
+              ),
+            ],
+            if (result.confidence == 'low') ...[
+              const SizedBox(height: 6),
+              const Text(
+                'Not sure? Retake the photo closer, or search the library.',
+                style: TextStyle(color: AppColors.muted, fontSize: 11),
+              ),
+            ],
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              key: const ValueKey('identify-ai-find'),
+              onPressed: () => _searchFor(term),
+              icon: const Icon(Icons.storefront_outlined, size: 18),
+              label: Text(
+                'Find "$term" in shops',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(46),
+              ),
+            ),
+          ],
+        );
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Semantics(liveRegion: true, child: child),
+    );
   }
 
   @override
@@ -270,7 +509,9 @@ class _IdentifyPageState extends State<IdentifyPage> {
                 const SizedBox(height: 7),
                 Text(
                   hasPhoto
-                      ? 'Your photo stays on this device. AI part recognition still needs a service connection.'
+                      ? (_identifier == null
+                            ? 'Your photo stays on this device. AI part recognition still needs a service connection.'
+                            : 'Your photo is sent to Google Gemini to identify the part. AI answers can be wrong, so check before buying.')
                       : 'Place the part on a plain surface. Avoid glare and keep its full shape in frame.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
@@ -308,6 +549,13 @@ class _IdentifyPageState extends State<IdentifyPage> {
               ],
             ),
           ),
+          if (hasPhoto &&
+              (_isIdentifying ||
+                  _result != null ||
+                  _identifyError != null)) ...[
+            const SizedBox(height: 14),
+            _buildAiCard(),
+          ],
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(15),

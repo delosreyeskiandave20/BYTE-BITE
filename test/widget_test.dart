@@ -241,7 +241,7 @@ void main() {
       expect(catalog, hasLength(69));
       expect(
         catalog.fold<int>(0, (total, vehicle) => total + vehicle.partCount),
-        3450,
+        5225,
       );
       final beat = catalog.firstWhere(
         (vehicle) =>
@@ -249,7 +249,7 @@ void main() {
             vehicle.model == 'Beat' &&
             vehicle.variant == 'Playful',
       );
-      expect(beat.partCount, 50);
+      expect(beat.partCount, 76);
       expect(beat.categories, hasLength(5));
       expect(beat.categories.first.name, 'Engine');
       expect(beat.categories.first.parts.first, 'Engine oil');
@@ -278,9 +278,9 @@ void main() {
     },
   );
 
-  test('maintenance has all 20 items and their supplied choices', () {
-    expect(maintenanceItemCount, 20);
-    expect(maintenanceChoiceCount, 209);
+  test('maintenance has all 24 items and their supplied choices', () {
+    expect(maintenanceItemCount, 24);
+    expect(maintenanceChoiceCount, 244);
     expect(maintenanceGroups.map((group) => group.title), [
       'Engine Oil',
       'Oil Filter or Oil Strainer',
@@ -302,6 +302,10 @@ void main() {
       'Grease and Protective Chemicals',
       'Cleaning Products',
       'Electric Motorcycle Maintenance Items',
+      'Cables',
+      'Gaskets and Seals',
+      'Engine Tune-Up Items',
+      'Workshop Tools',
     ]);
     expect(
       maintenanceGroups
@@ -312,8 +316,8 @@ void main() {
   });
 
   test('accessories has all supplied groups and unique choices', () {
-    expect(accessoryItemCount, 32);
-    expect(accessoryChoiceCount, 296);
+    expect(accessoryItemCount, 35);
+    expect(accessoryChoiceCount, 317);
     expect(accessoryGroups.map((group) => group.title), [
       'Helmet',
       'Helmet Accessories',
@@ -347,13 +351,16 @@ void main() {
       'Performance Accessories',
       'Scooter Accessories',
       'Electric Motorcycle Accessories',
+      'Body Armor and Protective Gear',
+      'Neck, Face and Base Layers',
+      'Camera and Recording',
     ]);
 
     final choices = accessoryGroups
         .expand((group) => group.itemChoices[group.title] ?? const <String>[])
         .toList();
-    expect(choices, hasLength(296));
-    expect(choices.toSet(), hasLength(296));
+    expect(choices, hasLength(317));
+    expect(choices.toSet(), hasLength(317));
     expect(choices, contains('Full-face helmet'));
     expect(choices, contains('Electric-motor diagnostic tool'));
   });
@@ -1448,8 +1455,10 @@ void main() {
             'tail_light_turn_signal_assembly.png',
       };
 
+      // The supplied photos cover the original 10 parts of each category;
+      // parts added later sit after them.
       final orderedParts = click125.categories
-          .expand((category) => category.parts)
+          .expand((category) => category.parts.take(10))
           .toList();
       expect([
         ...orderedParts.take(23),
@@ -1577,7 +1586,7 @@ void main() {
             .singleWhere((category) => category.name == 'Body')
             .parts;
 
-        expect(click125.partCount, 50);
+        expect(click125.partCount, 76);
         final folder = variant == 'Smart Edition'
             ? 'click125_smart_edition'
             : 'click125_street';

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../data/item_parts.dart';
 import '../data/item_specs.dart';
+import '../data/number_input.dart';
 import '../data/product_photo_storage.dart';
 import '../models/shop.dart' show FitSpec;
 import '../theme/app_theme.dart';
@@ -469,19 +470,10 @@ class _AddItemPageState extends State<AddItemPage> {
   String? _nameError(String? value) =>
       (value?.trim().isEmpty ?? true) ? 'Please type a product name.' : null;
 
-  String? _priceError(String? value) {
-    final price = double.tryParse(value?.trim() ?? '');
-    return price == null || !price.isFinite || price <= 0
-        ? 'Please enter a price above 0.'
-        : null;
-  }
+  String? _priceError(String? value) => NumberInput.priceError(value);
 
-  String? _quantityError(String? value) {
-    final quantity = int.tryParse(value?.trim() ?? '');
-    return quantity == null || quantity < 1
-        ? 'Please enter a whole number, 1 or more.'
-        : null;
-  }
+  String? _quantityError(String? value) =>
+      NumberInput.wholeNumberError(value, min: 1);
 
   bool get _isComplete =>
       _photos.isNotEmpty &&
@@ -818,6 +810,7 @@ class _AddItemPageState extends State<AddItemPage> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
+                  inputFormatters: NumberInput.price,
                   decoration: InputDecoration(
                     label: requiredLabel('Price (₱)'),
                     hintText: 'e.g. 250',
@@ -835,6 +828,7 @@ class _AddItemPageState extends State<AddItemPage> {
                   key: const ValueKey('add-item-quantity'),
                   controller: _quantity,
                   keyboardType: TextInputType.number,
+                  inputFormatters: NumberInput.wholeNumber,
                   decoration: InputDecoration(
                     label: requiredLabel('Quantity'),
                     hintText: 'e.g. 5',

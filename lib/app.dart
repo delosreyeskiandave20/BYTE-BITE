@@ -142,11 +142,12 @@ class _MotoScanShellState extends State<_MotoScanShell> {
     );
   }
 
-  void _openSearch() {
+  void _openSearch({String? query}) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => SearchPage(
           shopStore: _shopStore,
+          initialQuery: query,
           onOwnerSignIn: _openOwnerSignIn,
           onOpenShop: () {
             Navigator.of(context).pop();
@@ -223,7 +224,10 @@ class _MotoScanShellState extends State<_MotoScanShell> {
               shopStore: _shopStore,
               scrollController: _homeScrollController,
             ),
-            IdentifyPage(onSearchParts: _openSearch),
+            IdentifyPage(
+              onSearchParts: _openSearch,
+              onSearchQuery: (term) => _openSearch(query: term),
+            ),
             ShopPage(store: _shopStore, onOwnerSignIn: _openOwnerSignIn),
           ],
         ),

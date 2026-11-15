@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import '../data/number_input.dart';
 import '../data/price_format.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
@@ -1150,18 +1151,14 @@ class _EditProductSheetState extends State<_EditProductSheet> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      inputFormatters: NumberInput.price,
                       decoration: const InputDecoration(
                         labelText: 'Price (PHP)',
                         prefixText: '₱ ',
+                        errorMaxLines: 2,
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) {
-                        final price = double.tryParse(value?.trim() ?? '');
-                        if (price == null || !price.isFinite || price <= 0) {
-                          return 'Enter a price above zero.';
-                        }
-                        return null;
-                      },
+                      validator: NumberInput.priceError,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1169,18 +1166,16 @@ class _EditProductSheetState extends State<_EditProductSheet> {
                     child: TextFormField(
                       controller: _quantityController,
                       keyboardType: TextInputType.number,
+                      inputFormatters: NumberInput.wholeNumber,
                       decoration: const InputDecoration(
                         labelText: 'Quantity',
+                        errorMaxLines: 2,
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (_) => setState(() {}),
-                      validator: (value) {
-                        final quantity = int.tryParse(value?.trim() ?? '');
-                        if (quantity == null || quantity < 0) {
-                          return 'Enter zero or more.';
-                        }
-                        return null;
-                      },
+                      // 0 is allowed here: it lists the item as Out of stock.
+                      validator: (value) =>
+                          NumberInput.wholeNumberError(value, min: 0),
                     ),
                   ),
                 ],

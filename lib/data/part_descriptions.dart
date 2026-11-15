@@ -292,4 +292,98 @@ const _descriptions = <String, String>{
       'Guards on the handlebar ends that protect the hands and levers.',
   'windscreen':
       'Front screen that deflects wind from the rider\'s chest and helmet.',
+
+  // Engine (added)
+  'throttle cable':
+      'Cable that links the throttle grip to the throttle body or '
+      'carburettor. Replace it if the throttle feels stiff, the cable is '
+      'frayed, or the grip does not snap back closed.',
+  'piston ring set':
+      'Compression and oil rings that seal the piston against the cylinder '
+      'wall. Worn rings cause blue smoke, oil burning and low power.',
+  'cylinder-head cover gasket':
+      'Rubber gasket that seals the valve cover on top of the engine. '
+      'Replace it when oil seeps out around the head cover.',
+  'exhaust gasket':
+      'Heat-resistant ring that seals the exhaust pipe to the cylinder head. '
+      'A leaking gasket makes a ticking sound and can upset the fuel mixture.',
+  'intake manifold/insulator':
+      'Rubber joint between the throttle body or carburettor and the '
+      'cylinder head. Cracks let in extra air and cause rough idling.',
+
+  // Electrical (added)
+  'horn':
+      '12-V horn that warns other road users. Match the bracket and '
+      'connector, and check it works before every ride.',
+  'turn-signal relay':
+      'Flasher relay that makes the turn signals blink. LED signals usually '
+      'need an LED-compatible relay to flash at the correct speed.',
+  'starter motor':
+      'Electric motor that cranks the engine when you press the starter '
+      'button. Slow cranking with a good battery points to worn brushes or '
+      'a failing motor.',
+  'handlebar switch set':
+      'Switch housings on the handlebar for lights, horn, turn signals and '
+      'starter. Replace when buttons stick or only work some of the time.',
+  'ignition switch/key set':
+      'Key switch (or smart-key unit on keyless models) that turns on the '
+      'electrical system. Often sold with matching seat and fuel-cap locks.',
+
+  // Suspension (added)
+  'front fork inner tube':
+      'Chrome tube that slides inside the fork leg. Rust, pitting or a bent '
+      'tube quickly ruins the fork seals and must be replaced.',
+  'side stand':
+      'Kickstand that holds the motorcycle upright when parked. Replace it '
+      'if it is bent or no longer stays firmly in the up position.',
+  'rear-shock mounting bolts':
+      'Bolts and nuts that hold the rear shock to the frame and swingarm or '
+      'engine. Use the correct grade and tighten to the specified torque.',
+  'center stand':
+      'Two-legged stand that lifts the rear wheel off the ground for stable '
+      'parking, chain or tire work, and cleaning.',
+  'center-stand spring':
+      'Return spring that pulls the center stand up and keeps it from '
+      'dragging. Replace it if the stand rattles or drops while riding.',
+  'swingarm':
+      'Rear arm that holds the rear wheel and pivots on the frame with the '
+      'shock absorber. Check it for cracks or bends after a fall.',
+  'chain slider':
+      'Plastic or rubber guide on the swingarm that stops the drive chain '
+      'from cutting into it. Replace it when it is worn through.',
+
+  // Wheels & tires (added)
+  'front wheel rim':
+      'Front wheel (alloy or spoked rim) that holds the tire. Replace it if '
+      'it is bent, cracked or will not hold air.',
+  'rear wheel rim':
+      'Rear wheel (alloy or spoked rim) that holds the tire and carries the '
+      'drive. Replace it if it is bent, cracked or will not hold air.',
+  'brake lever set':
+      'Hand levers that work the brakes: both brakes on scooters, the front '
+      'brake on bikes with a foot pedal. Replace bent or broken levers.',
+  'front brake hose/cable':
+      'Hydraulic hose (disc brake) or steel cable (drum brake) that carries '
+      'lever force to the front brake. Replace hoses that bulge or crack and '
+      'cables that fray.',
+  'speed sensor/speedometer gear':
+      'Wheel-driven gear or electronic sensor that sends road speed to the '
+      'speedometer. A faulty one makes the reading stop or jump.',
+
+  // Body (added)
+  'footrest set':
+      'Rider and passenger footpegs or footrest rubbers. Replace worn rubbers '
+      'and bent pegs for secure footing.',
+  'handlebar grip set':
+      'Rubber grips for the left bar and the throttle. Worn or slippery '
+      'grips reduce control, especially in the rain.',
+  'fuel cap':
+      'Locking cap that seals the fuel tank and keeps water and dirt out. '
+      'Match the key type and the filler-neck shape.',
+  'license-plate bracket':
+      'Bracket that holds the rear license plate and often the plate light. '
+      'Make sure it fits the local plate size.',
+  'body clips and fasteners':
+      'Plastic clips, rivets and screws that hold panels and fairings in '
+      'place. Keep spares, as they often break when panels are removed.',
 };

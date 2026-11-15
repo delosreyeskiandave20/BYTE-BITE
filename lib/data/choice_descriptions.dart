@@ -849,4 +849,119 @@ const _descriptions = <String, Map<String, String>>{
     'Electric-motor diagnostic tool':
         'Tool for reading motor and controller fault codes.',
   },
+  'Body Armor and Protective Gear': {
+    'Back protector':
+        'Armor that protects the spine in a fall. Look for CE level 1 or 2.',
+    'Chest protector': 'Armor plate that shields the chest and ribs.',
+    'Knee guards': 'Strap-on or in-pant pads that protect the knees.',
+    'Elbow guards': 'Pads that protect the elbows and forearms.',
+    'Hip protectors': 'Pads or shorts that protect the hips in a slide.',
+    'Neck brace':
+        'Brace that limits extreme neck movement; mainly for off-road.',
+    'Airbag vest':
+        'Vest that inflates in a crash to protect the chest, back and neck.',
+    'Armored base layer':
+        'Thin shirt or pants with built-in armor to wear under clothes.',
+  },
+  'Neck, Face and Base Layers': {
+    'Neck gaiter': 'Tube of fabric that keeps sun, dust and wind off the neck.',
+    'Balaclava':
+        'Thin hood worn under the helmet; absorbs sweat and keeps the liner '
+        'clean.',
+    'Riding face mask': 'Washable mask that filters road dust and smoke.',
+    'Arm sleeves': 'UV-blocking sleeves that protect the arms from the sun.',
+    'Cooling vest': 'Vest that cools you by evaporation on hot rides.',
+    'Moisture-wicking base layer':
+        'Quick-dry shirt worn under the jacket to keep you dry and cool.',
+    'Riding socks': 'Long, cushioned socks that stop boots from rubbing.',
+  },
+  'Camera and Recording': {
+    'Helmet action camera':
+        'Small camera that records your ride from the helmet.',
+    'Helmet camera mount': 'Adhesive or strap mount for a helmet camera.',
+    'Handlebar camera mount': 'Clamp that holds a camera on the handlebar.',
+    'Motorcycle dash cam':
+        'Weatherproof camera wired to the bike that records the road ahead.',
+    'Front and rear dash cam':
+        'Two-camera system that records in front of and behind the bike.',
+    'Camera battery pack': 'Spare battery for longer recording time.',
+  },
+  // ============================================ MAINTENANCE (added groups)
+  'Cables': {
+    'Throttle cable':
+        'Links the throttle grip to the throttle body or carburettor. '
+        'Replace it if it is stiff, frayed or does not snap closed.',
+    'Clutch cable':
+        'Connects the clutch lever to the clutch. Replace it when the lever '
+        'feels gritty or the cable is frayed; for bikes with a clutch lever.',
+    'Front brake cable': 'Operates a front drum brake from the hand lever.',
+    'Rear brake cable':
+        'Operates the rear drum brake from the lever (scooters) or pedal.',
+    'Speedometer cable':
+        'Drives a mechanical speedometer from the wheel. Older and basic '
+        'models only.',
+    'Choke cable': 'Opens the choke on carburetted engines for cold starts.',
+    'Seat-lock cable': 'Releases the seat lock from the key switch.',
+    'Cable lubricant':
+        'Spray that keeps cables moving smoothly and stops rust inside.',
+  },
+  'Gaskets and Seals': {
+    'Head gasket':
+        'Seals the cylinder head to the cylinder. Replace it whenever the head '
+        'is removed.',
+    'Cylinder base gasket': 'Seals the cylinder to the crankcase.',
+    'Valve cover gasket':
+        'Seals the cover on top of the engine; fixes oil seeping from the '
+        'head cover.',
+    'Exhaust gasket':
+        'Seals the exhaust pipe to the engine; stops ticking leaks.',
+    'Crankcase gasket': 'Seals the engine side covers and crankcase halves.',
+    'Magneto cover gasket': 'Seals the stator (magneto) cover on the engine.',
+    'Engine oil seal kit':
+        'Set of rubber seals for shafts that leave the engine, such as the '
+        'crank and gear-shift shafts.',
+    'Liquid gasket (RTV silicone)':
+        'Paste that forms a seal where no paper gasket is used. Use the type '
+        'the manual specifies.',
+  },
+  'Engine Tune-Up Items': {
+    'Piston kit':
+        'Piston, rings, pin and clips for an engine rebuild. Match the bore '
+        'size (standard or oversize).',
+    'Piston ring set':
+        'Compression and oil rings. New rings fix blue smoke and low power.',
+    'Cam chain':
+        'Chain that drives the camshaft. A worn one rattles at idle.',
+    'Cam-chain tensioner':
+        'Keeps the cam chain tight. A weak one causes rattling on start-up.',
+    'Valve stem seals':
+        'Small seals that stop oil running down the valves; worn ones cause '
+        'smoke on start-up.',
+    'Valve shims':
+        'Shims that set valve clearance on shim-type engines.',
+    'Carburetor repair kit':
+        'Jets, gaskets, needle and float valve to refresh a carburettor.',
+    'Fuel filter':
+        'Stops dirt in the fuel from reaching the injector or carburettor.',
+    'Fuel pump':
+        'Electric pump in the tank that feeds fuel-injected engines.',
+  },
+  'Workshop Tools': {
+    'Torque wrench':
+        'Tightens bolts to the exact torque in the manual so they neither '
+        'loosen nor strip.',
+    'Socket set': 'Metric sockets and ratchet for most motorcycle bolts.',
+    'Spark-plug socket':
+        'Deep socket with a rubber insert that holds the spark plug.',
+    'Feeler gauge':
+        'Thin blades for checking valve clearance and spark-plug gaps.',
+    'Oil-filter wrench': 'Grips spin-on oil filters for removal.',
+    'Oil drain pan': 'Catches used oil during an oil change.',
+    'Funnel': 'Pours oil and coolant without spills.',
+    'Chain breaker and riveter':
+        'Removes and fits drive-chain links and rivets the master link.',
+    'Multimeter':
+        'Measures battery voltage, charging output and wiring faults.',
+    'Tire levers': 'Levers for taking tires off and putting them back on.',
+  },
 };

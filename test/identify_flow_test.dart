@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:flutter_application_1/data/part_identifier.dart';
 import 'package:flutter_application_1/screens/camera_capture_page.dart';
 import 'package:flutter_application_1/screens/identify_page.dart';
 
@@ -84,6 +85,84 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('AI identifies the photographed part and opens search', (
+    WidgetTester tester,
+  ) async {
+    String? searched;
+    String? sentMime;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: IdentifyPage(
+          pickImage: (source) async => XFile.fromData(
+            _photoBytes,
+            name: 'caliper.png',
+            mimeType: 'image/png',
+          ),
+          identifyPart: (bytes, mimeType) async {
+            sentMime = mimeType;
+            return const PartIdentification(
+              isMotorcyclePart: true,
+              partName: 'Brake caliper',
+              categoryId: 'brakes',
+              confidence: 'high',
+              description: 'Squeezes the brake pads against the disc.',
+              searchTerm: 'Brake',
+            );
+          },
+          onSearchQuery: (term) => searched = term,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final takePhoto = find.byKey(const ValueKey('identify-take-photo'));
+    await tester.ensureVisible(takePhoto);
+    await tester.pumpAndSettle();
+    await tester.tap(takePhoto);
+    await tester.pumpAndSettle();
+
+    expect(sentMime, 'image/png');
+    expect(find.text('Brake caliper'), findsOneWidget);
+    expect(find.text('Brakes · high confidence'), findsOneWidget);
+
+    final findInShops = find.byKey(const ValueKey('identify-ai-find'));
+    await tester.ensureVisible(findInShops);
+    await tester.pumpAndSettle();
+    await tester.tap(findInShops);
+    expect(searched, 'Brake');
+  });
+
+  testWidgets('AI errors offer a retry', (WidgetTester tester) async {
+    var calls = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: IdentifyPage(
+          pickImage: (source) async =>
+              XFile.fromData(_photoBytes, name: 'part.png'),
+          identifyPart: (bytes, mimeType) async {
+            calls++;
+            throw const PartIdentificationException('AI is busy.');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final upload = find.byKey(const ValueKey('identify-upload-photo'));
+    await tester.ensureVisible(upload);
+    await tester.pumpAndSettle();
+    await tester.tap(upload);
+    await tester.pumpAndSettle();
+
+    expect(find.text('AI is busy.'), findsOneWidget);
+    final retry = find.byKey(const ValueKey('identify-ai-retry'));
+    await tester.ensureVisible(retry);
+    await tester.pumpAndSettle();
+    await tester.tap(retry);
+    await tester.pumpAndSettle();
+    expect(calls, 2);
   });
 
   testWidgets('camera error state points to the upload fallback', (

@@ -208,6 +208,43 @@ const designGroups = [
       'Custom Style',
     ],
   ),
+  DesignGroup(
+    title: 'Exhaust Designs',
+    items: [
+      'Carbon Fiber Exhaust',
+      'Titanium Burnt Exhaust',
+      'Matte Black Exhaust',
+      'Polished Stainless Exhaust',
+      'Chrome Exhaust',
+      'Custom Exhaust Tip',
+      'Exhaust Heat Wrap',
+    ],
+  ),
+  DesignGroup(
+    title: 'Body Kit and Fairing Designs',
+    items: [
+      'Front Winglets',
+      'Belly Pan',
+      'Undertail Cover',
+      'Tail Tidy',
+      'Front Fender Extender',
+      'Headlight Visor',
+      'Racing Fairing Kit',
+      'Carbon Fiber Fairing',
+    ],
+  ),
+  DesignGroup(
+    title: 'CNC and Anodized Parts',
+    items: [
+      'CNC Brake Levers',
+      'CNC Footpegs',
+      'Anodized Bolt Kit',
+      'Titanium Bolt Kit',
+      'CNC Fuel Cap Cover',
+      'Anodized Valve Caps',
+      'CNC Axle Caps',
+    ],
+  ),
 ];
 
 final designItemCount = designGroups.fold<int>(

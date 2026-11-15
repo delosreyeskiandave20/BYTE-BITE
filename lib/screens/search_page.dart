@@ -13,12 +13,16 @@ import 'shop_page.dart';
 class SearchPage extends StatefulWidget {
   const SearchPage({
     this.shopStore,
+    this.initialQuery,
     this.onOwnerSignIn,
     this.onOpenShop,
     super.key,
   });
 
   final ShopStore? shopStore;
+
+  /// Pre-fills the search box, e.g. with a part the AI recognized.
+  final String? initialQuery;
   final VoidCallback? onOwnerSignIn;
 
   /// Switches the app shell to the Shop tab. Used by "View all in Shop".
@@ -61,8 +65,10 @@ class _SearchPageState extends State<SearchPage> {
     _expandedProductId = null;
   });
 
-  final _searchController = TextEditingController();
-  String _query = '';
+  late final _searchController = TextEditingController(
+    text: widget.initialQuery,
+  );
+  late String _query = widget.initialQuery ?? '';
   String? _selectedCategory;
   String? _expandedProductId;
 

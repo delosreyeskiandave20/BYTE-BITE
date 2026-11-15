@@ -499,6 +499,42 @@ final accessoryGroups = [
       'Electric-motor diagnostic tool',
     ],
   ),
+  CatalogGroup.withChoices(
+    title: 'Body Armor and Protective Gear',
+    choices: [
+      'Back protector',
+      'Chest protector',
+      'Knee guards',
+      'Elbow guards',
+      'Hip protectors',
+      'Neck brace',
+      'Airbag vest',
+      'Armored base layer',
+    ],
+  ),
+  CatalogGroup.withChoices(
+    title: 'Neck, Face and Base Layers',
+    choices: [
+      'Neck gaiter',
+      'Balaclava',
+      'Riding face mask',
+      'Arm sleeves',
+      'Cooling vest',
+      'Moisture-wicking base layer',
+      'Riding socks',
+    ],
+  ),
+  CatalogGroup.withChoices(
+    title: 'Camera and Recording',
+    choices: [
+      'Helmet action camera',
+      'Helmet camera mount',
+      'Handlebar camera mount',
+      'Motorcycle dash cam',
+      'Front and rear dash cam',
+      'Camera battery pack',
+    ],
+  ),
 ];
 
 final accessoryItemCount = accessoryGroups.length;
@@ -873,6 +909,73 @@ const maintenanceGroups = [
         'Suspension parts',
         'Fuses',
         'Relays',
+      ],
+    },
+  ),
+  CatalogGroup(
+    title: 'Cables',
+    items: [],
+    itemChoices: {
+      'Cables': [
+        'Throttle cable',
+        'Clutch cable',
+        'Front brake cable',
+        'Rear brake cable',
+        'Speedometer cable',
+        'Choke cable',
+        'Seat-lock cable',
+        'Cable lubricant',
+      ],
+    },
+  ),
+  CatalogGroup(
+    title: 'Gaskets and Seals',
+    items: [],
+    itemChoices: {
+      'Gaskets and Seals': [
+        'Head gasket',
+        'Cylinder base gasket',
+        'Valve cover gasket',
+        'Exhaust gasket',
+        'Crankcase gasket',
+        'Magneto cover gasket',
+        'Engine oil seal kit',
+        'Liquid gasket (RTV silicone)',
+      ],
+    },
+  ),
+  CatalogGroup(
+    title: 'Engine Tune-Up Items',
+    items: [],
+    itemChoices: {
+      'Engine Tune-Up Items': [
+        'Piston kit',
+        'Piston ring set',
+        'Cam chain',
+        'Cam-chain tensioner',
+        'Valve stem seals',
+        'Valve shims',
+        'Carburetor repair kit',
+        'Fuel filter',
+        'Fuel pump',
+      ],
+    },
+  ),
+  CatalogGroup(
+    title: 'Workshop Tools',
+    items: [],
+    itemChoices: {
+      'Workshop Tools': [
+        'Torque wrench',
+        'Socket set',
+        'Spark-plug socket',
+        'Feeler gauge',
+        'Oil-filter wrench',
+        'Oil drain pan',
+        'Funnel',
+        'Chain breaker and riveter',
+        'Multimeter',
+        'Tire levers',
       ],
     },
   ),

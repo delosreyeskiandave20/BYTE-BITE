@@ -41,8 +41,10 @@ class _MotorcyclePartsCatalogPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.paper,
+      // White page so part photos sit on a clean background.
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.white,
         leading: IconButton(
           tooltip: 'Back to home',
           onPressed: () => Navigator.of(context).pop(),
@@ -157,7 +159,7 @@ class _MotorcyclePartsCatalogPageState
                         height: 210,
                         child: selectedImageAsset == null
                             ? const ColoredBox(
-                                color: AppColors.paper,
+                                color: Colors.white,
                                 child: Icon(
                                   Icons.two_wheeler,
                                   color: AppColors.primary,
@@ -197,7 +199,7 @@ class _MotorcyclePartsCatalogPageState
             child: Container(
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.only(left: 20),
-              color: AppColors.paper,
+              color: Colors.white,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 clipBehavior: Clip.none,
@@ -209,7 +211,7 @@ class _MotorcyclePartsCatalogPageState
                         child: ChoiceChip(
                           key: ValueKey('part-category-${category.name}'),
                           label: Text(
-                            '${category.name} · ${category.parts.length}',
+                            category.name,
                           ),
                           selected: category == activeCategory,
                           onSelected: (_) =>
@@ -250,7 +252,7 @@ class _MotorcyclePartsCatalogPageState
               ),
               padding: const EdgeInsets.symmetric(vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: AppColors.line),
               ),
@@ -336,7 +338,7 @@ class _VehiclePartTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.line),
       ),
@@ -478,7 +480,7 @@ class _VehiclePartImage extends StatelessWidget {
   Widget _placeholder() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.paper,
+        color: Colors.white,
         border: Border.all(color: AppColors.line),
         borderRadius: BorderRadius.circular(8),
       ),
