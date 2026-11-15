@@ -233,69 +233,116 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
                     child: IconButton(
                       onPressed: () => Navigator.of(context).maybePop(),
                       tooltip: 'Back',
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 18,
+                      ),
                       style: IconButton.styleFrom(
-                        backgroundColor: AppColors.surface,
+                        backgroundColor: Colors.white,
                         foregroundColor: AppColors.ink,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.all(10),
+                        side: const BorderSide(color: AppColors.line),
+                        shape: const CircleBorder(),
+                        padding: const EdgeInsets.all(12),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Card(
-                    color: AppColors.surface,
+                  const SizedBox(height: 12),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x14000000),
+                          blurRadius: 30,
+                          offset: Offset(0, 12),
+                        ),
+                      ],
+                    ),
                     child: Padding(
-                      padding: const EdgeInsets.all(22),
+                      padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Center(
-                            child: Image.asset(
-                              'assets/motoscan_logo.png',
-                              key: const ValueKey('motoscan-logo'),
-                              width: 68,
-                              height: 68,
-                              semanticLabel: 'MotoScan logo',
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.orange.withValues(
+                                      alpha: 0.35,
+                                    ),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Image.asset(
+                                'assets/motoscan_logo.png',
+                                key: const ValueKey('motoscan-logo'),
+                                width: 76,
+                                height: 76,
+                                semanticLabel: 'MotoScan logo',
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 16),
                           const Center(
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: MotoScanWordmark(size: 28),
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Shop owner access',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 20),
-                          SegmentedButton<bool>(
-                            segments: const [
-                              ButtonSegment(value: true, label: Text('Log in')),
-                              ButtonSegment(
-                                value: false,
-                                label: Text('Create owner account'),
+                          const SizedBox(height: 10),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
                               ),
-                            ],
-                            selected: {_isLogin},
-                            onSelectionChanged: _loading
-                                ? null
-                                : (selection) => _switchMode(selection.first),
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Text(
+                                'Shop owner access',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: AppType.micro,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 22),
+                          _ModeSwitch(
+                            isLogin: _isLogin,
+                            onChanged: _loading ? null : _switchMode,
+                          ),
+                          const SizedBox(height: 22),
                           Text(
                             _isLogin
                                 ? 'Shop owner sign in'
                                 : 'Create owner account',
-                            style: Theme.of(context).textTheme.titleLarge,
+                            style: const TextStyle(
+                              color: AppColors.ink,
+                              fontSize: AppType.section,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 4),
+                          Text(
+                            _isLogin
+                                ? 'Manage your shop and listings.'
+                                : 'Start selling parts to riders near you.',
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: AppType.caption + 1,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           Form(
                             key: _formKey,
                             child: AutofillGroup(
@@ -480,29 +527,70 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
                             const SizedBox(height: 12),
                             const LinearProgressIndicator(),
                           ],
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           ElevatedButton(
                             onPressed: _loading ? null : _submit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
-                              foregroundColor: AppColors.surface,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(54),
+                              elevation: 4,
+                              shadowColor: AppColors.orange.withValues(
+                                alpha: 0.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: AppType.cardTitle + 1,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                            child: Text(
-                              _isLogin ? 'Log in' : 'Create owner account',
-                              textAlign: TextAlign.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _isLogin
+                                        ? 'Log in'
+                                        : 'Create owner account',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 20,
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          Text(
-                            _isLogin
-                                ? 'Accounts are secured by Firebase Authentication and shop listings are saved to Cloud Firestore.'
-                                : 'We will email a verification link to confirm your address. Your shop stays manageable from this account.',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: AppType.caption,
-                              height: 1.5,
-                            ),
+                          const SizedBox(height: 14),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(top: 1),
+                                child: Icon(
+                                  Icons.lock_outline_rounded,
+                                  size: 15,
+                                  color: AppColors.faint,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _isLogin
+                                      ? 'Accounts are secured by Firebase Authentication and shop listings are saved to Cloud Firestore.'
+                                      : 'We will email a verification link to confirm your address. Your shop stays manageable from this account.',
+                                  style: const TextStyle(
+                                    color: AppColors.muted,
+                                    fontSize: AppType.micro,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -513,6 +601,76 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Pill switch between "Log in" and "Create owner account".
+class _ModeSwitch extends StatelessWidget {
+  const _ModeSwitch({required this.isLogin, required this.onChanged});
+
+  final bool isLogin;
+
+  /// Null while a request is running.
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tab(String label, bool value) {
+      final selected = isLogin == value;
+      return Expanded(
+        child: Semantics(
+          button: true,
+          selected: selected,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onChanged == null || selected
+                ? null
+                : () => onChanged!(value),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
+              decoration: BoxDecoration(
+                color: selected ? Colors.white : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: selected
+                    ? const [
+                        BoxShadow(
+                          color: Color(0x1A000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: selected ? AppColors.primary : AppColors.muted,
+                    fontSize: AppType.body,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.noticeSoft,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        children: [tab('Log in', true), tab('Create owner account', false)],
       ),
     );
   }

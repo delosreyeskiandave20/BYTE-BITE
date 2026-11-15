@@ -55,6 +55,12 @@ class PartCategoryGrid extends StatelessWidget {
   }
 }
 
+/// Cards that show only their short line, not their title.
+const _hideName = {'engine', 'electrical', 'suspension', 'wheels', 'body'};
+
+/// Cards that show only their title, not their short line.
+const _hideSubtitle = {'accessories', 'maintenance', 'sizes'};
+
 class _CategoryCard extends StatelessWidget {
   const _CategoryCard({required this.category, required this.onSelected});
 
@@ -117,17 +123,31 @@ class _CategoryCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            category.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: AppType.cardTitle + 1,
-                              fontWeight: FontWeight.w800,
-                              height: 1.15,
+                          if (!_hideName.contains(category.id))
+                            Text(
+                              category.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: AppType.cardTitle + 1,
+                                fontWeight: FontWeight.w800,
+                                height: 1.15,
+                              ),
                             ),
-                          ),
+                          if (!_hideName.contains(category.id) &&
+                              !_hideSubtitle.contains(category.id))
+                            const SizedBox(height: 2),
+                          if (!_hideSubtitle.contains(category.id))
+                            Text(
+                              category.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xD9FFFFFF),
+                                fontSize: AppType.caption,
+                              ),
+                            ),
                         ],
                       ),
                     ),

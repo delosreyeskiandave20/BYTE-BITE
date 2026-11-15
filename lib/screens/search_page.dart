@@ -39,6 +39,28 @@ class _SearchPageState extends State<SearchPage> {
     ('Body', 'body'),
   ];
 
+  static const _popularSearches = [
+    'Brake',
+    'Oil',
+    'Tire',
+    'Headlight',
+    'Mirror',
+    'Air filter',
+  ];
+
+  static IconData _filterIcon(String? category) => switch (category) {
+    'engine' => Icons.settings_rounded,
+    'brakes' => Icons.album_outlined,
+    'electrical' => Icons.bolt_rounded,
+    'body' => Icons.two_wheeler_rounded,
+    _ => Icons.apps_rounded,
+  };
+
+  void _setQuery(String value) => setState(() {
+    _query = value;
+    _expandedProductId = null;
+  });
+
   final _searchController = TextEditingController();
   String _query = '';
   String? _selectedCategory;
@@ -137,87 +159,102 @@ class _SearchPageState extends State<SearchPage> {
           final hasResults = results.isNotEmpty || shopMatches.isNotEmpty;
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
-              const Text(
-                'Search parts',
-                style: TextStyle(
-                  color: AppColors.ink,
-                  fontSize: AppType.display,
-                  fontWeight: FontWeight.w800,
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 18,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _setQuery,
+                  textInputAction: TextInputAction.search,
+                  style: const TextStyle(
+                    fontSize: AppType.cardTitle,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Part name, part number or shop',
+                    hintStyle: const TextStyle(
+                      color: AppColors.faint,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 17),
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(left: 6),
+                      child: Icon(
+                        Icons.search_rounded,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
+                    ),
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Clear search',
+                            onPressed: () {
+                              _searchController.clear();
+                              _setQuery('');
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: const BorderSide(color: AppColors.line),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: const BorderSide(color: AppColors.line),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(999),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 1.6,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Search the parts library, or live shop listings by part name, '
-                'category, shop, or part number.',
-                style: TextStyle(
-                  color: AppColors.muted,
-                  fontSize: 13,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() {
-                  _query = value;
-                  _expandedProductId = null;
-                }),
-                decoration: InputDecoration(
-                  hintText: 'Try "brake", "MS-BRK", or a shop name',
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: AppColors.primary,
-                  ),
-                  suffixIcon: _query.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Clear search',
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _query = '';
-                              _expandedProductId = null;
-                            });
-                          },
-                          icon: const Icon(Icons.close),
-                        ),
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: const BorderSide(color: AppColors.lineStrong),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: const BorderSide(color: AppColors.lineStrong),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
                 child: Row(
                   children: _filters.map((filter) {
                     final selected = _selectedCategory == filter.$2;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ChoiceChip(
+                        avatar: Icon(
+                          _filterIcon(filter.$2),
+                          size: 16,
+                          color: selected ? Colors.white : AppColors.primary,
+                        ),
                         label: Text(filter.$1),
                         selected: selected,
                         onSelected: (_) => setState(() {
                           _selectedCategory = filter.$2;
                           _expandedProductId = null;
                         }),
-                        selectedColor: AppColors.primarySoft,
-                        backgroundColor: AppColors.surface,
+                        selectedColor: AppColors.primary,
+                        backgroundColor: Colors.white,
+                        shape: const StadiumBorder(),
                         side: BorderSide(
                           color: selected ? AppColors.primary : AppColors.line,
                         ),
                         labelStyle: TextStyle(
-                          color: selected ? AppColors.primary : AppColors.muted,
-                          fontSize: 11,
+                          color: selected ? Colors.white : AppColors.inkSoft,
+                          fontSize: AppType.caption,
                           fontWeight: FontWeight.w700,
                         ),
                         showCheckmark: false,
@@ -226,6 +263,34 @@ class _SearchPageState extends State<SearchPage> {
                   }).toList(),
                 ),
               ),
+              if (!hasQuery) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Popular searches',
+                  style: TextStyle(
+                    color: AppColors.muted,
+                    fontSize: AppType.micro,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final term in _popularSearches)
+                      _PopularSearch(
+                        key: ValueKey('popular-$term'),
+                        term: term,
+                        onTap: () {
+                          _searchController.text = term;
+                          _setQuery(term);
+                        },
+                      ),
+                  ],
+                ),
+              ],
               if (hasQuery && _shopStore.isLoading) ...[
                 const SizedBox(height: 12),
                 const LinearProgressIndicator(
@@ -330,18 +395,64 @@ class _SearchSectionHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Flexible(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(999),
+          ),
           child: Text(
             trailing,
-            textAlign: TextAlign.end,
             style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+              fontSize: AppType.micro,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A tappable suggestion shown before the rider types anything.
+class _PopularSearch extends StatelessWidget {
+  const _PopularSearch({required this.term, required this.onTap, super.key});
+
+  final String term;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.noticeSoft,
+      shape: const StadiumBorder(),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.trending_up_rounded,
+                size: 15,
+                color: AppColors.muted,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                term,
+                style: const TextStyle(
+                  color: AppColors.inkSoft,
+                  fontSize: AppType.caption,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -364,11 +475,13 @@ class _SearchResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: AppColors.surface,
+      color: Colors.white,
       margin: const EdgeInsets.only(bottom: 10),
       clipBehavior: Clip.antiAlias,
+      elevation: expanded ? 3 : 0,
+      shadowColor: const Color(0x33B8400F),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         side: BorderSide(
           color: expanded ? AppColors.primary : AppColors.line,
           width: expanded ? 1.4 : 1,
@@ -377,20 +490,24 @@ class _SearchResultCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(13),
+          padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(13),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.orange, AppColors.primary],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(product.icon, color: AppColors.primary),
+                child: Icon(product.icon, color: Colors.white, size: 24),
               ),
-              const SizedBox(width: 11),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,20 +516,28 @@ class _SearchResultCard extends StatelessWidget {
                       product.name,
                       style: const TextStyle(
                         color: AppColors.ink,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontSize: AppType.cardTitle,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${categoryNames[product.categoryId]} · ${product.code}',
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _Tag(
+                          text: categoryNames[product.categoryId] ?? '',
+                          color: AppColors.primary,
+                          background: AppColors.primarySoft,
+                        ),
+                        _Tag(
+                          text: product.code,
+                          color: AppColors.muted,
+                          background: AppColors.noticeSoft,
+                          mono: true,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 5),
                     AnimatedSize(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeInOut,
@@ -442,13 +567,60 @@ class _SearchResultCard extends StatelessWidget {
                   ],
                 ),
               ),
-              AnimatedRotation(
-                turns: expanded ? 0.5 : 0,
-                duration: const Duration(milliseconds: 220),
-                child: const Icon(Icons.expand_more, color: AppColors.primary),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: expanded ? AppColors.primary : AppColors.noticeSoft,
+                  shape: BoxShape.circle,
+                ),
+                child: AnimatedRotation(
+                  turns: expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 220),
+                  child: Icon(
+                    Icons.expand_more_rounded,
+                    size: 20,
+                    color: expanded ? Colors.white : AppColors.inkSoft,
+                  ),
+                ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag({
+    required this.text,
+    required this.color,
+    required this.background,
+    this.mono = false,
+  });
+
+  final String text;
+  final Color color;
+  final Color background;
+  final bool mono;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          fontFamily: mono ? 'monospace' : null,
+          letterSpacing: mono ? 0.3 : 0,
         ),
       ),
     );
