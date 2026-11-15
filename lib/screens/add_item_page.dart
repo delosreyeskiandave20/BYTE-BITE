@@ -1164,7 +1164,6 @@ class _AddItemPageState extends State<AddItemPage> {
       ],
     );
   }
-
 }
 
 /// "1 Category → 2 Part → 3 Details", with the current step highlighted.

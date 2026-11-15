@@ -512,9 +512,7 @@ void main() {
           store: store,
           ownerEmail: 'test-owner@example.com',
           onDone: () => didFinishEditing = true,
-          specRows: parseItemSpecs(
-            File(itemSpecsAssetPath).readAsStringSync(),
-          ),
+          specRows: parseItemSpecs(File(itemSpecsAssetPath).readAsStringSync()),
           pickPhotos: (source, limit) async => [
             PickedPhoto(bytes: _onePixelPng, extension: 'png'),
             PickedPhoto(bytes: _onePixelPng, extension: 'png'),
@@ -547,10 +545,7 @@ void main() {
       'Brake lever',
     );
     await tester.tap(find.byKey(const ValueKey('condition-New')));
-    await tester.enterText(
-      find.byKey(const ValueKey('add-item-price')),
-      '200',
-    );
+    await tester.enterText(find.byKey(const ValueKey('add-item-price')), '200');
     await tester.enterText(
       find.byKey(const ValueKey('add-item-quantity')),
       '2',
