@@ -2,21 +2,21 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/shop.dart';
+import 'item_specs.dart';
 import 'owner_auth.dart';
+import 'product_photo_storage.dart';
 import 'owner_email_hash.dart';
 
 export '../models/shop.dart';
+export 'product_photo_storage.dart' show PickedPhoto, ProductPhotoStorage;
 export 'shop_search.dart';
 
 /// Product categories offered by the owner dashboard.
-const shopProductCategories = <String>[
-  defaultShopProductCategory,
-  'Accessories',
-  'Maintenance',
-];
+const shopProductCategories = itemCategories;
 
 /// Stores shop profiles and shop products.
 ///
@@ -26,11 +26,13 @@ const shopProductCategories = <String>[
 /// the store falls back to read-only in-memory demo shop data; owner
 /// authentication stays unavailable.
 class ShopStore extends ChangeNotifier {
-  ShopStore({OwnerAuth? ownerAuth}) {
+  ShopStore({OwnerAuth? ownerAuth, ProductPhotoStorage? photoStorage}) {
     _ownerAuth = ownerAuth ?? createOwnerAuth();
+    _photoStorage = photoStorage;
     _listenToAuthState();
     if (Firebase.apps.isNotEmpty) {
       _firestore = FirebaseFirestore.instance;
+      _photoStorage ??= FirebaseProductPhotoStorage(FirebaseStorage.instance);
       _isLoading = true;
       _subscribeToShops();
       purgeStaleShops();
@@ -43,11 +45,93 @@ class ShopStore extends ChangeNotifier {
   static const _shopsCollection = 'shops';
   static const _productsCollection = 'products';
   static const _maxProductsPerShop = 500;
+
+  /// How long a save waits for the server before the screen moves on.
+  /// Firestore shows the change on this device right away and keeps
+  /// syncing it in the background, so a slow connection must not leave the
+  /// owner stuck on a spinner.
+  static const serverAckWait = Duration(seconds: 6);
+
+  Object? _syncError;
+
+  /// A save that the server rejected after the screen had moved on.
+  Object? get syncError => _syncError;
+
+  void clearSyncError() {
+    if (_syncError == null) return;
+    _syncError = null;
+    notifyListeners();
+  }
+
+  /// Waits up to [serverAckWait] for [write]; after that it finishes in the
+  /// background and a later failure is reported through [syncError].
+  Future<void> _commit(Future<void> write) async {
+    try {
+      await write.timeout(serverAckWait);
+    } on TimeoutException {
+      unawaited(
+        write.catchError((Object error) {
+          _syncError = error;
+          notifyListeners();
+        }),
+      );
+    }
+  }
+
   static const _maxNameLength = 120;
   static const _maxLocationLength = 120;
   static const _maxShopDescriptionLength = 2000;
   static const _maxCategoryLength = 60;
   static const _maxProductDescriptionLength = 1000;
+  static const _maxMotorcyclesPerProduct = 100;
+
+  /// Photos after the cover; with the cover that makes 8 at most.
+  static const _maxPhotosPerProduct = 7;
+
+  /// Trims per-motorcycle spec values, drops blank ones and enforces the
+  /// Firestore limit of one entry per checked motorcycle.
+  static List<FitSpec> _validateSpecs(List<FitSpec> specs) {
+    final clean = [
+      for (final spec in specs)
+        if (spec.motorcycle.trim().isNotEmpty && spec.value.trim().isNotEmpty)
+          FitSpec(motorcycle: spec.motorcycle.trim(), value: spec.value.trim()),
+    ];
+    if (clean.length > _maxMotorcyclesPerProduct) {
+      throw ArgumentError('Too many motorcycle specs.');
+    }
+    if (clean.any((s) => s.motorcycle.length > 120 || s.value.length > 200)) {
+      throw ArgumentError('A spec value is too long.');
+    }
+    return List.unmodifiable(clean);
+  }
+
+  /// Empty (older listings) or one of [productConditions].
+  static String _validateCondition(String condition) {
+    final trimmed = condition.trim();
+    if (trimmed.isNotEmpty && !productConditions.contains(trimmed)) {
+      throw ArgumentError('Choose New, Used or Surplus.');
+    }
+    return trimmed;
+  }
+
+  /// Trims names, drops blanks and duplicates, and enforces the Firestore
+  /// limits on the motorcycles an item fits.
+  static List<String> _validateMotorcycles(List<String> motorcycles) {
+    final clean = <String>{
+      for (final motorcycle in motorcycles)
+        if (motorcycle.trim().isNotEmpty) motorcycle.trim(),
+    }.toList();
+    if (clean.length > _maxMotorcyclesPerProduct) {
+      throw ArgumentError(
+        'Pick $_maxMotorcyclesPerProduct motorcycles or fewer.',
+      );
+    }
+    if (clean.any((motorcycle) => motorcycle.length > _maxNameLength)) {
+      throw ArgumentError('A motorcycle name is too long.');
+    }
+    return List.unmodifiable(clean);
+  }
+
   static const _staleShopMaxAge = Duration(days: 30);
   static const _firestoreBatchLimit = 400;
 
@@ -74,6 +158,36 @@ class ShopStore extends ChangeNotifier {
 
   FirebaseFirestore? _firestore;
   OwnerAuth? _ownerAuth;
+  ProductPhotoStorage? _photoStorage;
+
+  /// Whether item photos can be uploaded. Without it, sellers can still paste
+  /// an image URL.
+  bool get canUploadPhotos => _photoStorage != null;
+
+  /// Uploads one item photo for [ownerEmail]'s shop and returns its URL.
+  Future<String> uploadProductPhoto({
+    required String ownerEmail,
+    required PickedPhoto photo,
+  }) {
+    final storage = _photoStorage;
+    if (storage == null) {
+      throw StateError(
+        'Photo uploads need the online shop. Paste an image URL instead.',
+      );
+    }
+    final shop = _requireOwnerShop(ownerEmail);
+    // A stalled upload should fail with a message, not spin forever.
+    return storage
+        .upload(shopId: shop.id, photo: photo)
+        .timeout(
+          const Duration(seconds: 90),
+          onTimeout: () => throw StateError(
+            'The photo upload is taking too long. Check your connection, '
+            'or paste an image URL instead.',
+          ),
+        );
+  }
+
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _shopsSubscription;
   StreamSubscription<OwnerAccount?>? _authStateSubscription;
 
@@ -399,6 +513,7 @@ class ShopStore extends ChangeNotifier {
     required String name,
     required String location,
     required String description,
+    String contact = '',
   }) async {
     final normalizedEmail = _normalizeEmail(ownerEmail);
     _validateEmail(normalizedEmail);
@@ -417,6 +532,11 @@ class ShopStore extends ChangeNotifier {
       'Shop information',
       maxLength: _maxShopDescriptionLength,
     );
+    final trimmedContact = _optionalText(
+      contact,
+      'Contact',
+      maxLength: _maxLocationLength,
+    );
     final account = _requireSignedInOwner(normalizedEmail);
     final firestore = _firestore;
     final shopId = firestore == null ? normalizedEmail : account.uid;
@@ -432,6 +552,7 @@ class ShopStore extends ChangeNotifier {
       name: trimmedName,
       location: trimmedLocation,
       description: trimmedDescription,
+      contact: trimmedContact,
       products: existing?.products ?? const <ShopProduct>[],
       isVerified: account.emailVerified || (existing?.isVerified ?? false),
       lastEditedAt: DateTime.now().millisecondsSinceEpoch,
@@ -442,10 +563,12 @@ class ShopStore extends ChangeNotifier {
       return;
     }
 
-    await _shopRef(
-      firestore,
-      account.uid,
-    ).set(shop.toMap(), SetOptions(merge: true));
+    await _commit(
+      _shopRef(
+        firestore,
+        account.uid,
+      ).set(shop.toMap(), SetOptions(merge: true)),
+    );
     _shopDocuments[account.uid] = shop;
     _productsByShop[account.uid] ??= shop.products;
     _rebuildShops();
@@ -466,6 +589,15 @@ class ShopStore extends ChangeNotifier {
     double price = 0,
     int quantity = 0,
     String imageUrl = '',
+    List<String> motorcycles = const [],
+    List<String> photoUrls = const [],
+    String part = '',
+    bool isCustomPart = false,
+    String brand = '',
+    String condition = '',
+    bool fitsAll = false,
+    String specLabel = '',
+    List<FitSpec> specs = const [],
   }) async {
     final shop = _requireOwnerShop(ownerEmail);
     if (shop.products.length >= _maxProductsPerShop) {
@@ -491,6 +623,14 @@ class ShopStore extends ChangeNotifier {
     _validatePrice(price);
     _validateQuantity(quantity);
     final normalizedImageUrl = _validateImageUrl(imageUrl);
+    final cleanMotorcycles = _validateMotorcycles(motorcycles);
+    if (photoUrls.length > _maxPhotosPerProduct) {
+      throw ArgumentError('Add $_maxPhotosPerProduct photos or fewer.');
+    }
+    final cleanPhotoUrls = [
+      for (final url in photoUrls)
+        if (url.trim().isNotEmpty) _validateImageUrl(url),
+    ];
 
     final firestore = _firestore;
     final productId = firestore == null
@@ -504,6 +644,19 @@ class ShopStore extends ChangeNotifier {
       price: price,
       quantity: quantity,
       imageUrl: normalizedImageUrl,
+      motorcycles: cleanMotorcycles,
+      photoUrls: cleanPhotoUrls,
+      part: _optionalText(part, 'Part', maxLength: _maxCategoryLength),
+      isCustomPart: isCustomPart,
+      brand: _optionalText(brand, 'Brand', maxLength: _maxCategoryLength),
+      condition: _validateCondition(condition),
+      fitsAll: fitsAll,
+      specLabel: _optionalText(
+        specLabel,
+        'Spec',
+        maxLength: _maxCategoryLength,
+      ),
+      specs: _validateSpecs(specs),
     );
 
     if (firestore == null) {
@@ -516,7 +669,9 @@ class ShopStore extends ChangeNotifier {
       return;
     }
 
-    await _productsRef(firestore, shop.id).doc(productId).set(product.toMap());
+    await _commit(
+      _productsRef(firestore, shop.id).doc(productId).set(product.toMap()),
+    );
   }
 
   Future<void> updateProduct({
@@ -528,6 +683,11 @@ class ShopStore extends ChangeNotifier {
     String? name,
     String? category,
     String? imageUrl,
+    List<String>? motorcycles,
+    String? brand,
+    String? condition,
+    bool? fitsAll,
+    List<FitSpec>? specs,
   }) async {
     final shop = _requireOwnerShop(ownerEmail);
     final productIndex = shop.products.indexWhere(
@@ -555,6 +715,15 @@ class ShopStore extends ChangeNotifier {
       price: price,
       quantity: quantity,
       imageUrl: imageUrl == null ? null : _validateImageUrl(imageUrl),
+      motorcycles: motorcycles == null
+          ? null
+          : _validateMotorcycles(motorcycles),
+      brand: brand == null
+          ? null
+          : _optionalText(brand, 'Brand', maxLength: _maxCategoryLength),
+      condition: condition == null ? null : _validateCondition(condition),
+      fitsAll: fitsAll,
+      specs: specs == null ? null : _validateSpecs(specs),
     );
     products[productIndex] = updated;
 
@@ -569,10 +738,12 @@ class ShopStore extends ChangeNotifier {
       return;
     }
 
-    await _productsRef(
-      firestore,
-      shop.id,
-    ).doc(productId).set(updated.toMap(), SetOptions(merge: true));
+    await _commit(
+      _productsRef(
+        firestore,
+        shop.id,
+      ).doc(productId).set(updated.toMap(), SetOptions(merge: true)),
+    );
   }
 
   Future<void> deleteProduct({
@@ -598,7 +769,7 @@ class ShopStore extends ChangeNotifier {
       return;
     }
 
-    await _productsRef(firestore, shop.id).doc(productId).delete();
+    await _commit(_productsRef(firestore, shop.id).doc(productId).delete());
   }
 
   Future<void> deleteShop({required String ownerEmail}) async {

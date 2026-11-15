@@ -4,6 +4,29 @@ import 'package:flutter/painting.dart';
 /// Category assigned to a product created without one.
 const defaultShopProductCategory = 'Parts';
 
+/// Item conditions a seller can choose.
+const productConditions = ['New', 'Used', 'Surplus'];
+
+/// One motorcycle's value for the item's spec, e.g. NMAX 155 → NGK CPR8EA-9.
+/// It belongs to this listing only; editing it never changes the master table.
+class FitSpec {
+  const FitSpec({required this.motorcycle, required this.value});
+
+  final String motorcycle;
+  final String value;
+
+  Map<String, dynamic> toMap() => {'motorcycle': motorcycle, 'value': value};
+
+  static FitSpec? fromMap(Object? map) {
+    if (map is! Map) return null;
+    final motorcycle = map['motorcycle'];
+    final value = map['value'];
+    if (motorcycle is! String || value is! String) return null;
+    if (motorcycle.trim().isEmpty || value.trim().isEmpty) return null;
+    return FitSpec(motorcycle: motorcycle, value: value);
+  }
+}
+
 class ShopProduct {
   const ShopProduct({
     required this.id,
@@ -14,6 +37,15 @@ class ShopProduct {
     required this.quantity,
     this.imageUrl = '',
     this.imageAsset = '',
+    this.motorcycles = const [],
+    this.photoUrls = const [],
+    this.part = '',
+    this.isCustomPart = false,
+    this.brand = '',
+    this.condition = '',
+    this.fitsAll = false,
+    this.specLabel = '',
+    this.specs = const [],
   });
 
   final String id;
@@ -23,12 +55,35 @@ class ShopProduct {
   final double price;
   final int quantity;
 
-  /// Optional product photo. Only http(s) URLs are rendered.
+  /// Cover photo. Only http(s) URLs are rendered.
   final String imageUrl;
 
   /// Bundled photo, used by the built-in demo shop. Shown only when
   /// [imageUrl] is empty, so a photo link an owner sets always wins.
   final String imageAsset;
+
+  /// Motorcycles the seller checked as ones this item fits.
+  final List<String> motorcycles;
+
+  /// More photos after the cover in [imageUrl], in the seller's order.
+  final List<String> photoUrls;
+
+  /// The part picked in Add Item, e.g. "Spark plug".
+  final String part;
+
+  /// True when the seller typed their own part name; admins review these.
+  final bool isCustomPart;
+  final String brand;
+
+  /// One of [productConditions], or empty for older listings.
+  final String condition;
+
+  /// "Universal / Fits all motorcycles".
+  final bool fitsAll;
+
+  /// What [specs] describe, e.g. "Spark plug".
+  final String specLabel;
+  final List<FitSpec> specs;
 
   bool get isAvailable => quantity > 0;
 
@@ -40,6 +95,15 @@ class ShopProduct {
       ? NetworkImage(imageUrl)
       : AssetImage(imageAsset);
 
+  /// Every photo, cover first.
+  List<ImageProvider> get gallery => [
+    if (hasImage) imageProvider,
+    for (final url in photoUrls) NetworkImage(url),
+  ];
+
+  /// Whether this item is listed as fitting [motorcycle].
+  bool fits(String motorcycle) => fitsAll || motorcycles.contains(motorcycle);
+
   ShopProduct copyWith({
     String? name,
     String? category,
@@ -47,6 +111,12 @@ class ShopProduct {
     double? price,
     int? quantity,
     String? imageUrl,
+    List<String>? motorcycles,
+    List<String>? photoUrls,
+    String? brand,
+    String? condition,
+    bool? fitsAll,
+    List<FitSpec>? specs,
   }) {
     return ShopProduct(
       id: id,
@@ -57,6 +127,15 @@ class ShopProduct {
       quantity: quantity ?? this.quantity,
       imageUrl: imageUrl ?? this.imageUrl,
       imageAsset: imageAsset,
+      motorcycles: motorcycles ?? this.motorcycles,
+      photoUrls: photoUrls ?? this.photoUrls,
+      part: part,
+      isCustomPart: isCustomPart,
+      brand: brand ?? this.brand,
+      condition: condition ?? this.condition,
+      fitsAll: fitsAll ?? this.fitsAll,
+      specLabel: specLabel,
+      specs: specs ?? this.specs,
     );
   }
 
@@ -70,6 +149,15 @@ class ShopProduct {
       'quantity': quantity,
       'imageUrl': imageUrl,
       if (imageAsset.isNotEmpty) 'imageAsset': imageAsset,
+      'motorcycles': motorcycles,
+      'photoUrls': photoUrls,
+      'part': part,
+      'customPart': isCustomPart,
+      'brand': brand,
+      'condition': condition,
+      'fitsAll': fitsAll,
+      'specLabel': specLabel,
+      'specs': [for (final spec in specs) spec.toMap()],
     };
   }
 
@@ -83,8 +171,26 @@ class ShopProduct {
       quantity: (map['quantity'] as num?)?.toInt() ?? 0,
       imageUrl: map['imageUrl'] as String? ?? '',
       imageAsset: map['imageAsset'] as String? ?? '',
+      motorcycles: _stringList(map['motorcycles']),
+      photoUrls: _stringList(map['photoUrls']),
+      part: map['part'] as String? ?? '',
+      isCustomPart: map['customPart'] as bool? ?? false,
+      brand: map['brand'] as String? ?? '',
+      condition: map['condition'] as String? ?? '',
+      fitsAll: map['fitsAll'] as bool? ?? false,
+      specLabel: map['specLabel'] as String? ?? '',
+      specs: [
+        if (map['specs'] case final List<dynamic> specs)
+          for (final spec in specs) ?FitSpec.fromMap(spec),
+      ],
     );
   }
+
+  static List<String> _stringList(Object? value) => [
+    if (value is List)
+      for (final item in value)
+        if (item is String && item.trim().isNotEmpty) item,
+  ];
 }
 
 class Shop {
@@ -96,6 +202,7 @@ class Shop {
     required this.location,
     required this.description,
     required this.products,
+    this.contact = '',
     this.isVerified = false,
     this.lastEditedAt,
   });
@@ -111,6 +218,10 @@ class Shop {
   final String name;
   final String location;
   final String description;
+
+  /// How buyers reach the seller: a mobile number or a Messenger/Facebook
+  /// link. Empty when the seller has not added one.
+  final String contact;
 
   final List<ShopProduct> products;
 
@@ -139,6 +250,7 @@ class Shop {
     String? name,
     String? location,
     String? description,
+    String? contact,
     List<ShopProduct>? products,
     bool? isVerified,
     int? lastEditedAt,
@@ -150,6 +262,7 @@ class Shop {
       name: name ?? this.name,
       location: location ?? this.location,
       description: description ?? this.description,
+      contact: contact ?? this.contact,
       products: products ?? this.products,
       isVerified: isVerified ?? this.isVerified,
       lastEditedAt: lastEditedAt ?? this.lastEditedAt,
@@ -163,6 +276,7 @@ class Shop {
       'name': name,
       'location': location,
       'description': description,
+      'contact': contact,
       'verified': isVerified,
       if (lastEditedAt != null) 'lastEditedAt': lastEditedAt,
     };
@@ -178,6 +292,7 @@ class Shop {
       name: data['name'] as String? ?? '',
       location: data['location'] as String? ?? '',
       description: data['description'] as String? ?? '',
+      contact: data['contact'] as String? ?? '',
       products: const <ShopProduct>[],
       isVerified: data['verified'] as bool? ?? false,
       lastEditedAt: (data['lastEditedAt'] as num?)?.toInt(),

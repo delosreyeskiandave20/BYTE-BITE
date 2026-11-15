@@ -7,12 +7,16 @@ class LoadErrorBanner extends StatelessWidget {
   const LoadErrorBanner({
     required this.message,
     this.onRetry,
+    this.actionLabel = 'Retry',
     this.compact = false,
     super.key,
   });
 
   final String message;
   final VoidCallback? onRetry;
+
+  /// Text of the [onRetry] button.
+  final String actionLabel;
 
   /// Uses smaller type and tighter padding for dense screens.
   final bool compact;
@@ -50,7 +54,7 @@ class LoadErrorBanner extends StatelessWidget {
             ),
           ),
           if (onRetry != null)
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
+            TextButton(onPressed: onRetry, child: Text(actionLabel)),
         ],
       ),
     );

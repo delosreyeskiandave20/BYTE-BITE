@@ -234,7 +234,13 @@ void main() {
       find.widgetWithText(TextFormField, 'Shop name'),
       'Saved Shop',
     );
-    await tester.ensureVisible(find.text('Done'));
+    // The dashboard ListView builds lazily; scroll until Done is built.
+    await tester.scrollUntilVisible(
+      find.text('Done'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Save and view shop'));

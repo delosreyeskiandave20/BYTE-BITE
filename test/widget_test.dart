@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_application_1/data/choice_descriptions.dart';
 import 'package:flutter_application_1/data/part_descriptions.dart';
 import 'package:flutter_application_1/data/motorcycle_specs.dart';
 import 'package:flutter_application_1/data/online_stores.dart';
+import 'package:flutter_application_1/data/item_specs.dart';
 import 'package:flutter_application_1/data/parts_catalog.dart';
 import 'package:flutter_application_1/data/temporary_shop_store.dart';
 import 'package:flutter_application_1/data/vehicle_images.dart';
@@ -469,7 +471,7 @@ void main() {
     expect(find.text('Brake lever'), findsOneWidget);
     expect(find.text('₱275.00'), findsOneWidget);
     expect(find.text('3 in stock'), findsOneWidget);
-    expect(find.text('Unavailable'), findsOneWidget);
+    expect(find.text('Out of stock'), findsOneWidget);
 
     await store.updateProduct(
       ownerEmail: 'test-owner@example.com',
@@ -479,16 +481,17 @@ void main() {
       quantity: 0,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Unavailable'), findsWidgets);
+    expect(find.text('Out of stock'), findsWidgets);
     expect(find.text('3 in stock'), findsNothing);
     expect(find.text('0 in stock'), findsNothing);
   });
 
-  testWidgets('owner posts only a name and can edit details and stock', (
+  testWidgets('owner adds an item with photos and motorcycles, edits stock', (
     WidgetTester tester,
   ) async {
     var didFinishEditing = false;
-    final store = ShopStore(ownerAuth: FakeOwnerAuth());
+    final uploads = _FakePhotoStorage();
+    final store = ShopStore(ownerAuth: FakeOwnerAuth(), photoStorage: uploads);
     addTearDown(store.dispose);
     await store.createOwner(
       name: 'Test Owner',
@@ -507,23 +510,83 @@ void main() {
           store: store,
           ownerEmail: 'test-owner@example.com',
           onDone: () => didFinishEditing = true,
+          specRows: parseItemSpecs(
+            File(itemSpecsAssetPath).readAsStringSync(),
+          ),
+          pickPhotos: (source, limit) async => [
+            PickedPhoto(bytes: _onePixelPng, extension: 'png'),
+            PickedPhoto(bytes: _onePixelPng, extension: 'png'),
+          ],
         ),
       ),
     );
 
     expect(find.textContaining('Temporary demo only'), findsNothing);
-    await tester.tap(find.text('Add product'));
+    await tester.tap(find.text('Add Item'));
     await tester.pumpAndSettle();
-    expect(find.text('Product name'), findsOneWidget);
-    expect(find.text('Description or information'), findsNothing);
-    expect(find.text('Price (PHP)'), findsNothing);
-    expect(find.text('Quantity'), findsNothing);
+    tester.view.physicalSize = const Size(800, 2600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpAndSettle();
+    // 1 Category → 2 Part → 3 Details.
+    await tester.tap(find.byKey(const ValueKey('category-Body Parts')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('part-Handlebar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('proceed')));
+    await tester.pumpAndSettle();
+    expect(find.text('Body Parts › Handlebar'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('add-item-add-photo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take a photo'));
+    await tester.pumpAndSettle();
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Product name'),
+      find.widgetWithText(TextFormField, 'Product name *'),
       'Brake lever',
     );
-    await tester.tap(find.text('Post name'));
+    await tester.tap(find.byKey(const ValueKey('condition-New')));
+    await tester.enterText(
+      find.byKey(const ValueKey('add-item-price')),
+      '200',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('add-item-quantity')),
+      '2',
+    );
     await tester.pumpAndSettle();
+    final details = find
+        .descendant(
+          of: find.byKey(const ValueKey('step-details')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    for (final model in ['Honda BeAT', 'Honda Click 125i']) {
+      await tester.enterText(find.byKey(const ValueKey('fit-search')), model);
+      await tester.pumpAndSettle();
+      final box = find.byKey(ValueKey('fit-model-$model'));
+      await tester.scrollUntilVisible(box, 200, scrollable: details);
+      await tester.pumpAndSettle();
+      await tester.tap(box);
+      await tester.pumpAndSettle();
+    }
+    final post = find.byKey(const ValueKey('add-item-post'));
+    await tester.scrollUntilVisible(post, 200, scrollable: details);
+    await tester.pumpAndSettle();
+    await tester.tap(post);
+    await tester.pumpAndSettle();
+    expect(find.text('Item posted!'), findsOneWidget);
+    await tester.tap(find.text('View my items'));
+    await tester.pumpAndSettle();
+    final added = store.shopForOwner('test-owner@example.com')!.products.last;
+    expect(added.name, 'Brake lever');
+    expect(added.category, 'Body Parts');
+    expect(added.condition, 'New');
+    expect(added.quantity, 2);
+    expect(added.motorcycles, ['Honda BeAT', 'Honda Click 125i']);
+    // Both photos were uploaded; the first is the main image.
+    expect(uploads.count, 2);
+    expect(added.imageUrl, 'https://photos.example.com/1.png');
+    expect(added.photoUrls, ['https://photos.example.com/2.png']);
 
     await tester.scrollUntilVisible(
       find.text('Brake lever'),
@@ -542,6 +605,8 @@ void main() {
       '275',
     );
     await tester.enterText(find.widgetWithText(TextFormField, 'Quantity'), '0');
+    await tester.ensureVisible(find.text('Save product details'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save product details'));
     await tester.pumpAndSettle();
 
@@ -1867,4 +1932,20 @@ void main() {
           : '$homeLayoutException',
     );
   });
+}
+
+/// A valid 1×1 PNG.
+final _onePixelPng = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+);
+
+/// Records uploads and hands back predictable https URLs.
+class _FakePhotoStorage implements ProductPhotoStorage {
+  int count = 0;
+
+  @override
+  Future<String> upload({
+    required String shopId,
+    required PickedPhoto photo,
+  }) async => 'https://photos.example.com/${++count}.${photo.extension}';
 }

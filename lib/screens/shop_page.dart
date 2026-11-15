@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../data/price_format.dart';
+import '../data/item_parts.dart';
+import '../data/item_specs.dart';
 import '../data/marketplace.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/load_error_banner.dart';
 import '../widgets/marketplace_logo.dart';
+import '../data/my_motorcycle.dart';
+import '../widgets/shop_item_card.dart';
 import 'online_store_page.dart';
+import 'shop_item_page.dart';
 
 /// Pseudo-category that shows every product in a shop.
 const _allCategories = 'All';
@@ -90,7 +94,7 @@ class _ShopPageState extends State<ShopPage> {
       ),
       body: SafeArea(
         child: AnimatedBuilder(
-          animation: widget.store,
+          animation: Listenable.merge([widget.store, myMotorcycle]),
           builder: (context, _) {
             if (widget.store.isLoading && widget.store.shops.isEmpty) {
               return const _ShopStatus(
@@ -174,6 +178,8 @@ class _ShopContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final filterTokens = searchTokens(searchQuery.trim());
+    final mine = myMotorcycle.model;
+    final onlyFits = myMotorcycle.onlyFits;
     final shops = store.shops
         .where(
           (shop) => initialShopName == null || shop.name == initialShopName,
@@ -182,14 +188,19 @@ class _ShopContent extends StatelessWidget {
           final base = query == null
               ? shop.products
               : availableProductsForQuery(shop, query!);
-          final filtered = filterTokens.isEmpty
-              ? base
-              : base
-                    .where(
-                      (product) =>
-                          shopProductMatchesTokens(shop, product, filterTokens),
-                    )
-                    .toList(growable: false);
+          final filtered = base
+              .where(
+                (product) =>
+                    (filterTokens.isEmpty ||
+                        shopProductMatchesTokens(
+                          shop,
+                          product,
+                          filterTokens,
+                        )) &&
+                    // Universal items always count as a match.
+                    (!onlyFits || product.fits(mine!)),
+              )
+              .toList(growable: false);
           // In-stock products lead each shop; unavailable items stay visible so
           // shoppers can still see what the shop carries.
           final ordered = [
@@ -201,7 +212,7 @@ class _ShopContent extends StatelessWidget {
         .where(
           (entry) =>
               entry.products.isNotEmpty ||
-              (query == null && filterTokens.isEmpty),
+              (query == null && filterTokens.isEmpty && !onlyFits),
         )
         .toList(growable: false);
     final categories = <String>{
@@ -258,6 +269,8 @@ class _ShopContent extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 12),
+        const _MyMotorcycleBar(),
         const SizedBox(height: 20),
         _SectionHeading(
           title: activeQuery.isEmpty
@@ -320,7 +333,11 @@ class _ShopContent extends StatelessWidget {
             }
             return FadeSlideIn(
               key: ValueKey('shop-card-${entry.shop.id}'),
-              child: _ShopCard(shop: entry.shop, products: products),
+              child: _ShopCard(
+                shop: entry.shop,
+                products: products,
+                myMotorcycle: mine,
+              ),
             );
           }),
         ],
@@ -354,6 +371,179 @@ class _ShopContent extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// "My Motorcycle": the buyer picks their motorcycle once, then can show
+/// only the parts that fit it.
+class _MyMotorcycleBar extends StatelessWidget {
+  const _MyMotorcycleBar();
+
+  Future<void> _pick(BuildContext context) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => const _MyMotorcyclePicker(),
+    );
+    if (picked == null) return;
+    await myMotorcycle.choose(picked.isEmpty ? null : picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final model = myMotorcycle.model;
+    return Material(
+      key: const ValueKey('my-motorcycle-bar'),
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: const BorderSide(color: AppColors.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.two_wheeler, color: AppColors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    model == null
+                        ? 'Set your motorcycle to find parts that fit'
+                        : 'My motorcycle: ${motorcycleModel(model)}',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                TextButton(
+                  key: const ValueKey('my-motorcycle-pick'),
+                  onPressed: () => _pick(context),
+                  child: Text(model == null ? 'Choose' : 'Change'),
+                ),
+              ],
+            ),
+            if (model != null)
+              SwitchListTile(
+                key: const ValueKey('my-motorcycle-only-fits'),
+                dense: true,
+                contentPadding: const EdgeInsets.only(left: 2, right: 8),
+                value: myMotorcycle.onlyFits,
+                title: Text(
+                  'Show only parts that fit my ${motorcycleModel(model)}',
+                ),
+                onChanged: myMotorcycle.setOnlyFits,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet listing the master-table motorcycles by brand. Pops the
+/// chosen name, or '' to clear the choice.
+class _MyMotorcyclePicker extends StatefulWidget {
+  const _MyMotorcyclePicker();
+
+  @override
+  State<_MyMotorcyclePicker> createState() => _MyMotorcyclePickerState();
+}
+
+class _MyMotorcyclePickerState extends State<_MyMotorcyclePicker> {
+  late final Future<List<ItemSpecRow>> _rows = loadItemSpecs();
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.85,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 18, 20, 8),
+            child: Text(
+              'Which motorcycle do you ride?',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              key: const ValueKey('my-motorcycle-search'),
+              decoration: const InputDecoration(
+                hintText: 'Search motorcycle…',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (text) => setState(() => _query = text),
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<ItemSpecRow>>(
+              future: _rows,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text('Could not load the motorcycle list.'),
+                  );
+                }
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final needle = _query.trim().toLowerCase();
+                final current = myMotorcycle.model;
+                return ListView(
+                  children: [
+                    if (current != null)
+                      ListTile(
+                        key: const ValueKey('my-motorcycle-clear'),
+                        leading: const Icon(Icons.clear),
+                        title: const Text('Clear my motorcycle'),
+                        onTap: () => Navigator.of(context).pop(''),
+                      ),
+                    for (final brand in motorcyclesByBrand(
+                      snapshot.data!,
+                    ).entries)
+                      if (brand.value.any(
+                        (model) => model.toLowerCase().contains(needle),
+                      )) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 2),
+                          child: Text(
+                            brand.key.toUpperCase(),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: AppType.caption,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        for (final model in brand.value)
+                          if (model.toLowerCase().contains(needle))
+                            ListTile(
+                              key: ValueKey('my-motorcycle-$model'),
+                              dense: true,
+                              title: Text(model),
+                              trailing: model == current
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: AppColors.primary,
+                                    )
+                                  : null,
+                              onTap: () => Navigator.of(context).pop(model),
+                            ),
+                      ],
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -471,10 +661,15 @@ class _SectionHeading extends StatelessWidget {
 }
 
 class _ShopCard extends StatelessWidget {
-  const _ShopCard({required this.shop, required this.products});
+  const _ShopCard({
+    required this.shop,
+    required this.products,
+    this.myMotorcycle,
+  });
 
   final Shop shop;
   final List<ShopProduct> products;
+  final String? myMotorcycle;
 
   @override
   Widget build(BuildContext context) {
@@ -545,120 +740,54 @@ class _ShopCard extends StatelessWidget {
               'No products listed yet.',
               style: TextStyle(color: AppColors.muted, fontSize: 12),
             ),
-          ...products.map(
-            (product) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = (constraints.maxWidth - 10) / 2;
+              Widget grid(List<ShopProduct> items) => Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final product in items)
+                    SizedBox(
+                      width: width,
+                      child: ShopItemCard(
+                        product: product,
+                        myMotorcycle: myMotorcycle,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ShopItemPage(
+                              shop: shop,
+                              product: product,
+                              myMotorcycle: myMotorcycle,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+              final available = [
+                for (final product in products)
+                  if (product.isAvailable) product,
+              ];
+              final unavailable = [
+                for (final product in products)
+                  if (!product.isAvailable) product,
+              ];
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ProductThumbnail(product: product),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          product.category,
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          product.description.isEmpty
-                              ? 'Product details not added yet.'
-                              : product.description,
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 12,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        product.price > 0
-                            ? formatPeso(product.price)
-                            : 'Price not set',
-                        style: const TextStyle(
-                          color: AppColors.ink,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        product.isAvailable
-                            ? '${product.quantity} in stock'
-                            : 'Unavailable',
-                        style: TextStyle(
-                          color: product.isAvailable
-                              ? AppColors.success
-                              : AppColors.danger,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
+                  // In-stock items come first; sold-out items follow below.
+                  if (available.isNotEmpty) grid(available),
+                  if (unavailable.isNotEmpty) ...[
+                    if (available.isNotEmpty) const SizedBox(height: 10),
+                    grid(unavailable),
+                  ],
                 ],
-              ),
-            ),
+              );
+            },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ProductThumbnail extends StatelessWidget {
-  const _ProductThumbnail({required this.product});
-
-  final ShopProduct product;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!product.hasImage) {
-      return const Icon(
-        Icons.inventory_2_outlined,
-        color: AppColors.primary,
-        size: 19,
-      );
-    }
-    return Semantics(
-      label: 'Photo of ${product.name}',
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(9),
-        child: Image(
-          image: product.imageProvider,
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            width: 48,
-            height: 48,
-            color: AppColors.primarySoft,
-            child: const Icon(
-              Icons.broken_image_outlined,
-              color: AppColors.primary,
-              size: 19,
-            ),
-          ),
-        ),
       ),
     );
   }

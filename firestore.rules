@@ -26,6 +26,7 @@ service cloud.firestore {
           'name',
           'location',
           'description',
+          'contact',
           'verified',
           'lastEditedAt'
         ])
@@ -50,6 +51,8 @@ service cloud.firestore {
         && data.location.size() <= 120
         && data.description is string
         && data.description.size() <= 2000
+        && (!('contact' in data)
+          || (data.contact is string && data.contact.size() <= 120))
         && data.verified is bool
         && (!('lastEditedAt' in data)
           || (data.lastEditedAt is int
@@ -77,7 +80,16 @@ service cloud.firestore {
           'description',
           'price',
           'quantity',
-          'imageUrl'
+          'imageUrl',
+          'motorcycles',
+          'photoUrls',
+          'part',
+          'customPart',
+          'brand',
+          'condition',
+          'fitsAll',
+          'specLabel',
+          'specs'
         ])
         && data.keys().hasAll([
           'id',
@@ -108,7 +120,25 @@ service cloud.firestore {
         && data.imageUrl is string
         && data.imageUrl.size() <= 500
         && (data.imageUrl == ''
-          || data.imageUrl.matches('^https://[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]+$'));
+          || data.imageUrl.matches('^https://[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]+$'))
+        // Optional: the motorcycles the seller checked as ones the item fits.
+        && (!('motorcycles' in data)
+          || (data.motorcycles is list && data.motorcycles.size() <= 100))
+        // Optional: extra uploaded photos after the main imageUrl.
+        && (!('photoUrls' in data)
+          || (data.photoUrls is list && data.photoUrls.size() <= 7))
+        // Optional Add Item fields: part (custom ones flagged for review),
+        // brand, condition, "fits all" and per-motorcycle spec values.
+        && (!('part' in data) || (data.part is string && data.part.size() <= 60))
+        && (!('customPart' in data) || data.customPart is bool)
+        && (!('brand' in data) || (data.brand is string && data.brand.size() <= 60))
+        && (!('condition' in data)
+          || data.condition in ['', 'New', 'Used', 'Surplus'])
+        && (!('fitsAll' in data) || data.fitsAll is bool)
+        && (!('specLabel' in data)
+          || (data.specLabel is string && data.specLabel.size() <= 60))
+        && (!('specs' in data)
+          || (data.specs is list && data.specs.size() <= 100));
     }
 
     match /shops/{ownerId} {

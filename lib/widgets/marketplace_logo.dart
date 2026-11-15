@@ -42,17 +42,15 @@ class MarketplaceLogoButton extends StatelessWidget {
   const MarketplaceLogoButton({
     required this.marketplace,
     required this.onPressed,
-    this.caption = 'Search',
     super.key,
   });
 
   final String marketplace;
   final VoidCallback onPressed;
-  final String caption;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final button = Material(
       key: ValueKey('marketplace-$marketplace'),
       color: Colors.white,
       shape: RoundedRectangleBorder(
@@ -72,20 +70,19 @@ class MarketplaceLogoButton extends StatelessWidget {
                   child: MarketplaceLogo(marketplace),
                 ),
               ),
-              Text(
-                caption,
-                style: const TextStyle(
-                  color: AppColors.muted,
-                  fontSize: AppType.caption,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
               const SizedBox(width: 4),
               const Icon(Icons.open_in_new, size: 15, color: AppColors.muted),
             ],
           ),
         ),
       ),
+    );
+    // No visible "Search" word; screen readers still hear what it does.
+    return Semantics(
+      button: true,
+      label: 'Search $marketplace',
+      excludeSemantics: true,
+      child: button,
     );
   }
 }

@@ -5,6 +5,10 @@ import '../data/price_format.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/load_error_banner.dart';
+import '../data/item_parts.dart';
+import '../data/item_specs.dart';
+import '../widgets/motorcycle_checklist.dart';
+import 'add_item_page.dart';
 
 /// Form validator for fields that must not be blank.
 String? _requiredField(String? value, String label) {
@@ -17,12 +21,21 @@ class ShopOwnerDashboardPage extends StatefulWidget {
     required this.store,
     required this.ownerEmail,
     required this.onDone,
+    this.pickPhotos,
+    this.imageForUrl,
+    this.specRows,
     super.key,
   });
 
   final ShopStore store;
   final String ownerEmail;
   final VoidCallback onDone;
+
+  /// Overrides for the Add Item page; tests pass these to avoid loading
+  /// assets, the network and the device photo picker.
+  final ItemPhotoPicker? pickPhotos;
+  final UrlImageBuilder? imageForUrl;
+  final List<ItemSpecRow>? specRows;
 
   @override
   State<ShopOwnerDashboardPage> createState() => _ShopOwnerDashboardPageState();
@@ -33,6 +46,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
   late final TextEditingController _nameController;
   late final TextEditingController _locationController;
   late final TextEditingController _descriptionController;
+  late final TextEditingController _contactController;
 
   bool _saving = false;
   bool _loadingShop = false;
@@ -40,6 +54,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
   bool _checkingVerification = false;
   String? _loadError;
   String _savedSignature = '';
+  final _productsKey = GlobalKey();
 
   @override
   void initState() {
@@ -50,6 +65,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
     _descriptionController = TextEditingController(
       text: shop?.description ?? '',
     );
+    _contactController = TextEditingController(text: shop?.contact ?? '');
     _savedSignature = _currentSignature;
     if (shop == null && widget.store.isCloudConnected) {
       _loadExistingShop();
@@ -60,6 +76,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
     _nameController.text,
     _locationController.text,
     _descriptionController.text,
+    _contactController.text,
   ].map((value) => value.trim()).join('\u0000');
 
   bool get _hasUnsavedChanges => _currentSignature != _savedSignature;
@@ -80,6 +97,9 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
         if (_descriptionController.text.isEmpty) {
           _descriptionController.text = shop.description;
         }
+        if (_contactController.text.isEmpty) {
+          _contactController.text = shop.contact;
+        }
       }
       _savedSignature = _currentSignature;
     } catch (error) {
@@ -97,6 +117,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
     _nameController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
+    _contactController.dispose();
     super.dispose();
   }
 
@@ -109,6 +130,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
         name: _nameController.text,
         location: _locationController.text,
         description: _descriptionController.text,
+        contact: _contactController.text,
       );
       _savedSignature = _currentSignature;
       return true;
@@ -150,6 +172,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
     if (error is ArgumentError) {
       return error.message?.toString() ?? 'Some shop details are invalid.';
     }
+    if (error is StateError) return error.message;
     return error.toString();
   }
 
@@ -214,16 +237,87 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
       if (!await _saveShopDetails()) return;
     }
     if (!mounted) return;
-    final name = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => const _AddProductNameSheet(),
+    final item = await Navigator.of(context).push<AddItemResult>(
+      MaterialPageRoute(
+        builder: (_) => AddItemPage(
+          pickPhotos: widget.pickPhotos,
+          imageForUrl: widget.imageForUrl,
+          specRows: widget.specRows,
+          canUploadPhotos: widget.store.canUploadPhotos,
+        ),
+      ),
     );
-    if (!mounted || name == null) return;
+    if (!mounted || item == null) return;
+    setState(() => _saving = true);
+    var posted = false;
     try {
-      await widget.store.addProduct(ownerEmail: widget.ownerEmail, name: name);
+      // Keep the seller's order: uploads are stored, pasted links are used
+      // as they are. The first photo is the cover.
+      final urls = [
+        for (final photo in item.photos)
+          photo.url ??
+              await widget.store.uploadProductPhoto(
+                ownerEmail: widget.ownerEmail,
+                photo: photo.upload!,
+              ),
+      ];
+      await widget.store.addProduct(
+        ownerEmail: widget.ownerEmail,
+        name: item.name,
+        category: item.category,
+        part: item.part,
+        isCustomPart: item.isCustomPart,
+        brand: item.brand,
+        condition: item.condition,
+        description: item.description,
+        price: item.price,
+        quantity: item.quantity,
+        imageUrl: urls.isEmpty ? '' : urls.first,
+        photoUrls: urls.skip(1).toList(),
+        motorcycles: item.motorcycles,
+        fitsAll: item.fitsAll,
+        specLabel: item.specLabel,
+        specs: item.specs,
+      );
+      posted = true;
     } catch (error) {
-      if (mounted) _showError(error);
+      if (mounted) _showError(error, action: 'post your item');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+    if (!posted || !mounted) return;
+    final addAnother = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.check_circle, color: AppColors.success),
+        title: const Text('Item posted!'),
+        content: Text('"${item.name}" is now listed in your shop.'),
+        actions: [
+          TextButton(
+            key: const ValueKey('posted-add-another'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Add another item'),
+          ),
+          FilledButton(
+            key: const ValueKey('posted-view-items'),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('View my items'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (addAnother == true) {
+      await _addProduct();
+      return;
+    }
+    // Bring the product list into view.
+    final products = _productsKey.currentContext;
+    if (products != null && products.mounted) {
+      await Scrollable.ensureVisible(
+        products,
+        duration: const Duration(milliseconds: 300),
+      );
     }
   }
 
@@ -231,7 +325,8 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
     final result = await showModalBottomSheet<_ProductDetails>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _EditProductSheet(product: product),
+      builder: (context) =>
+          _EditProductSheet(product: product, specRows: widget.specRows),
     );
     if (!mounted || result == null) return;
     try {
@@ -244,6 +339,11 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
         price: result.price,
         quantity: result.quantity,
         imageUrl: result.imageUrl,
+        brand: result.brand,
+        condition: result.condition,
+        motorcycles: result.motorcycles,
+        fitsAll: result.fitsAll,
+        specs: result.specs,
       );
     } catch (error) {
       if (mounted) _showError(error);
@@ -425,6 +525,15 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                 ),
                 const SizedBox(height: 14),
               ],
+              if (widget.store.syncError case final error?) ...[
+                LoadErrorBanner(
+                  message:
+                      'A change was not saved online: ${_describeError(error)}',
+                  onRetry: widget.store.clearSyncError,
+                  actionLabel: 'Dismiss',
+                ),
+                const SizedBox(height: 14),
+              ],
               if (_loadError != null) ...[
                 LoadErrorBanner(
                   message: 'Could not load your shop: $_loadError',
@@ -479,11 +588,24 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: const ValueKey('shop-contact'),
+                      controller: _contactController,
+                      keyboardType: TextInputType.url,
+                      decoration: const InputDecoration(
+                        labelText: 'How buyers can message you',
+                        hintText: 'e.g. 09171234567 or m.me/yourshop',
+                        helperText: 'Used by the "Message seller" button on your items.',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
               Row(
+                key: _productsKey,
                 children: [
                   const Expanded(
                     child: Text(
@@ -497,7 +619,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                   FilledButton.tonalIcon(
                     onPressed: _saving ? null : _addProduct,
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add product'),
+                    label: const Text('Add Item'),
                   ),
                 ],
               ),
@@ -740,89 +862,39 @@ class _OwnerProductTile extends StatelessWidget {
 
 enum _ProductAction { edit, delete }
 
-class _AddProductNameSheet extends StatefulWidget {
-  const _AddProductNameSheet();
-
-  @override
-  State<_AddProductNameSheet> createState() => _AddProductNameSheetState();
-}
-
-class _AddProductNameSheetState extends State<_AddProductNameSheet> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.of(context).pop(_nameController.text.trim());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.viewInsetsOf(context).bottom + 20,
-      ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Add product name',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Product name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) => _requiredField(value, 'Product name'),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: _submit, child: const Text('Post name')),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ProductDetails {
   const _ProductDetails({
     required this.name,
     required this.category,
+    required this.brand,
+    required this.condition,
     required this.description,
     required this.price,
     required this.quantity,
     required this.imageUrl,
+    required this.motorcycles,
+    required this.fitsAll,
+    required this.specs,
   });
 
   final String name;
   final String category;
+  final String brand;
+  final String condition;
   final String description;
   final double price;
   final int quantity;
   final String imageUrl;
+  final List<String> motorcycles;
+  final bool fitsAll;
+  final List<FitSpec> specs;
 }
 
 class _EditProductSheet extends StatefulWidget {
-  const _EditProductSheet({required this.product});
+  const _EditProductSheet({required this.product, this.specRows});
 
   final ShopProduct product;
+  final List<ItemSpecRow>? specRows;
 
   @override
   State<_EditProductSheet> createState() => _EditProductSheetState();
@@ -830,30 +902,41 @@ class _EditProductSheet extends StatefulWidget {
 
 class _EditProductSheetState extends State<_EditProductSheet> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameController;
-  late final TextEditingController _descriptionController;
-  late final TextEditingController _priceController;
-  late final TextEditingController _quantityController;
-  late final TextEditingController _imageUrlController;
+  late final _nameController = TextEditingController(text: widget.product.name);
+  late final _brandController = TextEditingController(
+    text: widget.product.brand,
+  );
+  late final _descriptionController = TextEditingController(
+    text: widget.product.description,
+  );
+  late final _priceController = TextEditingController(
+    text: widget.product.price > 0
+        ? widget.product.price.toStringAsFixed(2)
+        : '',
+  );
+  late final _quantityController = TextEditingController(
+    text: widget.product.quantity.toString(),
+  );
+  late final _imageUrlController = TextEditingController(
+    text: widget.product.imageUrl,
+  );
   late String _category;
   late final List<String> _categories;
+  late String? _condition = widget.product.condition.isEmpty
+      ? null
+      : widget.product.condition;
+  List<ItemSpecRow> _rows = const [];
+  late MotorcycleFit _fit;
+
+  /// One editable value per motorcycle in the saved specs.
+  late final Map<String, TextEditingController> _specValues = {
+    for (final spec in widget.product.specs)
+      spec.motorcycle: TextEditingController(text: spec.value),
+  };
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.product.name);
-    _descriptionController = TextEditingController(
-      text: widget.product.description,
-    );
-    _priceController = TextEditingController(
-      text: widget.product.price > 0
-          ? widget.product.price.toStringAsFixed(2)
-          : '',
-    );
-    _quantityController = TextEditingController(
-      text: widget.product.quantity.toString(),
-    );
-    _imageUrlController = TextEditingController(text: widget.product.imageUrl);
     _category = widget.product.category.trim().isEmpty
         ? shopProductCategories.first
         : widget.product.category;
@@ -861,48 +944,88 @@ class _EditProductSheetState extends State<_EditProductSheet> {
       ...shopProductCategories,
       if (_category.isNotEmpty) _category,
     }.toList(growable: false);
+    _rows = widget.specRows ?? const [];
+    _fit = _fitFor(_rows);
+    if (widget.specRows == null) {
+      loadItemSpecs().then((rows) {
+        if (mounted) {
+          setState(() {
+            _rows = rows;
+            _fit = _fitFor(rows);
+          });
+        }
+      }, onError: (_) {});
+    }
+  }
+
+  /// Saved motorcycles that are not in the table (from older listings).
+  /// They have no checkbox, so they are kept as they are when saving.
+  List<String> _unlisted = const [];
+
+  /// Checks the saved motorcycles that are in the table.
+  MotorcycleFit _fitFor(List<ItemSpecRow> rows) {
+    final listed = {for (final row in rows) row.motorcycle};
+    final saved = widget.product.motorcycles;
+    _unlisted = saved.where((m) => !listed.contains(m)).toList();
+    return MotorcycleFit(
+      models: saved.where(listed.contains).toSet(),
+      universal: widget.product.fitsAll,
+    );
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _descriptionController.dispose();
-    _priceController.dispose();
-    _quantityController.dispose();
-    _imageUrlController.dispose();
+    for (final controller in [
+      _nameController,
+      _brandController,
+      _descriptionController,
+      _priceController,
+      _quantityController,
+      _imageUrlController,
+      ..._specValues.values,
+    ]) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!_fit.isValid && _unlisted.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please check at least 1 motorcycle, or choose Universal.',
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.of(context).pop(
       _ProductDetails(
         name: _nameController.text.trim(),
         category: _category,
+        brand: _brandController.text.trim(),
+        condition: _condition ?? '',
         description: _descriptionController.text.trim(),
         price: double.parse(_priceController.text.trim()),
         quantity: int.parse(_quantityController.text.trim()),
         imageUrl: _imageUrlController.text.trim(),
+        motorcycles: _fit.universal ? const [] : [..._fit.models, ..._unlisted],
+        fitsAll: _fit.universal,
+        specs: [
+          for (final entry in _specValues.entries)
+            if (!_fit.universal && _fit.models.contains(entry.key))
+              FitSpec(motorcycle: entry.key, value: entry.value.text.trim()),
+        ],
       ),
     );
   }
 
-  /// A live thumbnail for a syntactically valid http(s) URL. Invalid or empty
-  /// input returns null so the sheet stays compact while typing.
-  String? get _previewUrl {
-    final trimmed = _imageUrlController.text.trim();
-    if (trimmed.isEmpty) return null;
-    final uri = Uri.tryParse(trimmed);
-    if (uri == null ||
-        uri.host.isEmpty ||
-        (uri.scheme != 'http' && uri.scheme != 'https')) {
-      return null;
-    }
-    return trimmed;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final label = widget.product.specLabel;
+    final product = widget.product;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         20,
@@ -918,12 +1041,22 @@ class _EditProductSheetState extends State<_EditProductSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Edit ${widget.product.name}',
+                'Edit ${product.name}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
                 ),
               ),
+              if (product.part.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  [
+                    '${product.category} › ${product.part}',
+                    if (product.isCustomPart) 'Custom',
+                  ].join(' · '),
+                  style: const TextStyle(color: AppColors.muted),
+                ),
+              ],
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
@@ -951,14 +1084,25 @@ class _EditProductSheetState extends State<_EditProductSheet> {
               ),
               const SizedBox(height: 12),
               TextFormField(
-                controller: _descriptionController,
-                maxLines: 2,
+                controller: _brandController,
                 decoration: const InputDecoration(
-                  labelText: 'Description or information',
+                  labelText: 'Brand',
+                  hintText: 'e.g. NGK, Yamaha, Koso',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) =>
-                    _requiredField(value, 'Product information'),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<String>(
+                emptySelectionAllowed: true,
+                showSelectedIcon: false,
+                segments: [
+                  for (final condition in productConditions)
+                    ButtonSegment(value: condition, label: Text(condition)),
+                ],
+                selected: {?_condition},
+                onSelectionChanged: (selected) => setState(
+                  () => _condition = selected.isEmpty ? null : selected.first,
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -1005,65 +1149,75 @@ class _EditProductSheetState extends State<_EditProductSheet> {
                   ),
                 ],
               ),
+              const SizedBox(height: 4),
+              Text(
+                (int.tryParse(_quantityController.text.trim()) ?? 1) > 0
+                    ? 'This item will be listed as available in your shop.'
+                    : 'Quantity 0 shows this item as Out of stock.',
+                style: const TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Which motorcycles does this fit?',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              MotorcycleChecklist(
+                byBrand: motorcyclesByBrand(_rows),
+                value: _fit,
+                onChanged: (fit) => setState(() => _fit = fit),
+              ),
+              if (label.isNotEmpty && !_fit.universal)
+                for (final row in _rows)
+                  if (_fit.models.contains(row.motorcycle)) ...[
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      key: ValueKey('edit-spec-${row.motorcycle}'),
+                      controller: _specValues.putIfAbsent(
+                        row.motorcycle,
+                        TextEditingController.new,
+                      ),
+                      decoration: InputDecoration(
+                        labelText:
+                            '${motorcycleModel(row.motorcycle)} – $label',
+                        hintText: 'Not available, please type it in',
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
               const SizedBox(height: 12),
+              TextFormField(
+                controller: _descriptionController,
+                maxLines: 3,
+                maxLength: 1000,
+                decoration: const InputDecoration(
+                  labelText: 'Description or information',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 4),
               TextFormField(
                 controller: _imageUrlController,
                 keyboardType: TextInputType.url,
                 autocorrect: false,
-                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
-                  labelText: 'Image URL (optional)',
+                  labelText: 'Cover photo URL',
                   hintText: 'https://example.com/photo.jpg',
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (_) => setState(() {}),
                 validator: (value) {
                   final trimmed = value?.trim() ?? '';
+                  // Older listings without a photo may stay that way here.
                   if (trimmed.isEmpty) return null;
                   final uri = Uri.tryParse(trimmed);
                   if (uri == null ||
                       uri.host.isEmpty ||
                       (uri.scheme != 'http' && uri.scheme != 'https')) {
-                    return 'Enter a valid http(s) image URL.';
+                    return 'Enter a valid https image URL.';
                   }
                   return null;
                 },
-              ),
-              if (_previewUrl != null) ...[
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  child: Image.network(
-                    _previewUrl!,
-                    height: 72,
-                    width: double.infinity,
-                    cacheWidth: 720,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 44,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceMuted,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        border: Border.all(color: AppColors.line),
-                      ),
-                      child: const Text(
-                        'Preview unavailable',
-                        style: TextStyle(
-                          color: AppColors.muted,
-                          fontSize: AppType.micro,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 8),
-              Text(
-                (int.tryParse(_quantityController.text.trim()) ?? 1) > 0
-                    ? 'This item will be listed as available in your shop.'
-                    : 'Quantity 0 marks this item unavailable in the shop.',
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
               ),
               const SizedBox(height: 16),
               FilledButton(
