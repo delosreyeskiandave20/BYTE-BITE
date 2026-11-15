@@ -711,20 +711,55 @@ class _ShopCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      shop.location,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 12,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.place_outlined,
+                          size: 14,
+                          color: AppColors.muted,
+                        ),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            shop.location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
+              if (products.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    products.length == 1
+                        ? '1 item'
+                        : '${products.length} items',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
             ],
           ),
           if (shop.description.isNotEmpty) ...[
-            const SizedBox(height: 9),
+            const SizedBox(height: 10),
             Text(
               shop.description,
               style: const TextStyle(
@@ -734,22 +769,20 @@ class _ShopCard extends StatelessWidget {
               ),
             ),
           ],
-          const Divider(height: 22),
+          const Divider(height: 24, color: AppColors.line),
           if (products.isEmpty)
             const Text(
               'No products listed yet.',
               style: TextStyle(color: AppColors.muted, fontSize: 12),
             ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final width = (constraints.maxWidth - 10) / 2;
-              Widget grid(List<ShopProduct> items) => Wrap(
-                spacing: 10,
-                runSpacing: 10,
+          Builder(
+            builder: (context) {
+              Widget grid(List<ShopProduct> items) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final product in items)
-                    SizedBox(
-                      width: width,
+                  for (final (index, product) in items.indexed)
+                    Padding(
+                      padding: EdgeInsets.only(top: index == 0 ? 0 : 10),
                       child: ShopItemCard(
                         product: product,
                         myMotorcycle: myMotorcycle,

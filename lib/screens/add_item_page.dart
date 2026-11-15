@@ -867,7 +867,6 @@ class _AddItemPageState extends State<AddItemPage> {
           _photosSection(),
           const SizedBox(height: 22),
           _fitSection(),
-          ..._specsSection(),
           const SizedBox(height: 22),
           // Looks disabled until every required field is valid, but stays
           // tappable so the seller is taken to what is missing.
@@ -1166,36 +1165,6 @@ class _AddItemPageState extends State<AddItemPage> {
     );
   }
 
-  List<Widget> _specsSection() {
-    final field = _specField;
-    if (field == null || _fit.universal) return const [];
-    final motorcycles = _fit.motorcycles;
-    if (motorcycles.isEmpty) return const [];
-    return [
-      const SizedBox(height: 22),
-      _heading(
-        'Specs',
-        helper:
-            'Filled in from our motorcycle data. You can change any value; '
-            'your changes are saved only to this listing.',
-      ),
-      for (final motorcycle in motorcycles)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: TextField(
-            key: ValueKey('spec-$motorcycle'),
-            controller: _specController(motorcycle),
-            decoration: InputDecoration(
-              labelText: '${motorcycleModel(motorcycle)} – $_part',
-              hintText: itemSpecUnknownHint,
-              helperText: _rowFor(motorcycle)?.valueOf(field)?.note,
-              border: const OutlineInputBorder(),
-              isDense: true,
-            ),
-          ),
-        ),
-    ];
-  }
 }
 
 /// "1 Category → 2 Part → 3 Details", with the current step highlighted.

@@ -114,8 +114,8 @@ class FitsYourBadge extends StatelessWidget {
   }
 }
 
-/// A buyer-facing item card: large square cover, then name, price, tags,
-/// what it fits and stock.
+/// A buyer-facing item row: the cover photo on the left, then name, price,
+/// tags, what it fits and stock on the right.
 class ShopItemCard extends StatelessWidget {
   const ShopItemCard({
     required this.product,
@@ -144,81 +144,98 @@ class ShopItemCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(aspectRatio: 1, child: ItemCover(product: product)),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 13,
-                      height: 1.25,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    product.price > 0
-                        ? formatPeso(product.price)
-                        : 'Price not set',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: [
-                      _Tag(product.category),
-                      if (product.condition.isNotEmpty)
-                        _Tag(product.condition),
-                    ],
-                  ),
-                  if (mine != null && product.fits(mine)) ...[
-                    const SizedBox(height: 6),
-                    FitsYourBadge(motorcycle: mine),
-                  ],
-                  if (fits != null) ...[
-                    const SizedBox(height: 6),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.md - 4),
+                child: SizedBox(
+                  width: 108,
+                  height: 108,
+                  child: ItemCover(product: product, cacheWidth: 324),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      fits,
+                      product.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: AppColors.inkSoft,
+                        color: AppColors.ink,
+                        fontSize: 13,
+                        height: 1.25,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      product.price > 0
+                          ? formatPeso(product.price)
+                          : 'Price not set',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        _Tag(product.category),
+                        if (product.condition.isNotEmpty)
+                          _Tag(product.condition),
+                      ],
+                    ),
+                    if (mine != null && product.fits(mine)) ...[
+                      const SizedBox(height: 6),
+                      FitsYourBadge(motorcycle: mine),
+                    ],
+                    if (fits != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        fits,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.inkSoft,
+                          fontSize: 11,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    Text(
+                      product.isAvailable
+                          ? '${product.quantity} in stock'
+                          : 'Out of stock',
+                      style: TextStyle(
+                        color: product.isAvailable
+                            ? AppColors.success
+                            : AppColors.danger,
                         fontSize: 11,
-                        height: 1.3,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 6),
-                  Text(
-                    product.isAvailable
-                        ? '${product.quantity} in stock'
-                        : 'Out of stock',
-                    style: TextStyle(
-                      color: product.isAvailable
-                          ? AppColors.success
-                          : AppColors.danger,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+              const Padding(
+                padding: EdgeInsets.only(left: 4, top: 2),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

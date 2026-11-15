@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/shop.dart';
+import 'cloudinary_photo_storage.dart';
 import 'item_specs.dart';
 import 'owner_auth.dart';
 import 'product_photo_storage.dart';
@@ -32,7 +33,13 @@ class ShopStore extends ChangeNotifier {
     _listenToAuthState();
     if (Firebase.apps.isNotEmpty) {
       _firestore = FirebaseFirestore.instance;
-      _photoStorage ??= FirebaseProductPhotoStorage(FirebaseStorage.instance);
+      // Free Cloudinary storage when it is set up; Firebase Storage otherwise.
+      _photoStorage ??= isCloudinaryConfigured
+          ? CloudinaryProductPhotoStorage(
+              cloudName: cloudinaryCloudName,
+              uploadPreset: cloudinaryUploadPreset,
+            )
+          : FirebaseProductPhotoStorage(FirebaseStorage.instance);
       _isLoading = true;
       _subscribeToShops();
       purgeStaleShops();
@@ -563,6 +570,9 @@ class ShopStore extends ChangeNotifier {
       return;
     }
 
+    // The rules only accept verified=true when the login token already says
+    // the email is verified; refresh it in case it was verified just now.
+    if (shop.isVerified) await _ownerAuth?.refreshIdToken();
     await _commit(
       _shopRef(
         firestore,

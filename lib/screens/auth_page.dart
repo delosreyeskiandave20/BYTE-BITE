@@ -251,17 +251,13 @@ class _MotoScanAuthPageState extends State<MotoScanAuthPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Container(
-                            width: 62,
-                            height: 62,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(21),
-                            ),
-                            child: const Icon(
-                              Icons.person_outline,
-                              color: AppColors.surface,
-                              size: 33,
+                          Center(
+                            child: Image.asset(
+                              'assets/motoscan_logo.png',
+                              key: const ValueKey('motoscan-logo'),
+                              width: 68,
+                              height: 68,
+                              semanticLabel: 'MotoScan logo',
                             ),
                           ),
                           const SizedBox(height: 8),

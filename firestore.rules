@@ -16,6 +16,13 @@ service cloud.firestore {
       return resource.data.verified == true;
     }
 
+    // Products have no "verified" field of their own; buyers may read them
+    // when the parent shop is verified.
+    function parentShopVerified(ownerId) {
+      return get(/databases/$(database)/documents/shops/$(ownerId)).data.verified
+        == true;
+    }
+
     // Shape and size validation for every shop write. Keep these limits in sync
     // with ShopStore and the owner dashboard form.
     function validShop() {
@@ -151,7 +158,7 @@ service cloud.firestore {
       allow delete: if isShopOwner(ownerId);
 
       match /products/{productId} {
-        allow read: if isVerifiedShop() || isShopOwner(ownerId);
+        allow read: if isShopOwner(ownerId) || parentShopVerified(ownerId);
         allow create, update: if isShopOwner(ownerId)
           && validProduct()
           && request.resource.data.id == productId;

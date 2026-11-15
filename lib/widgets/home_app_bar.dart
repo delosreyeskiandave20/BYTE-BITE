@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'motoscan_wordmark.dart';
 
 class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   const HomeAppBar({required this.onSearch, super.key});
@@ -13,40 +14,12 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return AppBar(
       titleSpacing: isCompact ? 12 : 20,
-      title: Row(
-        children: [
-          Container(
-            width: isCompact ? 34 : 36,
-            height: isCompact ? 34 : 36,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: const Icon(Icons.two_wheeler, color: Colors.white, size: 20),
-          ),
-          SizedBox(width: isCompact ? 7 : 9),
-          Flexible(
-            child: Text.rich(
-              TextSpan(
-                style: TextStyle(
-                  color: AppColors.ink,
-                  fontSize: isCompact ? 21 : 23,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                ),
-                children: const [
-                  TextSpan(text: 'Moto'),
-                  TextSpan(
-                    text: 'Scan',
-                    style: TextStyle(color: AppColors.primary),
-                  ),
-                ],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+      title: Align(
+        alignment: Alignment.centerLeft,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: MotoScanWordmark(size: isCompact ? 21 : 23),
+        ),
       ),
       actions: [
         Padding(

@@ -284,7 +284,7 @@ void main() {
     );
   });
 
-  testWidgets('specs are filled from the table and never guessed', (
+  testWidgets('specs are saved from the table without a Specs section', (
     tester,
   ) async {
     final results = await _open(tester);
@@ -294,14 +294,9 @@ void main() {
     await _checkModel(tester, 'Honda BeAT');
     expect(find.text('2 motorcycles selected'), findsOneWidget);
 
-    TextField spec(String model) => tester.widget(_key('spec-$model'));
-    expect(spec('Yamaha NMAX 155').controller!.text, 'NGK CPR8EA-9');
-    // "—" in the table: empty, with a hint to type it in.
-    expect(spec('Honda BeAT').controller!.text, isEmpty);
-    expect(spec('Honda BeAT').decoration!.hintText, itemSpecUnknownHint);
-    expect(find.text('NMAX 155 – Spark plug'), findsOneWidget);
+    expect(find.text('Specs'), findsNothing);
+    expect(_key('spec-Yamaha NMAX 155'), findsNothing);
 
-    await tester.enterText(_key('spec-Honda BeAT'), 'NGK CPR6EA-9');
     await _post(tester);
     final item = results.single!;
     expect(item.category, 'Engine');
@@ -313,9 +308,9 @@ void main() {
     expect(item.motorcycles, ['Yamaha NMAX 155', 'Honda BeAT']);
     expect(item.fitsAll, isFalse);
     expect(item.specLabel, 'Spark plug');
+    // "—" in the table is never guessed, so BeAT has no spec saved.
     expect(item.specs.map((s) => '${s.motorcycle}=${s.value}'), [
       'Yamaha NMAX 155=NGK CPR8EA-9',
-      'Honda BeAT=NGK CPR6EA-9',
     ]);
   });
 

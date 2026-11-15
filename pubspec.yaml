@@ -66,6 +66,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
+    - assets/motoscan_logo.png
     - assets/motorcycle_parts_catalog.json
     - assets/parts/
     - assets/vehicle_parts/

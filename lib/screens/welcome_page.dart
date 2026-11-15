@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/motoscan_wordmark.dart';
 
 /// Full-screen front page shown when the app launches.
 ///
@@ -94,59 +95,21 @@ class _Wordmark extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
+        padding: const EdgeInsets.fromLTRB(14, 9, 18, 9),
         decoration: BoxDecoration(
-          color: const Color(0x66000000),
+          color: const Color(0x80000000),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: const Color(0x33FFFFFF)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.orange, AppColors.primary],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.two_wheeler_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            // Shrinks rather than overflowing on narrow phones with large text.
-            const Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: 'Moto'),
-                      TextSpan(
-                        text: 'Scan',
-                        style: TextStyle(color: AppColors.orange),
-                      ),
-                    ],
-                  ),
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: AppType.section,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ),
-            ),
-          ],
+        // Shrinks rather than overflowing on narrow phones.
+        child: const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: MotoScanWordmark(
+            key: ValueKey('motoscan-logo'),
+            size: 24,
+            onDark: true,
+          ),
         ),
       ),
     );
@@ -178,30 +141,6 @@ class _WelcomeCopy extends StatelessWidget {
               fontSize: AppType.micro,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.2,
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Semantics(
-          header: true,
-          child: const Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: 'The right '),
-                TextSpan(
-                  text: 'parts',
-                  style: TextStyle(color: AppColors.orange),
-                ),
-                TextSpan(text: ' for your ride.'),
-              ],
-            ),
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: AppType.display + 6,
-              fontWeight: FontWeight.w800,
-              height: 1.1,
-              letterSpacing: -0.6,
-              shadows: [Shadow(color: Color(0x80000000), blurRadius: 12)],
             ),
           ),
         ),

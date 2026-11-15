@@ -21,6 +21,7 @@ import 'package:flutter_application_1/data/vehicle_images.dart';
 import 'package:flutter_application_1/data/vehicle_parts_catalog.dart';
 import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/screens/auth_page.dart';
+import 'package:flutter_application_1/widgets/motoscan_wordmark.dart';
 import 'package:flutter_application_1/screens/camera_capture_page.dart';
 import 'package:flutter_application_1/screens/catalog_page.dart';
 import 'package:flutter_application_1/screens/identify_page.dart';
@@ -86,7 +87,8 @@ void main() {
     await tester.pumpWidget(const MotoScanApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('MotoScan'), findsOneWidget);
+    expect(find.byType(MotoScanWordmark), findsOneWidget);
+    expect(find.bySemanticsLabel('MotoScan'), findsOneWidget);
     expect(find.byTooltip('Search parts'), findsOneWidget);
     expect(find.byIcon(Icons.person_outline), findsNothing);
     expect(find.text('Search for a part'), findsNothing);
@@ -105,7 +107,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('welcome-hero-image')), findsOneWidget);
-    expect(find.text('The right parts for your ride.'), findsOneWidget);
+    expect(find.text('The right parts for your ride.'), findsNothing);
     expect(find.text('Browse parts'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('welcome-get-started')));
@@ -145,12 +147,12 @@ void main() {
     expect(find.text('Browse parts'), findsOneWidget);
   });
 
-  testWidgets('login account entry points use a person icon', (
+  testWidgets('login page shows the MotoScan logo', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MaterialApp(home: MotoScanAuthPage()));
 
-    expect(find.byIcon(Icons.person_outline), findsOneWidget);
+    expect(find.byKey(const ValueKey('motoscan-logo')), findsOneWidget);
     expect(find.byIcon(Icons.storefront_rounded), findsNothing);
   });
 
