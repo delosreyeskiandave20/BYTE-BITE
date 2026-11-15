@@ -522,6 +522,12 @@ void main() {
     );
 
     expect(find.textContaining('Temporary demo only'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Add Item'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Add Item'));
     await tester.pumpAndSettle();
     tester.view.physicalSize = const Size(800, 2600);

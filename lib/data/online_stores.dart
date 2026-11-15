@@ -20,7 +20,12 @@ class OnlineStore {
     required this.marketplace,
     required this.slug,
     required this.items,
+    this.fromSeller = false,
   });
+
+  /// True when the seller lists this store in MotoScan themselves, so its
+  /// items and prices are kept up to date by them.
+  final bool fromSeller;
 
   final String name;
 

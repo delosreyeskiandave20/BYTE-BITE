@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import '../models/shop.dart';
 import 'cloudinary_photo_storage.dart';
 import 'item_specs.dart';
+import 'marketplace_link.dart';
 import 'owner_auth.dart';
 import 'product_photo_storage.dart';
 import 'owner_email_hash.dart';
@@ -521,8 +522,20 @@ class ShopStore extends ChangeNotifier {
     required String location,
     required String description,
     String contact = '',
+    String marketplaceUrl = '',
   }) async {
     final normalizedEmail = _normalizeEmail(ownerEmail);
+    final trimmedMarketplace = marketplaceUrl.trim();
+    final link = trimmedMarketplace.isEmpty
+        ? null
+        : parseMarketplaceLink(trimmedMarketplace);
+    if (trimmedMarketplace.isNotEmpty && link == null) {
+      throw StateError(
+        validateMarketplaceLink(trimmedMarketplace) ??
+            'Paste a Shopee or Lazada store link.',
+      );
+    }
+    final cleanMarketplaceUrl = link?.url ?? '';
     _validateEmail(normalizedEmail);
     final trimmedName = _requiredText(
       name,
@@ -560,6 +573,14 @@ class ShopStore extends ChangeNotifier {
       location: trimmedLocation,
       description: trimmedDescription,
       contact: trimmedContact,
+      marketplaceUrl: cleanMarketplaceUrl,
+      // Approval is kept only while the link stays the same. Without the
+      // cloud there is no admin, so local demo links go live at once.
+      marketplaceApproved:
+          cleanMarketplaceUrl.isNotEmpty &&
+          (firestore == null ||
+              (existing?.marketplaceApproved == true &&
+                  existing?.marketplaceUrl == cleanMarketplaceUrl)),
       products: existing?.products ?? const <ShopProduct>[],
       isVerified: account.emailVerified || (existing?.isVerified ?? false),
       lastEditedAt: DateTime.now().millisecondsSinceEpoch,
@@ -574,10 +595,12 @@ class ShopStore extends ChangeNotifier {
     // the email is verified; refresh it in case it was verified just now.
     if (shop.isVerified) await _ownerAuth?.refreshIdToken();
     await _commit(
-      _shopRef(
-        firestore,
-        account.uid,
-      ).set(shop.toMap(), SetOptions(merge: true)),
+      _shopRef(firestore, account.uid).set({
+        ...shop.toMap(),
+        // Owners may only clear approval (when the link changes), never
+        // grant it; the rules enforce this.
+        if (!shop.marketplaceApproved) 'marketplaceApproved': false,
+      }, SetOptions(merge: true)),
     );
     _shopDocuments[account.uid] = shop;
     _productsByShop[account.uid] ??= shop.products;

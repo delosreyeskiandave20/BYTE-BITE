@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../data/online_stores.dart';
 import '../data/price_format.dart';
+import '../models/shop.dart';
 import '../theme/app_theme.dart';
 import '../widgets/marketplace_logo.dart';
 
@@ -14,6 +15,23 @@ Future<void> openOnlineStoreLink(BuildContext context, Uri uri) async {
       context,
     ).showSnackBar(const SnackBar(content: Text('Could not open the store.')));
   }
+}
+
+/// A MotoScan shop whose approved Shopee/Lazada link sends buyers to the
+/// marketplace, as an [OnlineStore] of its in-stock items; null otherwise.
+OnlineStore? onlineStoreForShop(Shop shop) {
+  final link = shop.liveMarketplaceLink;
+  if (link == null) return null;
+  return OnlineStore(
+    name: shop.name,
+    marketplace: link.marketplace,
+    slug: link.slug,
+    fromSeller: true,
+    items: [
+      for (final product in shop.products)
+        if (product.isAvailable) OnlineStoreItem(product.name, product.price),
+    ],
+  );
 }
 
 /// One Shopee or Lazada store and the items it lists. Buying happens on the
@@ -106,8 +124,10 @@ class _StoreHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${store.items.length} items · prices as of '
-                      '$onlineStoresCheckedOn',
+                      store.fromSeller
+                          ? '${store.items.length} items · listed by the seller'
+                          : '${store.items.length} items · prices as of '
+                                '$onlineStoresCheckedOn',
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: AppType.caption,
@@ -281,9 +301,17 @@ bool onlineItemMatches(OnlineStoreItem item, List<String> tokens) {
 /// Shop-tab section listing the Shopee and Lazada stores. With a search, it
 /// shows only stores carrying a matching item, and how many match.
 class OnlineStoresSection extends StatelessWidget {
-  const OnlineStoresSection({required this.searchQuery, super.key});
+  const OnlineStoresSection({
+    required this.searchQuery,
+    this.sellerStores = const [],
+    super.key,
+  });
 
   final String searchQuery;
+
+  /// Approved MotoScan sellers with their own Shopee/Lazada store, listed
+  /// before the hand-picked stores.
+  final List<OnlineStore> sellerStores;
 
   /// A light tint of the marketplace's brand colour behind its logo.
   static Color _brandSoft(String marketplace) =>
@@ -304,7 +332,7 @@ class OnlineStoresSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = onlineStoreTokens(searchQuery);
     final stores = [
-      for (final store in onlineStores)
+      for (final store in [...sellerStores, ...onlineStores])
         (
           store: store,
           matches: store.items
@@ -376,15 +404,32 @@ class OnlineStoresSection extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              entry.store.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppColors.ink,
-                                fontSize: AppType.cardTitle + 1,
-                                fontWeight: FontWeight.w800,
-                              ),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    entry.store.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.ink,
+                                      fontSize: AppType.cardTitle + 1,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                                if (entry.store.fromSeller) ...[
+                                  const SizedBox(width: 4),
+                                  const Tooltip(
+                                    message: 'Seller on MotoScan',
+                                    child: Icon(
+                                      Icons.verified_rounded,
+                                      size: 16,
+                                      color: AppColors.success,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 4),
                             Row(

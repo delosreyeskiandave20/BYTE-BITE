@@ -34,6 +34,8 @@ service cloud.firestore {
           'location',
           'description',
           'contact',
+          'marketplaceUrl',
+          'marketplaceApproved',
           'verified',
           'lastEditedAt'
         ])
@@ -60,6 +62,14 @@ service cloud.firestore {
         && data.description.size() <= 2000
         && (!('contact' in data)
           || (data.contact is string && data.contact.size() <= 120))
+        // Optional: the seller's own Shopee or Lazada store link.
+        && (!('marketplaceUrl' in data)
+          || (data.marketplaceUrl is string
+            && data.marketplaceUrl.size() <= 200
+            && (data.marketplaceUrl == ''
+              || data.marketplaceUrl.matches(
+                '^https://(shopee\\.ph|www\\.lazada\\.com\\.ph/shop)/[A-Za-z0-9._-]+/?$'))))
+        && (!('marketplaceApproved' in data) || data.marketplaceApproved is bool)
         && data.verified is bool
         && (!('lastEditedAt' in data)
           || (data.lastEditedAt is int
@@ -148,13 +158,26 @@ service cloud.firestore {
           || (data.specs is list && data.specs.size() <= 100));
     }
 
+    // Only the app admin approves a Shopee/Lazada link, in the Firebase
+    // console. Owners may keep an existing approval while the link is
+    // unchanged, or clear it, but never grant it.
+    function validMarketplaceApproval() {
+      let data = request.resource.data;
+      return data.get('marketplaceApproved', false) == false
+        || (resource != null
+          && resource.data.get('marketplaceApproved', false) == true
+          && data.get('marketplaceUrl', '')
+            == resource.data.get('marketplaceUrl', ''));
+    }
+
     match /shops/{ownerId} {
       // Public marketplace reads only verified shops. Owners can read their own
       // shop before verification to complete setup.
       allow read: if isVerifiedShop() || isShopOwner(ownerId);
       allow create, update: if isShopOwner(ownerId)
         && validShop()
-        && validVerificationState();
+        && validVerificationState()
+        && validMarketplaceApproval();
       allow delete: if isShopOwner(ownerId);
 
       match /products/{productId} {

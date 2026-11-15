@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/painting.dart';
 
+import '../data/marketplace_link.dart';
+
 /// Category assigned to a product created without one.
 const defaultShopProductCategory = 'Parts';
 
@@ -203,6 +205,8 @@ class Shop {
     required this.description,
     required this.products,
     this.contact = '',
+    this.marketplaceUrl = '',
+    this.marketplaceApproved = false,
     this.isVerified = false,
     this.lastEditedAt,
   });
@@ -222,6 +226,17 @@ class Shop {
   /// How buyers reach the seller: a mobile number or a Messenger/Facebook
   /// link. Empty when the seller has not added one.
   final String contact;
+
+  /// The seller's own Shopee or Lazada store link, or empty.
+  final String marketplaceUrl;
+
+  /// Set by the app admin in Firebase after checking the store link really
+  /// belongs to this seller. Owners can never set it themselves.
+  final bool marketplaceApproved;
+
+  /// The store link once approved, so buyers are sent to it; null before.
+  MarketplaceLink? get liveMarketplaceLink =>
+      marketplaceApproved ? parseMarketplaceLink(marketplaceUrl) : null;
 
   final List<ShopProduct> products;
 
@@ -251,6 +266,8 @@ class Shop {
     String? location,
     String? description,
     String? contact,
+    String? marketplaceUrl,
+    bool? marketplaceApproved,
     List<ShopProduct>? products,
     bool? isVerified,
     int? lastEditedAt,
@@ -263,6 +280,8 @@ class Shop {
       location: location ?? this.location,
       description: description ?? this.description,
       contact: contact ?? this.contact,
+      marketplaceUrl: marketplaceUrl ?? this.marketplaceUrl,
+      marketplaceApproved: marketplaceApproved ?? this.marketplaceApproved,
       products: products ?? this.products,
       isVerified: isVerified ?? this.isVerified,
       lastEditedAt: lastEditedAt ?? this.lastEditedAt,
@@ -277,6 +296,7 @@ class Shop {
       'location': location,
       'description': description,
       'contact': contact,
+      'marketplaceUrl': marketplaceUrl,
       'verified': isVerified,
       if (lastEditedAt != null) 'lastEditedAt': lastEditedAt,
     };
@@ -293,6 +313,8 @@ class Shop {
       location: data['location'] as String? ?? '',
       description: data['description'] as String? ?? '',
       contact: data['contact'] as String? ?? '',
+      marketplaceUrl: data['marketplaceUrl'] as String? ?? '',
+      marketplaceApproved: data['marketplaceApproved'] as bool? ?? false,
       products: const <ShopProduct>[],
       isVerified: data['verified'] as bool? ?? false,
       lastEditedAt: (data['lastEditedAt'] as num?)?.toInt(),

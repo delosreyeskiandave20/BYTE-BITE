@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/load_error_banner.dart';
 import '../data/item_parts.dart';
 import '../data/item_specs.dart';
+import '../data/marketplace_link.dart';
 import '../widgets/motorcycle_checklist.dart';
 import 'add_item_page.dart';
 
@@ -47,6 +48,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
   late final TextEditingController _locationController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _contactController;
+  late final TextEditingController _marketplaceController;
 
   bool _saving = false;
   bool _loadingShop = false;
@@ -66,6 +68,9 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
       text: shop?.description ?? '',
     );
     _contactController = TextEditingController(text: shop?.contact ?? '');
+    _marketplaceController = TextEditingController(
+      text: shop?.marketplaceUrl ?? '',
+    );
     _savedSignature = _currentSignature;
     if (shop == null && widget.store.isCloudConnected) {
       _loadExistingShop();
@@ -77,6 +82,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
     _locationController.text,
     _descriptionController.text,
     _contactController.text,
+    _marketplaceController.text,
   ].map((value) => value.trim()).join('\u0000');
 
   bool get _hasUnsavedChanges => _currentSignature != _savedSignature;
@@ -100,6 +106,9 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
         if (_contactController.text.isEmpty) {
           _contactController.text = shop.contact;
         }
+        if (_marketplaceController.text.isEmpty) {
+          _marketplaceController.text = shop.marketplaceUrl;
+        }
       }
       _savedSignature = _currentSignature;
     } catch (error) {
@@ -118,6 +127,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
     _locationController.dispose();
     _descriptionController.dispose();
     _contactController.dispose();
+    _marketplaceController.dispose();
     super.dispose();
   }
 
@@ -131,7 +141,11 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
         location: _locationController.text,
         description: _descriptionController.text,
         contact: _contactController.text,
+        marketplaceUrl: _marketplaceController.text,
       );
+      // Show the cleaned-up link that was saved.
+      final saved = widget.store.shopForOwner(widget.ownerEmail);
+      if (saved != null) _marketplaceController.text = saved.marketplaceUrl;
       _savedSignature = _currentSignature;
       return true;
     } catch (error) {
@@ -600,6 +614,28 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                         border: OutlineInputBorder(),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      key: const ValueKey('shop-marketplace'),
+                      controller: _marketplaceController,
+                      keyboardType: TextInputType.url,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Shopee or Lazada store link (optional)',
+                        hintText: 'e.g. shopee.ph/yourshop',
+                        helperText:
+                            'Sell on Shopee or Lazada? Buyers will be sent '
+                            'there to buy your items.',
+                        helperMaxLines: 2,
+                        prefixIcon: Icon(Icons.storefront_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: validateMarketplaceLink,
+                    ),
+                    if (shop != null && shop.marketplaceUrl.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _MarketplaceStatus(approved: shop.marketplaceApproved),
+                    ],
                   ],
                 ),
               ),
@@ -1227,6 +1263,53 @@ class _EditProductSheetState extends State<_EditProductSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Whether the seller's Shopee/Lazada link is live or waiting for review.
+class _MarketplaceStatus extends StatelessWidget {
+  const _MarketplaceStatus({required this.approved});
+
+  final bool approved;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = approved ? AppColors.success : AppColors.warning;
+    return Container(
+      key: const ValueKey('shop-marketplace-status'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: approved ? AppColors.successSoft : AppColors.warningSoft,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            approved ? Icons.verified_rounded : Icons.hourglass_top_rounded,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              approved
+                  ? 'Live: your shop is listed under Shopee & Lazada stores.'
+                  : 'Waiting for review. We check that the store is yours '
+                        'before buyers are sent to it. Your shop still shows '
+                        'as a local shop until then.',
+              style: TextStyle(
+                color: color,
+                fontSize: AppType.caption,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

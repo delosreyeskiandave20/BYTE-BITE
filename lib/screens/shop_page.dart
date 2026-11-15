@@ -213,7 +213,11 @@ class _ShopContent extends StatelessWidget {
     final onlyFits = myMotorcycle.onlyFits;
     final shops = store.shops
         .where(
-          (shop) => initialShopName == null || shop.name == initialShopName,
+          (shop) =>
+              // Approved Shopee/Lazada sellers are listed with the online
+              // stores below instead.
+              shop.liveMarketplaceLink == null &&
+              (initialShopName == null || shop.name == initialShopName),
         )
         .map((shop) {
           final base = query == null
@@ -368,7 +372,13 @@ class _ShopContent extends StatelessWidget {
         // Local shops are the point of MotoScan, so online marketplaces come
         // after them as a fallback.
         const SizedBox(height: 22),
-        OnlineStoresSection(searchQuery: activeQuery),
+        OnlineStoresSection(
+          searchQuery: activeQuery,
+          sellerStores: [
+            for (final shop in store.shops)
+              ?onlineStoreForShop(shop),
+          ],
+        ),
         if (query == null) ...[
           const SizedBox(height: 22),
           const _SectionHeading(
