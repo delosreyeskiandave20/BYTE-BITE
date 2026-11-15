@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'accessories_maintenance_catalog.dart';
+import 'motorcycle_specs.dart';
 import '../models/part_category.dart';
 
 final homeCategories = [
@@ -66,5 +67,14 @@ final homeCategories = [
     imageAsset: 'assets/parts/maintenance-showcase.png',
     icon: Icons.build,
     color: Color(0xFF7A6043),
+  ),
+  PartCategory(
+    id: 'sizes',
+    name: 'Sizes',
+    subtitle: 'Tires, battery & oil',
+    count: '${motorcycleSpecs.length} motorcycles',
+    imageAsset: 'assets/parts/sizes-showcase.jpg',
+    icon: Icons.tire_repair,
+    color: Color(0xFF5A6370),
   ),
 ];

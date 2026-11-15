@@ -7,6 +7,7 @@ import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/fade_slide_in.dart';
 import '../widgets/load_error_banner.dart';
+import 'online_store_page.dart';
 
 /// Pseudo-category that shows every product in a shop.
 const _allCategories = 'All';
@@ -324,6 +325,8 @@ class _ShopContent extends StatelessWidget {
         ],
         // Local shops are the point of MotoScan, so online marketplaces come
         // after them as a fallback.
+        const SizedBox(height: 22),
+        OnlineStoresSection(searchQuery: activeQuery),
         if (query == null) ...[
           const SizedBox(height: 22),
           const _SectionHeading(
@@ -702,8 +705,8 @@ class _ProductThumbnail extends StatelessWidget {
       label: 'Photo of ${product.name}',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(9),
-        child: Image.network(
-          product.imageUrl,
+        child: Image(
+          image: product.imageProvider,
           width: 48,
           height: 48,
           fit: BoxFit.cover,

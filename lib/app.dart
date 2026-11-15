@@ -7,6 +7,7 @@ import 'screens/identify_page.dart';
 import 'screens/home_page.dart';
 import 'screens/motorcycle_browse_page.dart';
 import 'screens/motorcycle_parts_catalog_page.dart';
+import 'screens/motorcycle_specs_page.dart';
 import 'screens/parts_catalog_page.dart';
 import 'screens/search_page.dart';
 import 'screens/shop_page.dart';
@@ -90,6 +91,12 @@ class _MotoScanShellState extends State<_MotoScanShell> {
   }
 
   void _openCategory(BuildContext context, String categoryId) {
+    if (categoryId == 'sizes') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const MotorcycleSpecsPage()),
+      );
+      return;
+    }
     if (categoryId == 'accessories' || categoryId == 'maintenance') {
       Navigator.of(context).push(
         MaterialPageRoute<void>(

@@ -33,6 +33,7 @@ class _MotorcyclePartsCatalogPageState
   String? _selectedBrand;
   String? _selectedModel;
   String? _selectedVariant;
+  late String? _selectedCategory = widget.initialCategory;
 
   @override
   Widget build(BuildContext context) {
@@ -81,144 +82,219 @@ class _MotorcyclePartsCatalogPageState
       (vehicle) => vehicle.variant == _selectedVariant,
       orElse: () => variants.first,
     );
+    // Keeps the chosen category when switching bikes, if the new one has it.
+    final activeCategory = selected.categories.firstWhere(
+      (category) => category.name == _selectedCategory,
+      orElse: () => selected.categories.first,
+    );
     final selectedImageAsset = vehiclePartsVariantImageAsset(
       brand: selected.brand,
       model: selected.model,
       variant: selected.variant,
     );
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      children: [
-        _BrandChoiceGrid(
-          choices: brands,
-          selected: brand,
-          onSelected: (value) => setState(() {
-            _selectedBrand = value;
-            _selectedModel = null;
-            _selectedVariant = null;
-          }),
-        ),
-        const SizedBox(height: 10),
-        _VehicleSelection(
-          label: 'MODEL',
-          value: model,
-          choices: models,
-          imageAssetForChoice: (choice) {
-            final vehicle = catalog.firstWhere(
-              (vehicle) => vehicle.brand == brand && vehicle.model == choice,
-            );
-            return vehiclePartsVariantImageAsset(
-              brand: vehicle.brand,
-              model: vehicle.model,
-              variant: vehicle.variant,
-            );
-          },
-          onChanged: (value) => setState(() {
-            _selectedModel = value;
-            _selectedVariant = null;
-          }),
-        ),
-        const SizedBox(height: 10),
-        _VehicleChoiceGroup(
-          label: 'VARIANT',
-          choices: variants.map((vehicle) => vehicle.variant).toList(),
-          selected: selected.variant,
-          onSelected: (value) => setState(() => _selectedVariant = value),
-        ),
-        const SizedBox(height: 18),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: AppColors.primaryBorder),
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              _BrandChoiceGrid(
+                choices: brands,
+                selected: brand,
+                onSelected: (value) => setState(() {
+                  _selectedBrand = value;
+                  _selectedModel = null;
+                  _selectedVariant = null;
+                }),
+              ),
+              const SizedBox(height: 10),
+              _VehicleSelection(
+                label: 'MODEL',
+                value: model,
+                choices: models,
+                imageAssetForChoice: (choice) {
+                  final vehicle = catalog.firstWhere(
+                    (vehicle) =>
+                        vehicle.brand == brand && vehicle.model == choice,
+                  );
+                  return vehiclePartsVariantImageAsset(
+                    brand: vehicle.brand,
+                    model: vehicle.model,
+                    variant: vehicle.variant,
+                  );
+                },
+                onChanged: (value) => setState(() {
+                  _selectedModel = value;
+                  _selectedVariant = null;
+                }),
+              ),
+              const SizedBox(height: 10),
+              _VehicleChoiceGroup(
+                label: 'VARIANT',
+                choices: variants.map((vehicle) => vehicle.variant).toList(),
+                selected: selected.variant,
+                onSelected: (value) => setState(() => _selectedVariant = value),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: AppColors.primaryBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 210,
+                        child: selectedImageAsset == null
+                            ? const ColoredBox(
+                                color: AppColors.paper,
+                                child: Icon(
+                                  Icons.two_wheeler,
+                                  color: AppColors.primary,
+                                  size: 36,
+                                ),
+                              )
+                            : Image.asset(
+                                selectedImageAsset,
+                                key: const ValueKey('motorcycle-preview-image'),
+                                cacheWidth: 800,
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${selected.brand} ${selected.model} ${selected.variant}',
+                      style: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ]),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 210,
-                  child: selectedImageAsset == null
-                      ? const ColoredBox(
-                          color: AppColors.paper,
-                          child: Icon(
-                            Icons.two_wheeler,
-                            color: AppColors.primary,
-                            size: 36,
+        ),
+        // The category tabs stick to the top while the parts below scroll, so
+        // another category is always one tap away.
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _PinnedBar(
+            height: 60,
+            child: Container(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 20),
+              color: AppColors.paper,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                child: Row(
+                  children: [
+                    for (final category in selected.categories)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          key: ValueKey('part-category-${category.name}'),
+                          label: Text(
+                            '${category.name} · ${category.parts.length}',
                           ),
-                        )
-                      : Image.asset(
-                          selectedImageAsset,
-                          key: const ValueKey('motorcycle-preview-image'),
-                          cacheWidth: 800,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
+                          selected: category == activeCategory,
+                          onSelected: (_) =>
+                              setState(() => _selectedCategory = category.name),
+                          showCheckmark: false,
+                          selectedColor: AppColors.primary,
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          side: BorderSide(
+                            color: category == activeCategory
+                                ? AppColors.primary
+                                : AppColors.line,
+                          ),
+                          labelStyle: TextStyle(
+                            color: category == activeCategory
+                                ? Colors.white
+                                : AppColors.inkSoft,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                '${selected.brand} ${selected.model} ${selected.variant}',
-                style: const TextStyle(
-                  color: AppColors.ink,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        ...selected.categories.map(
-          (category) => Card(
-            color: AppColors.surface,
-            margin: const EdgeInsets.only(bottom: 8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-              side: const BorderSide(color: AppColors.line),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: ExpansionTile(
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          sliver: SliverToBoxAdapter(
+            child: Container(
               key: PageStorageKey(
-                '${selected.brand}-${selected.model}-${selected.variant}-${category.name}',
+                '${selected.brand}-${selected.model}-${selected.variant}-'
+                '${activeCategory.name}',
               ),
-              initiallyExpanded: category.name == widget.initialCategory,
-              title: Text(
-                category.name,
-                style: const TextStyle(
-                  color: AppColors.ink,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: AppColors.line),
               ),
-              children: category.parts
-                  .map(
-                    (part) => _VehiclePartTile(
+              child: Column(
+                children: [
+                  for (final part in activeCategory.parts)
+                    _VehiclePartTile(
                       brand: selected.brand,
                       model: selected.model,
                       variant: selected.variant,
-                      category: category.name,
+                      category: activeCategory.name,
                       part: part,
                       shopStore: _shopStore,
                       onOwnerSignIn: widget.onOwnerSignIn,
                     ),
-                  )
-                  .toList(growable: false),
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 5),
-        const Text(
-          'This list follows the supplied spreadsheet. Model year and OEM part numbers were not provided.',
-          style: TextStyle(color: AppColors.muted, fontSize: 11, height: 1.45),
         ),
       ],
     );
   }
+}
+
+/// Fixed-height header that stays pinned at the top of a scroll view.
+class _PinnedBar extends SliverPersistentHeaderDelegate {
+  const _PinnedBar({required this.height, required this.child});
+
+  final double height;
+  final Widget child;
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => SizedBox.expand(child: child);
+
+  @override
+  bool shouldRebuild(_PinnedBar oldDelegate) => true;
 }
 
 class _VehiclePartTile extends StatelessWidget {

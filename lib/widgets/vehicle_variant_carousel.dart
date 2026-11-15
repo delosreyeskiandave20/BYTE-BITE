@@ -58,141 +58,255 @@ class _VehicleVariantCarouselState extends State<VehicleVariantCarousel> {
     });
   }
 
+  void _selectVariant(String variant) {
+    final vehicle = _currentVehicle;
+    setState(() {
+      _currentIndex = _vehicles.indexWhere(
+        (other) =>
+            other.brand == vehicle.brand &&
+            other.model == vehicle.model &&
+            other.variant == variant,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final vehicle = _currentVehicle;
     final brandVehicles = _brandVehicles;
+    final position = brandVehicles.indexOf(vehicle) + 1;
     final imageAsset = vehicleVariantImageAsset(
       vehicle.brand,
       vehicle.model,
       vehicle.variant,
     );
+    final zoom = imageAsset == null
+        ? null
+        : () => _showZoomedImage(context, imageAsset);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.end,
+        const _SectionLabel('Choose a brand'),
+        const SizedBox(height: AppSpacing.sm),
+        // Wraps instead of scrolling so every brand stays visible.
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
           children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Browse motorcycle variants',
-                    style: TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 22,
-                      height: 1.15,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ],
+            for (final brand in vehicleCatalog.keys)
+              _BrandChip(
+                brand: brand,
+                selected: brand == _selectedBrand,
+                onSelected: () => _selectBrand(brand),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '${brandVehicles.indexOf(vehicle) + 1} / ${brandVehicles.length}',
-              style: const TextStyle(
-                color: AppColors.muted,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
           ],
         ),
-        const SizedBox(height: 16),
-        const Text(
-          'CHOOSE A BRAND',
-          style: TextStyle(
-            color: AppColors.muted,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1,
-          ),
-        ),
-        const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: vehicleCatalog.keys.map((brand) {
-              final selected = brand == _selectedBrand;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  key: ValueKey('gallery-brand-$brand'),
-                  label: Text(brand),
-                  selected: selected,
-                  onSelected: (_) => _selectBrand(brand),
-                  showCheckmark: false,
-                  selectedColor: AppColors.primarySoft,
-                  backgroundColor: Colors.white,
-                  side: BorderSide(
-                    color: selected ? AppColors.primary : AppColors.line,
-                    width: selected ? 1.5 : 1,
-                  ),
-                  labelStyle: TextStyle(
-                    color: selected ? AppColors.primary : AppColors.muted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Column(
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: _MotorcycleImage(
-                key: ValueKey(
-                  '${vehicle.brand}-${vehicle.model}-${vehicle.variant}',
-                ),
-                vehicle: vehicle,
+        const SizedBox(height: AppSpacing.lg),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.line),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F22201E),
+                blurRadius: 18,
+                offset: Offset(0, 6),
               ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.md,
             ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _CarouselArrow(
-                  tooltip: 'Previous motorcycle variant',
-                  icon: Icons.chevron_left,
-                  onPressed: _showPrevious,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            vehicle.brand.toUpperCase(),
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: AppType.micro,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            vehicle.model,
+                            style: const TextStyle(
+                              color: AppColors.ink,
+                              fontSize: AppType.screen,
+                              height: 1.1,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            vehicle.variant,
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: AppType.body,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.paper,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$position / ${brandVehicles.length}',
+                        style: const TextStyle(
+                          color: AppColors.inkSoft,
+                          fontSize: AppType.micro,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  tooltip: imageAsset == null
-                      ? 'No vehicle image available'
-                      : 'Zoom motorcycle image',
-                  onPressed: imageAsset == null
-                      ? null
-                      : () => _showZoomedImage(context, imageAsset),
-                  icon: const Icon(Icons.zoom_in),
-                  color: AppColors.primary,
-                  style: IconButton.styleFrom(
-                    backgroundColor: AppColors.paper,
-                    minimumSize: const Size(44, 44),
-                    maximumSize: const Size(44, 44),
-                    padding: EdgeInsets.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  height: 230,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: GestureDetector(
+                          onTap: zoom,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            child: _MotorcycleImage(
+                              key: ValueKey(
+                                '${vehicle.brand}-${vehicle.model}-'
+                                '${vehicle.variant}',
+                              ),
+                              vehicle: vehicle,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _CarouselArrow(
+                          tooltip: 'Previous motorcycle variant',
+                          icon: Icons.chevron_left,
+                          onPressed: _showPrevious,
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _CarouselArrow(
+                          tooltip: 'Next motorcycle variant',
+                          icon: Icons.chevron_right,
+                          onPressed: _showNext,
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: _CarouselArrow(
+                          tooltip: imageAsset == null
+                              ? 'No vehicle image available'
+                              : 'Zoom motorcycle image',
+                          icon: Icons.zoom_out_map,
+                          onPressed: zoom,
+                          small: true,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                _CarouselArrow(
-                  tooltip: 'Next motorcycle variant',
-                  icon: Icons.chevron_right,
-                  onPressed: _showNext,
+                const SizedBox(height: AppSpacing.md),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: position / brandVehicles.length,
+                    minHeight: 4,
+                    color: AppColors.primary,
+                    backgroundColor: AppColors.paper,
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 12),
-        _MotorcycleDetails(vehicle: vehicle),
+        const SizedBox(height: AppSpacing.md),
+        _MotorcycleDetails(vehicle: vehicle, onSelectVariant: _selectVariant),
       ],
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        color: AppColors.muted,
+        fontSize: AppType.micro,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 1,
+      ),
+    );
+  }
+}
+
+class _BrandChip extends StatelessWidget {
+  const _BrandChip({
+    required this.brand,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String brand;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      key: ValueKey('gallery-brand-$brand'),
+      label: Text(brand),
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      showCheckmark: false,
+      selectedColor: AppColors.primary,
+      backgroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+      visualDensity: VisualDensity.compact,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      side: BorderSide(color: selected ? AppColors.primary : AppColors.line),
+      labelStyle: TextStyle(
+        color: selected ? Colors.white : AppColors.inkSoft,
+        fontSize: AppType.caption,
+        fontWeight: FontWeight.w800,
+      ),
     );
   }
 }
@@ -222,31 +336,17 @@ class _MotorcycleImage extends StatelessWidget {
       vehicle.variant,
     );
 
-    return SizedBox(
-      width: double.infinity,
-      height: 260,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ColoredBox(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: imageAsset == null
-                    ? const _VehiclePlaceholder()
-                    : Image.asset(
-                        imageAsset,
-                        cacheWidth: 800,
-                        fit: BoxFit.contain,
-                        alignment: Alignment.center,
-                      ),
-              ),
+    // Side padding keeps the bike clear of the overlaid arrow buttons.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
+      child: imageAsset == null
+          ? const _VehiclePlaceholder()
+          : Image.asset(
+              imageAsset,
+              cacheWidth: 800,
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
             ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -284,35 +384,39 @@ class _VehiclePlaceholder extends StatelessWidget {
   }
 }
 
+/// Round button floating over the motorcycle photo.
 class _CarouselArrow extends StatelessWidget {
   const _CarouselArrow({
     required this.tooltip,
     required this.icon,
     required this.onPressed,
+    this.small = false,
   });
 
   final String tooltip;
   final IconData icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool small;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.zero,
-      child: Material(
-        color: AppColors.paper,
-        shape: const CircleBorder(),
-        child: IconButton(
-          tooltip: tooltip,
-          onPressed: onPressed,
-          icon: Icon(icon),
-          color: AppColors.primary,
-          style: IconButton.styleFrom(
-            minimumSize: const Size(44, 44),
-            maximumSize: const Size(44, 44),
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
+    final size = small ? 36.0 : 44.0;
+    return Material(
+      color: Colors.white,
+      shape: const CircleBorder(side: BorderSide(color: AppColors.line)),
+      elevation: 2,
+      shadowColor: const Color(0x3322201E),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        icon: Icon(icon, size: small ? 18 : 24),
+        color: AppColors.ink,
+        disabledColor: AppColors.faint,
+        style: IconButton.styleFrom(
+          minimumSize: Size(size, size),
+          maximumSize: Size(size, size),
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
       ),
     );
@@ -362,9 +466,13 @@ void _showZoomedImage(BuildContext context, String imageAsset) {
 }
 
 class _MotorcycleDetails extends StatelessWidget {
-  const _MotorcycleDetails({required this.vehicle});
+  const _MotorcycleDetails({
+    required this.vehicle,
+    required this.onSelectVariant,
+  });
 
   final _VehicleVariant vehicle;
+  final ValueChanged<String> onSelectVariant;
 
   Future<void> _openGoogleSearch(BuildContext context) async {
     final uri = motorcycleGoogleSearchUri(
@@ -386,117 +494,89 @@ class _MotorcycleDetails extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: const Color(0xFFE9E5DD)),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'MOTORCYCLE DETAILS',
-            style: TextStyle(
-              color: AppColors.primary,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
-            ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Available variants',
+                  style: TextStyle(
+                    color: AppColors.ink,
+                    fontSize: AppType.cardTitle,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                variants.length == 1
+                    ? '1 variant'
+                    : '${variants.length} variants',
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: AppType.caption,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          _DetailRow(label: 'Brand', value: vehicle.brand),
-          _DetailRow(label: 'Model', value: vehicle.model),
-          _DetailRow(label: 'Current variant', value: vehicle.variant),
-          const SizedBox(height: 9),
-          const Text(
-            'Available variants',
-            style: TextStyle(
-              color: AppColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 7),
+          const SizedBox(height: AppSpacing.md),
           Wrap(
-            spacing: 6,
-            runSpacing: 6,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
               for (final variant in variants)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 5,
+                ChoiceChip(
+                  key: ValueKey('gallery-variant-$variant'),
+                  label: Text(variant),
+                  selected: variant == vehicle.variant,
+                  onSelected: (_) => onSelectVariant(variant),
+                  showCheckmark: false,
+                  selectedColor: AppColors.primarySoft,
+                  backgroundColor: AppColors.paper,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
-                  decoration: BoxDecoration(
+                  side: BorderSide(
                     color: variant == vehicle.variant
-                        ? AppColors.primarySoft
-                        : AppColors.paper,
-                    borderRadius: BorderRadius.circular(12),
+                        ? AppColors.primaryBorder
+                        : Colors.transparent,
                   ),
-                  child: Text(
-                    variant,
-                    style: TextStyle(
-                      color: variant == vehicle.variant
-                          ? AppColors.primary
-                          : const Color(0xFF4F4A44),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  labelStyle: TextStyle(
+                    color: variant == vehicle.variant
+                        ? AppColors.primary
+                        : AppColors.inkSoft,
+                    fontSize: AppType.caption,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.lg),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
+            child: FilledButton.icon(
               onPressed: () => _openGoogleSearch(context),
-              icon: const Icon(Icons.open_in_new, size: 16),
+              icon: const Icon(Icons.play_circle_outline, size: 18),
               label: const Text('Find videos & details on Google'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                minimumSize: const Size.fromHeight(46),
-                side: const BorderSide(color: AppColors.primaryBorder),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(48),
+                textStyle: const TextStyle(
+                  fontSize: AppType.body,
+                  fontWeight: FontWeight.w800,
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 105,
-            child: Text(
-              label,
-              style: const TextStyle(color: AppColors.muted, fontSize: 11),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
               ),
             ),
           ),

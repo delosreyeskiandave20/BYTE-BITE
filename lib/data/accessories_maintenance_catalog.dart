@@ -511,9 +511,6 @@ final accessoryChoiceCount = accessoryGroups.fold<int>(
 const accessoryChoiceDetailsByGroup =
     <String, Map<String, CatalogChoiceDetails>>{};
 
-const accessoryNotice =
-    'Choices are accessory examples. Verify product dimensions, safety certifications, and seller details before purchase.';
-
 const maintenanceGroups = [
   CatalogGroup(
     title: 'Engine Oil',
@@ -973,6 +970,3 @@ const maintenanceRecordFields = [
   'Next service due date or odometer reading',
   'Notes, receipts, and inspection results',
 ];
-
-const maintenanceNotice =
-    'Choices are maintenance-supply examples. Check the owner’s manual and supplier specifications before purchase.';

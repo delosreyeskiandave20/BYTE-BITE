@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_1/data/accessories_maintenance_catalog.dart';
 import 'package:flutter_application_1/data/design_catalog.dart';
 import 'package:flutter_application_1/data/catalog_images.dart';
+import 'package:flutter_application_1/data/motorcycle_specs.dart';
+import 'package:flutter_application_1/data/online_stores.dart';
 import 'package:flutter_application_1/data/parts_catalog.dart';
 import 'package:flutter_application_1/data/temporary_shop_store.dart';
 import 'package:flutter_application_1/data/vehicle_images.dart';
@@ -16,8 +18,11 @@ import 'package:flutter_application_1/data/vehicle_parts_catalog.dart';
 import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/screens/auth_page.dart';
 import 'package:flutter_application_1/screens/camera_capture_page.dart';
+import 'package:flutter_application_1/screens/catalog_page.dart';
 import 'package:flutter_application_1/screens/identify_page.dart';
 import 'package:flutter_application_1/screens/motorcycle_parts_catalog_page.dart';
+import 'package:flutter_application_1/screens/motorcycle_specs_page.dart';
+import 'package:flutter_application_1/screens/online_store_page.dart';
 import 'package:flutter_application_1/screens/parts_catalog_page.dart';
 import 'package:flutter_application_1/screens/shop_page.dart';
 import 'package:flutter_application_1/screens/shop_owner_dashboard_page.dart';
@@ -156,27 +161,20 @@ void main() {
     );
   });
 
-  test('vehicle catalog contains the supplied 50 model records', () {
+  test('vehicle catalog contains the 45 model records', () {
     final modelCount = vehicleCatalog.values.fold<int>(
       0,
       (count, models) => count + models.length,
     );
 
-    expect(modelCount, 50);
-    expect(vehicleCatalog.keys, [
-      'Honda',
-      'Yamaha',
-      'Suzuki',
-      'Kawasaki',
-      'RUSI',
-      'MotorStar',
-    ]);
+    expect(modelCount, 45);
+    expect(vehicleCatalog.keys, ['Honda', 'Yamaha', 'Suzuki', 'Kawasaki']);
     expect(
       vehicleCatalog.values
           .expand((models) => models.values)
           .expand((variants) => variants)
           .length,
-      74,
+      69,
     );
   });
 
@@ -193,7 +191,7 @@ void main() {
       actual[vehicle.brand] = (actual[vehicle.brand] ?? 0) + 1;
     }
 
-    expect(catalog, hasLength(74));
+    expect(catalog, hasLength(69));
     expect(actual, expected);
   });
 
@@ -220,8 +218,8 @@ void main() {
         }
       }
 
-      expect(variantCount, 74);
-      expect(vehicleVariantImageAssets, hasLength(74));
+      expect(variantCount, 69);
+      expect(vehicleVariantImageAssets, hasLength(69));
     },
   );
 
@@ -230,10 +228,10 @@ void main() {
     () async {
       final catalog = await loadVehiclePartsCatalog();
 
-      expect(catalog, hasLength(74));
+      expect(catalog, hasLength(69));
       expect(
         catalog.fold<int>(0, (total, vehicle) => total + vehicle.partCount),
-        3700,
+        3450,
       );
       final beat = catalog.firstWhere(
         (vehicle) =>
@@ -475,7 +473,8 @@ void main() {
       quantity: 0,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Unavailable'), findsNWidgets(2));
+    expect(find.text('Unavailable'), findsWidgets);
+    expect(find.text('3 in stock'), findsNothing);
     expect(find.text('0 in stock'), findsNothing);
   });
 
@@ -676,9 +675,8 @@ void main() {
     );
     expect(find.text('Barako II'), findsOneWidget);
 
-    // Kawasaki, RUSI and MotorStar follow, then the carousel wraps to Honda.
-    final remainingVariantCount = ['Kawasaki', 'RUSI', 'MotorStar']
-        .expand((brand) => vehicleCatalog[brand]!.values)
+    // Kawasaki comes last, then the carousel wraps to Honda.
+    final remainingVariantCount = vehicleCatalog['Kawasaki']!.values
         .expand((variants) => variants)
         .length;
     await advanceVariants(remainingVariantCount);
@@ -696,12 +694,15 @@ void main() {
     expect(
       tester
           .widget<ChoiceChip>(
-            find.byKey(const ValueKey('gallery-brand-MotorStar')),
+            find.byKey(const ValueKey('gallery-brand-Kawasaki')),
           )
           .selected,
       isTrue,
     );
-    expect(find.text('Xplorer 250R'), findsOneWidget);
+    expect(find.text('Versys 650'), findsOneWidget);
+    for (final removed in ['RUSI', 'MotorStar']) {
+      expect(find.byKey(ValueKey('gallery-brand-$removed')), findsNothing);
+    }
   });
 
   test('design photos are found by item file name', () async {
@@ -948,6 +949,156 @@ void main() {
     expect(find.text('8 in stock'), findsOneWidget);
   });
 
+  testWidgets('shop tab lists online stores and filters them by search', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: OnlineStoresSection(searchQuery: ''),
+          ),
+        ),
+      ),
+    );
+    for (final store in onlineStores) {
+      expect(find.text(store.name), findsOneWidget);
+    }
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: OnlineStoresSection(searchQuery: 'nmax brake pad'),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Sh0pNStyle'), findsOneWidget);
+    expect(find.text('Bike World 2020'), findsNothing);
+
+    await tester.tap(find.text('Sh0pNStyle'));
+    await tester.pumpAndSettle();
+    expect(find.text('NMAX brake pad front and rear V1 V2 V3'), findsOneWidget);
+    expect(find.text('Buy'), findsWidgets);
+  });
+
+  test('online store item links open that store\'s own search', () {
+    final store = onlineStores.first;
+    final uri = store.itemUri(store.items.first);
+    expect(uri.host, 'www.lazada.com.ph');
+    expect(uri.path, '/${store.slug}/');
+    expect(uri.queryParameters['q'], store.items.first.name);
+  });
+
+  test('every spec motorcycle and listed value has a bundled photo', () async {
+    expect(motorcycleSpecs, hasLength(24));
+    for (final bike in motorcycleSpecs) {
+      await rootBundle.load(bike.imageAsset);
+      for (final item in SpecItem.values) {
+        final value = bike.valueOf(item);
+        if (value == null) continue;
+        await rootBundle.load(specImageAsset(item, value));
+      }
+    }
+  });
+
+  testWidgets('specs page shows the chosen item for the chosen motorcycle', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: MotorcycleSpecsPage()));
+    await tester.pumpAndSettle();
+
+    // First motorcycle and Front tire are selected by default.
+    expect(find.text('80/90-14'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('spec-item-Spark plug')));
+    await tester.pumpAndSettle();
+    expect(find.text('NGK CPR7EA-9'), findsOneWidget);
+
+    final nmax = find.byKey(const ValueKey('spec-bike-Yamaha NMAX 155'));
+    await tester.scrollUntilVisible(
+      nmax,
+      200,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('spec-bike-row')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(nmax);
+    await tester.pumpAndSettle();
+    expect(find.text('NGK CPR8EA-9'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('spec-item-Engine oil')));
+    await tester.pumpAndSettle();
+    expect(find.text('Capacity: 1.0 L'), findsOneWidget);
+
+    // A value missing from the table says so instead of showing a photo.
+    final beat = find.byKey(const ValueKey('spec-bike-Honda BeAT'));
+    await tester.scrollUntilVisible(
+      beat,
+      -200,
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('spec-bike-row')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(beat);
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Not listed for this motorcycle'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('maintenance groups sit in a sideways row above the choices', (
+    WidgetTester tester,
+  ) async {
+    final store = TemporaryShopStore();
+    addTearDown(store.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CatalogPage(type: 'maintenance', shopStore: store),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final first = find.byKey(const ValueKey('catalog-group-Engine Oil'));
+    final second = find.byKey(
+      const ValueKey('catalog-group-Oil Filter or Oil Strainer'),
+    );
+    expect(tester.getTopLeft(first).dy, tester.getTopLeft(second).dy);
+    // The first group's choices show without any tap.
+    expect(find.text('Mineral oil'), findsOneWidget);
+
+    await tester.tap(second);
+    await tester.pumpAndSettle();
+    expect(find.text('Spin-on filter'), findsOneWidget);
+    expect(find.text('Mineral oil'), findsNothing);
+  });
+
+  test('demo shop products show bundled photos', () async {
+    final store = TemporaryShopStore();
+    addTearDown(store.dispose);
+    final demo = store.shops.singleWhere(
+      (shop) => shop.name == 'MotoScan Demo Parts',
+    );
+
+    expect(demo.products, hasLength(3));
+    for (final product in demo.products) {
+      expect(product.hasImage, isTrue, reason: product.name);
+      expect(product.imageProvider, isA<AssetImage>());
+      await rootBundle.load(product.imageAsset);
+    }
+
+    // A photo link set by the owner replaces the bundled photo.
+    final linked = demo.products.first.copyWith(
+      imageUrl: 'https://example.com/holder.jpg',
+    );
+    expect(linked.imageProvider, isA<NetworkImage>());
+    expect(linked.imageAsset, demo.products.first.imageAsset);
+  });
+
   testWidgets('motorcycle parts catalog selects and lists vehicle parts', (
     WidgetTester tester,
   ) async {
@@ -1014,7 +1165,7 @@ void main() {
       ),
       findsNWidgets(2),
     );
-    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(find.text('Engine oil'), findsOneWidget);
     expect(find.text('CVT drive belt'), findsOneWidget);
@@ -1058,6 +1209,23 @@ void main() {
       ),
       const Size(92, 92),
     );
+
+    // Categories are side-by-side tabs; only the chosen one's parts show.
+    expect(find.text('12-V battery'), findsNothing);
+    final electricalTab = find.byKey(
+      const ValueKey('part-category-Electrical'),
+    );
+    expect(
+      tester.getTopLeft(electricalTab).dy,
+      tester.getTopLeft(find.byKey(const ValueKey('part-category-Engine'))).dy,
+    );
+    await tester.tap(electricalTab);
+    await tester.pumpAndSettle();
+    expect(find.text('12-V battery'), findsOneWidget);
+    expect(find.text('Engine oil'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('part-category-Engine')));
+    await tester.pumpAndSettle();
+
     final shopButton = find.byKey(const ValueKey('go-to-shop-Engine oil'));
     await tester.ensureVisible(shopButton);
     await tester.pumpAndSettle();
@@ -1377,7 +1545,7 @@ void main() {
     await tester.tap(find.text('Accessories').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('32 accessory groups · 296 choices'), findsOneWidget);
+    expect(find.text('32 accessory groups · 296 choices'), findsNothing);
     await tester.tap(find.text('Helmet'));
     await tester.pumpAndSettle();
     expect(find.text('Full-face helmet'), findsOneWidget);
@@ -1415,7 +1583,7 @@ void main() {
     await tester.tap(find.text('Maintenance').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('20 maintenance items · 209 choices'), findsOneWidget);
+    expect(find.text('20 maintenance items · 209 choices'), findsNothing);
     await tester.scrollUntilVisible(
       find.text('Engine Oil'),
       180,

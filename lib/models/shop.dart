@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/painting.dart';
 
 /// Category assigned to a product created without one.
 const defaultShopProductCategory = 'Parts';
@@ -12,6 +13,7 @@ class ShopProduct {
     required this.price,
     required this.quantity,
     this.imageUrl = '',
+    this.imageAsset = '',
   });
 
   final String id;
@@ -24,9 +26,19 @@ class ShopProduct {
   /// Optional product photo. Only http(s) URLs are rendered.
   final String imageUrl;
 
+  /// Bundled photo, used by the built-in demo shop. Shown only when
+  /// [imageUrl] is empty, so a photo link an owner sets always wins.
+  final String imageAsset;
+
   bool get isAvailable => quantity > 0;
 
-  bool get hasImage => imageUrl.trim().isNotEmpty;
+  bool get hasImage =>
+      imageUrl.trim().isNotEmpty || imageAsset.trim().isNotEmpty;
+
+  /// The photo to draw when [hasImage] is true.
+  ImageProvider get imageProvider => imageUrl.trim().isNotEmpty
+      ? NetworkImage(imageUrl)
+      : AssetImage(imageAsset);
 
   ShopProduct copyWith({
     String? name,
@@ -44,6 +56,7 @@ class ShopProduct {
       price: price ?? this.price,
       quantity: quantity ?? this.quantity,
       imageUrl: imageUrl ?? this.imageUrl,
+      imageAsset: imageAsset,
     );
   }
 
@@ -56,6 +69,7 @@ class ShopProduct {
       'price': price,
       'quantity': quantity,
       'imageUrl': imageUrl,
+      if (imageAsset.isNotEmpty) 'imageAsset': imageAsset,
     };
   }
 
@@ -68,6 +82,7 @@ class ShopProduct {
       price: (map['price'] as num?)?.toDouble() ?? 0,
       quantity: (map['quantity'] as num?)?.toInt() ?? 0,
       imageUrl: map['imageUrl'] as String? ?? '',
+      imageAsset: map['imageAsset'] as String? ?? '',
     );
   }
 }

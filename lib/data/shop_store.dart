@@ -722,6 +722,8 @@ class ShopStore extends ChangeNotifier {
                 'Handlebar-mounted phone holder with an adjustable clamp.',
             price: 450,
             quantity: 8,
+            imageAsset:
+                'assets/accessories/phone_holder-handlebar_phone_holder.jpg',
           ),
           ShopProduct(
             id: 'demo-tire',
@@ -730,6 +732,7 @@ class ShopStore extends ChangeNotifier {
             description: 'Everyday road tire. Confirm the size is compatible with your motorcycle.',
             price: 1850,
             quantity: 4,
+            imageAsset: 'assets/maintenance/tires-tubeless_tire.jpg',
           ),
           ShopProduct(
             id: 'demo-engine-oil',
@@ -738,6 +741,7 @@ class ShopStore extends ChangeNotifier {
             description: 'Sample listing. Check your motorcycle manual for the correct oil specification.',
             price: 320,
             quantity: 0,
+            imageAsset: 'assets/maintenance/engine_oil-10w_40.jpg',
           ),
         ],
       ),

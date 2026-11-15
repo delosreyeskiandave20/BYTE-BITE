@@ -56,15 +56,6 @@ const Map<String, Map<String, List<String>>> vehicleCatalog = {
     'Z650': ['Standard'],
     'Versys 650': ['Standard', 'LT'],
   },
-  'RUSI': {
-    'Surf': ['Standard'],
-    'Royal 125': ['Standard'],
-    'RFI 175': ['Standard'],
-    'Gamma SS 200': ['Standard'],
-  },
-  'MotorStar': {
-    'Xplorer 250R': ['Standard'],
-  },
 };
 
 const categoryNames = {

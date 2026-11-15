@@ -44,15 +44,15 @@ class _CatalogPageState extends State<CatalogPage> {
   List<CatalogGroup> get _groups =>
       _isMaintenance ? maintenanceGroups : accessoryGroups;
 
+  /// The group whose choices are shown; the first one until another is picked.
+  CatalogGroup get _selectedGroup => _groups.firstWhere(
+    (group) => group.title == _expandedGroup,
+    orElse: () => _groups.first,
+  );
+
   @override
   Widget build(BuildContext context) {
     final title = _isMaintenance ? 'Maintenance' : 'Accessories';
-    final count = _isMaintenance
-        ? maintenanceChoiceCount
-        : accessoryChoiceCount;
-    final description = _isMaintenance
-        ? 'Browse maintenance supplies and their available choices.'
-        : 'Browse accessory groups and their available choices.';
 
     return Scaffold(
       backgroundColor: AppColors.paper,
@@ -64,89 +64,76 @@ class _CatalogPageState extends State<CatalogPage> {
         ),
         title: Text(title),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      // The group row stays put; only the choices below it scroll, so another
+      // group is always one tap away.
+      body: Column(
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 31,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: const TextStyle(
-              color: AppColors.muted,
-              fontSize: 13,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 15),
           Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.primarySoft,
-              borderRadius: BorderRadius.circular(13),
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 12, 0, 12),
+            decoration: const BoxDecoration(
+              color: AppColors.paper,
+              border: Border(bottom: BorderSide(color: AppColors.line)),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  _isMaintenance ? Icons.build : Icons.extension,
-                  size: 19,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _isMaintenance
-                        ? '$maintenanceItemCount maintenance items · $count choices'
-                        : '$accessoryItemCount accessory groups · $count choices',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
+            child: SingleChildScrollView(
+              key: const ValueKey('catalog-group-row'),
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              child: Row(
+                children: [
+                  for (final group in _groups)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        key: ValueKey('catalog-group-${group.title}'),
+                        label: Text(group.title),
+                        selected: group == _selectedGroup,
+                        onSelected: (_) =>
+                            setState(() => _expandedGroup = group.title),
+                        showCheckmark: false,
+                        selectedColor: AppColors.primary,
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        side: BorderSide(
+                          color: group == _selectedGroup
+                              ? AppColors.primary
+                              : AppColors.line,
+                        ),
+                        labelStyle: TextStyle(
+                          color: group == _selectedGroup
+                              ? Colors.white
+                              : AppColors.inkSoft,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
-                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              key: const ValueKey('catalog-choice-list'),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              children: [
+                _CatalogGroupCard(
+                  key: ValueKey('catalog-group-card-${_selectedGroup.title}'),
+                  group: _selectedGroup,
+                  index: _groups.indexOf(_selectedGroup),
+                  expanded: true,
+                  showHeader: false,
+                  isMaintenance: _isMaintenance,
+                  photos: _photos,
+                  shopStore: _shopStore,
+                  onOwnerSignIn: widget.onOwnerSignIn,
+                  onToggle: () {},
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 22),
-          Text(
-            _isMaintenance
-                ? 'Maintenance supplies and choices'
-                : 'Browse all groups',
-            style: TextStyle(
-              color: AppColors.ink,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 11),
-          ..._groups.asMap().entries.map((entry) {
-            final index = entry.key;
-            final group = entry.value;
-            final expanded = _expandedGroup == group.title;
-            return _CatalogGroupCard(
-              group: group,
-              index: index,
-              expanded: expanded,
-              isMaintenance: _isMaintenance,
-              photos: _photos,
-              shopStore: _shopStore,
-              onOwnerSignIn: widget.onOwnerSignIn,
-              onToggle: () => setState(() {
-                _expandedGroup = expanded ? null : group.title;
-              }),
-            );
-          }),
-          if (!_isMaintenance) ...[
-            const SizedBox(height: 14),
-            const _CatalogNotice(text: accessoryNotice),
-          ],
         ],
       ),
     );
@@ -155,6 +142,8 @@ class _CatalogPageState extends State<CatalogPage> {
 
 class _CatalogGroupCard extends StatelessWidget {
   const _CatalogGroupCard({
+    super.key,
+    this.showHeader = true,
     required this.group,
     required this.index,
     required this.expanded,
@@ -168,6 +157,9 @@ class _CatalogGroupCard extends StatelessWidget {
   final CatalogGroup group;
   final int index;
   final bool expanded;
+
+  /// False when a chip row above already names the group.
+  final bool showHeader;
   final bool isMaintenance;
 
   /// Bundled photos keyed by [maintenanceImageSlug] or [accessoryImageSlug].
@@ -248,72 +240,73 @@ class _CatalogGroupCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: expanded ? AppColors.primary : AppColors.line,
-          width: expanded ? 1.4 : 1,
+          color: expanded && showHeader ? AppColors.primary : AppColors.line,
+          width: expanded && showHeader ? 1.4 : 1,
         ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          InkWell(
-            onTap: onToggle,
-            child: Padding(
-              padding: const EdgeInsets.all(11),
-              child: Row(
-                children: [
-                  Container(
-                    width: 37,
-                    height: 37,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${index + 1}'.padLeft(2, '0'),
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
+          if (showHeader)
+            InkWell(
+              onTap: onToggle,
+              child: Padding(
+                padding: const EdgeInsets.all(11),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 37,
+                      height: 37,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${index + 1}'.padLeft(2, '0'),
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          group.title,
-                          style: const TextStyle(
-                            color: AppColors.ink,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            group.title,
+                            style: const TextStyle(
+                              color: AppColors.ink,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${(group.itemChoices[group.title] ?? group.items).length} choices',
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 11,
+                          const SizedBox(height: 3),
+                          Text(
+                            '${(group.itemChoices[group.title] ?? group.items).length} choices',
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 11,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  AnimatedRotation(
-                    turns: expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 220),
-                    child: const Icon(
-                      Icons.expand_more,
-                      color: AppColors.primary,
+                    AnimatedRotation(
+                      turns: expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      child: const Icon(
+                        Icons.expand_more,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           AnimatedSize(
             duration: const Duration(milliseconds: 240),
             curve: Curves.easeInOut,
@@ -322,9 +315,11 @@ class _CatalogGroupCard extends StatelessWidget {
                 ? Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColors.paper,
-                      border: Border(top: BorderSide(color: AppColors.line)),
+                      border: showHeader
+                          ? const Border(top: BorderSide(color: AppColors.line))
+                          : null,
                     ),
                     child: group.itemChoices.containsKey(group.title)
                         ? _MaintenanceChoiceList(
@@ -636,40 +631,6 @@ class _MaintenanceChoiceImage extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(fallbackIcon, size: 28, color: AppColors.primary),
-    );
-  }
-}
-
-class _CatalogNotice extends StatelessWidget {
-  const _CatalogNotice({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.warningSoft,
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.info_outline, size: 18, color: Color(0xFFA46A1F)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: AppColors.warning,
-                fontSize: 11,
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -226,32 +226,6 @@ class _SearchPageState extends State<SearchPage> {
                   }).toList(),
                 ),
               ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.noticeSoft,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline, color: AppColors.notice, size: 18),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Parts library entries are sample data. Shop listings '
-                        'come from local sellers — confirm details before buying.',
-                        style: TextStyle(
-                          color: AppColors.notice,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          height: 1.45,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               if (hasQuery && _shopStore.isLoading) ...[
                 const SizedBox(height: 12),
                 const LinearProgressIndicator(
@@ -594,11 +568,10 @@ class _ShopProductThumb extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: Image.network(
-        product.imageUrl,
+      child: Image(
+        image: ResizeImage(product.imageProvider, width: 104),
         width: 52,
         height: 52,
-        cacheWidth: 104,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => fallback,
       ),
