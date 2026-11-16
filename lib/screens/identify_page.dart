@@ -262,7 +262,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
           key: ValueKey('identify-ai-not-part'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.help_outline, color: AppColors.primary),
+            Icon(Icons.error_outline, color: AppColors.primary),
             SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -491,13 +491,10 @@ class _IdentifyPageState extends State<IdentifyPage> {
                           ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    hasPhoto
-                        ? 'Photo ready to review'
-                        : 'Start with a clear photo',
+                if (!hasPhoto) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Start with a clear photo',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.ink,
@@ -505,22 +502,18 @@ class _IdentifyPageState extends State<IdentifyPage> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  hasPhoto
-                      ? (_identifier == null
-                            ? 'Your photo stays on this device. AI part recognition still needs a service connection.'
-                            : 'Your photo is sent to Google Gemini to identify the part. AI answers can be wrong, so check before buying.')
-                      : 'Place the part on a plain surface. Avoid glare and keep its full shape in frame.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.muted,
-                    fontSize: 12,
-                    height: 1.5,
+                  const SizedBox(height: 7),
+                  const Text(
+                    'Place the part on a plain surface. Avoid glare and keep its full shape in frame.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 18),
+                ],
+                SizedBox(height: hasPhoto ? 8 : 18),
                 if (isCompact) ...[
                   takePhotoButton(),
                   const SizedBox(height: 8),

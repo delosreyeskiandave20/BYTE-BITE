@@ -1809,7 +1809,7 @@ void main() {
       find.byKey(const ValueKey('identify-photo-preview')),
       findsOneWidget,
     );
-    expect(find.text('Photo ready to review'), findsOneWidget);
+    expect(find.text('Photo ready to review'), findsNothing);
     expect(
       find.text(
         'Photo preview ready. AI part recognition is not connected yet.',

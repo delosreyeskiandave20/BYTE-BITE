@@ -133,6 +133,22 @@ class GeminiPartIdentifier {
       );
     } on FirebaseAIException catch (error) {
       debugPrint('Gemini request failed: $error');
+      final details = error.toString();
+      if (kDebugMode &&
+          (details.contains('SERVICE_DISABLED') ||
+              details.contains('has not been used'))) {
+        throw const PartIdentificationException(
+          'Firebase AI Logic is not enabled for this Firebase project. '
+          'Open Firebase console > AI Logic > Get started, choose the '
+          'Gemini Developer API, then try again.',
+        );
+      }
+      if (kDebugMode && details.contains('not found')) {
+        throw PartIdentificationException(
+          'Gemini model "$_geminiModel" was not found. Run with '
+          '--dart-define=GEMINI_MODEL=<a valid model name>.',
+        );
+      }
       throw const PartIdentificationException(
         'The AI service is unavailable right now. Please try again.',
       );

@@ -73,7 +73,7 @@ void main() {
       find.byKey(const ValueKey('identify-photo-preview')),
       findsOneWidget,
     );
-    expect(find.text('Photo ready to review'), findsOneWidget);
+    expect(find.text('Photo ready to review'), findsNothing);
 
     final searchButton = find.byKey(const ValueKey('identify-search-parts'));
     await tester.ensureVisible(searchButton);
