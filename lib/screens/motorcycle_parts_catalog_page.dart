@@ -210,9 +210,7 @@ class _MotorcyclePartsCatalogPageState
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
                           key: ValueKey('part-category-${category.name}'),
-                          label: Text(
-                            category.name,
-                          ),
+                          label: Text(category.name),
                           selected: category == activeCategory,
                           onSelected: (_) =>
                               setState(() => _selectedCategory = category.name),

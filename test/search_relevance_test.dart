@@ -22,6 +22,9 @@ void main() {
 
   test('plural queries match singular names', () {
     final tokens = relevanceQueryTokens('Brake pads');
-    expect(searchRelevance(tokens, name: 'Ceramic brake pad'), greaterThan(999));
+    expect(
+      searchRelevance(tokens, name: 'Ceramic brake pad'),
+      greaterThan(999),
+    );
   });
 }

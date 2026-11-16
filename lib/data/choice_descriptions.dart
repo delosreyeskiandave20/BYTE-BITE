@@ -930,21 +930,18 @@ const _descriptions = <String, Map<String, String>>{
         'size (standard or oversize).',
     'Piston ring set':
         'Compression and oil rings. New rings fix blue smoke and low power.',
-    'Cam chain':
-        'Chain that drives the camshaft. A worn one rattles at idle.',
+    'Cam chain': 'Chain that drives the camshaft. A worn one rattles at idle.',
     'Cam-chain tensioner':
         'Keeps the cam chain tight. A weak one causes rattling on start-up.',
     'Valve stem seals':
         'Small seals that stop oil running down the valves; worn ones cause '
         'smoke on start-up.',
-    'Valve shims':
-        'Shims that set valve clearance on shim-type engines.',
+    'Valve shims': 'Shims that set valve clearance on shim-type engines.',
     'Carburetor repair kit':
         'Jets, gaskets, needle and float valve to refresh a carburettor.',
     'Fuel filter':
         'Stops dirt in the fuel from reaching the injector or carburettor.',
-    'Fuel pump':
-        'Electric pump in the tank that feeds fuel-injected engines.',
+    'Fuel pump': 'Electric pump in the tank that feeds fuel-injected engines.',
   },
   'Workshop Tools': {
     'Torque wrench':

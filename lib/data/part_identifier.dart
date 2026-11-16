@@ -55,8 +55,10 @@ class PartIdentificationException implements Exception {
 }
 
 /// Identifies the part in a photo. Injectable so tests can avoid the network.
-typedef PartIdentifier =
-    Future<PartIdentification> Function(Uint8List bytes, String mimeType);
+typedef PartIdentifier = Future<PartIdentification> Function(
+  Uint8List bytes,
+  String mimeType,
+);
 
 /// Gemini model used for recognition. Override without code changes:
 /// `flutter run --dart-define=GEMINI_MODEL=gemini-...`

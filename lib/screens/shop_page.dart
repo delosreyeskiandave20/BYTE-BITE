@@ -375,8 +375,7 @@ class _ShopContent extends StatelessWidget {
         OnlineStoresSection(
           searchQuery: activeQuery,
           sellerStores: [
-            for (final shop in store.shops)
-              ?onlineStoreForShop(shop),
+            for (final shop in store.shops) ?onlineStoreForShop(shop),
           ],
         ),
         if (query == null) ...[
