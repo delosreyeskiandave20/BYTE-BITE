@@ -71,6 +71,12 @@ flutter:
     - assets/motorcycle_parts_catalog.json
     - assets/parts/
     - assets/vehicle_parts/
+    # Shared photos for parts that apply to every motorcycle (see IMAGE_CREDITS.md).
+    - assets/vehicle_parts/body/
+    - assets/vehicle_parts/electrical/
+    - assets/vehicle_parts/engine/
+    - assets/vehicle_parts/suspension/
+    - assets/vehicle_parts/wheels_tires/
     - assets/vehicle_parts/beat_playful/
     - assets/vehicle_parts/beat_premium/
     - assets/vehicle_parts/click125_standard/
