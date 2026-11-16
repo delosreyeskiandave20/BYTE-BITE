@@ -67,10 +67,21 @@ void main() {
     // Matching items carry a badge; Universal items count as a match.
     expect(find.text('✅ Fits your NMAX 155'), findsNWidgets(2));
 
-    await tester.tap(find.byKey(const ValueKey('my-motorcycle-only-fits')));
+    final onlyFits = find.byKey(const ValueKey('my-motorcycle-only-fits'));
+    bool switchIsOn() => tester.widget<SwitchListTile>(onlyFits).value;
+    expect(switchIsOn(), isFalse);
+
+    await tester.tap(onlyFits);
     await tester.pumpAndSettle();
+    // The switch itself must show the new state, not just the list.
+    expect(switchIsOn(), isTrue);
     expect(find.text('NMAX brake pads'), findsOneWidget);
     expect(find.text('Phone holder'), findsOneWidget);
     expect(find.text('BeAT side mirror'), findsNothing);
+
+    await tester.tap(onlyFits);
+    await tester.pumpAndSettle();
+    expect(switchIsOn(), isFalse);
+    expect(find.text('BeAT side mirror'), findsOneWidget);
   });
 }

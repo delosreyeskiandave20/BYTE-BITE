@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../data/number_input.dart';
 import '../data/price_format.dart';
@@ -340,11 +341,22 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
     final result = await showModalBottomSheet<_ProductDetails>(
       context: context,
       isScrollControlled: true,
-      builder: (context) =>
-          _EditProductSheet(product: product, specRows: widget.specRows),
+      builder: (context) => _EditProductSheet(
+        product: product,
+        specRows: widget.specRows,
+        pickPhotos: widget.pickPhotos,
+        canUploadPhotos: widget.store.canUploadPhotos,
+      ),
     );
     if (!mounted || result == null) return;
     try {
+      final newPhoto = result.newPhoto;
+      final imageUrl = newPhoto == null
+          ? result.imageUrl
+          : await widget.store.uploadProductPhoto(
+              ownerEmail: widget.ownerEmail,
+              photo: newPhoto,
+            );
       await widget.store.updateProduct(
         ownerEmail: widget.ownerEmail,
         productId: product.id,
@@ -353,7 +365,7 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
         description: result.description,
         price: result.price,
         quantity: result.quantity,
-        imageUrl: result.imageUrl,
+        imageUrl: imageUrl,
         brand: result.brand,
         condition: result.condition,
         motorcycles: result.motorcycles,
@@ -912,6 +924,7 @@ class _ProductDetails {
     required this.motorcycles,
     required this.fitsAll,
     required this.specs,
+    this.newPhoto,
   });
 
   final String name;
@@ -925,13 +938,25 @@ class _ProductDetails {
   final List<String> motorcycles;
   final bool fitsAll;
   final List<FitSpec> specs;
+
+  /// A replacement cover photo picked on the device; uploaded on save.
+  final PickedPhoto? newPhoto;
 }
 
 class _EditProductSheet extends StatefulWidget {
-  const _EditProductSheet({required this.product, this.specRows});
+  const _EditProductSheet({
+    required this.product,
+    this.specRows,
+    this.pickPhotos,
+    this.canUploadPhotos = false,
+  });
 
   final ShopProduct product;
   final List<ItemSpecRow>? specRows;
+  final ItemPhotoPicker? pickPhotos;
+
+  /// Whether picked photos can be stored (Firebase Storage is set up).
+  final bool canUploadPhotos;
 
   @override
   State<_EditProductSheet> createState() => _EditProductSheetState();
@@ -957,6 +982,136 @@ class _EditProductSheetState extends State<_EditProductSheet> {
   late final _imageUrlController = TextEditingController(
     text: widget.product.imageUrl,
   );
+
+  /// Replacement cover photo picked in this sheet, if any.
+  PickedPhoto? _newPhoto;
+
+  Future<void> _changePhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+    List<PickedPhoto> picked;
+    try {
+      picked = await (widget.pickPhotos ?? defaultItemPhotoPicker)(source, 1);
+    } catch (_) {
+      _toast(
+        'Could not open your photos. You can paste an image link instead.',
+      );
+      return;
+    }
+    if (!mounted || picked.isEmpty) return;
+    final photo = picked.first;
+    if (!allowedItemPhotoTypes.contains(photo.extension) ||
+        photo.bytes.length > maxPhotoBytes) {
+      _toast('Use a JPG, PNG or WEBP photo, 10 MB or less.');
+      return;
+    }
+    setState(() => _newPhoto = photo);
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _photoSection() {
+    final newPhoto = _newPhoto;
+    final product = widget.product;
+    final placeholder = Container(
+      color: AppColors.primarySoft,
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.image_outlined,
+        size: 40,
+        color: AppColors.primary,
+      ),
+    );
+    final Widget preview = newPhoto != null
+        ? Image.memory(newPhoto.bytes, fit: BoxFit.cover)
+        : product.hasImage
+        ? Image(
+            image: product.imageProvider,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => placeholder,
+          )
+        : placeholder;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            height: 170,
+            child: KeyedSubtree(
+              key: const ValueKey('edit-product-photo'),
+              child: preview,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                key: const ValueKey('edit-product-change-photo'),
+                onPressed: widget.canUploadPhotos ? _changePhoto : null,
+                icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                label: Text(
+                  product.hasImage || newPhoto != null
+                      ? 'Change photo'
+                      : 'Add photo',
+                ),
+              ),
+            ),
+            if (newPhoto != null) ...[
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => setState(() => _newPhoto = null),
+                child: const Text('Undo'),
+              ),
+            ],
+          ],
+        ),
+        if (newPhoto != null)
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              'The new photo uploads when you save.',
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          )
+        else if (!widget.canUploadPhotos)
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              'Photo uploads are not set up yet. Paste a photo link below '
+              'instead.',
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          ),
+      ],
+    );
+  }
+
   late String _category;
   late final List<String> _categories;
   late String? _condition = widget.product.condition.isEmpty
@@ -1048,6 +1203,7 @@ class _EditProductSheetState extends State<_EditProductSheet> {
         price: double.parse(_priceController.text.trim()),
         quantity: int.parse(_quantityController.text.trim()),
         imageUrl: _imageUrlController.text.trim(),
+        newPhoto: _newPhoto,
         motorcycles: _fit.universal ? const [] : [..._fit.models, ..._unlisted],
         fitsAll: _fit.universal,
         specs: [
@@ -1094,6 +1250,8 @@ class _EditProductSheetState extends State<_EditProductSheet> {
                   style: const TextStyle(color: AppColors.muted),
                 ),
               ],
+              const SizedBox(height: 16),
+              _photoSection(),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,

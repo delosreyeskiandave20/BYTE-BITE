@@ -606,6 +606,15 @@ void main() {
     await tester.tap(find.text('Brake lever'));
     await tester.pumpAndSettle();
     expect(find.text('Edit Brake lever'), findsOneWidget);
+    // Replace the cover photo from the edit sheet.
+    final changePhoto = find.byKey(const ValueKey('edit-product-change-photo'));
+    await tester.ensureVisible(changePhoto);
+    await tester.pumpAndSettle();
+    await tester.tap(changePhoto);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
+    expect(find.text('The new photo uploads when you save.'), findsOneWidget);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Description or information'),
       'Replacement brake lever.',
@@ -622,6 +631,8 @@ void main() {
 
     final product = store.shopForOwner('test-owner@example.com')!.products.last;
     expect(product.description, 'Replacement brake lever.');
+    expect(uploads.count, 3);
+    expect(product.imageUrl, 'https://photos.example.com/3.png');
     expect(product.price, 275);
     expect(product.quantity, 0);
     expect(product.isAvailable, isFalse);
@@ -935,7 +946,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Parts library'), findsOneWidget);
-    expect(find.text('7 matches'), findsOneWidget);
+    expect(find.text('7 matches'), findsNothing);
     await tester.enterText(find.byType(TextField), 'clutch friction');
     await tester.pumpAndSettle();
 

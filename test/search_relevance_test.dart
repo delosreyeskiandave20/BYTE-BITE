@@ -1,4 +1,8 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:flutter_application_1/data/catalog_images.dart';
+import 'package:flutter_application_1/data/parts_catalog.dart';
 
 import 'package:flutter_application_1/data/shop_search.dart';
 
@@ -26,5 +30,17 @@ void main() {
       searchRelevance(tokens, name: 'Ceramic brake pad'),
       greaterThan(999),
     );
+  });
+
+  test('every parts library item has a photo', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final index = await loadPartImageIndex(rootBundle);
+    for (final product in catalogProducts) {
+      expect(
+        index.lookup(product.name, ''),
+        isNotNull,
+        reason: '${product.name} has no photo',
+      );
+    }
   });
 }

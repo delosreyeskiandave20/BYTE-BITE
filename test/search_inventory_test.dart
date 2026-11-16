@@ -145,5 +145,33 @@ void main() {
       ),
       findsWidgets,
     );
+    // Related parts show their photo instead of a generic icon.
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith(
+              'search-related-image-',
+            ),
+      ),
+      findsWidgets,
+    );
+
+    // Tapping a photo opens it full screen for zooming.
+    final photo = find
+        .byWidgetPredicate(
+          (widget) =>
+              widget.key is ValueKey<String> &&
+              (widget.key! as ValueKey<String>).value.startsWith(
+                'search-related-image-',
+              ),
+        )
+        .first;
+    await tester.ensureVisible(photo);
+    await tester.pumpAndSettle();
+    await tester.tap(photo);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('zoomed-image')), findsOneWidget);
+    expect(find.text('Pinch or double-tap to zoom'), findsOneWidget);
   });
 }

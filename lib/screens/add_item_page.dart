@@ -21,7 +21,7 @@ const maxPhotoBytes = 10 * 1024 * 1024;
 const minCustomPartLength = 2;
 const maxCustomPartLength = 60;
 
-const _allowedPhotoTypes = {'jpg', 'jpeg', 'png', 'webp'};
+const allowedItemPhotoTypes = {'jpg', 'jpeg', 'png', 'webp'};
 
 /// Shown when a pasted link does not load as an image.
 const notAnImageMessage =
@@ -85,7 +85,7 @@ class AddItemResult {
   final String description;
 }
 
-Future<List<PickedPhoto>> _defaultPhotoPicker(
+Future<List<PickedPhoto>> defaultItemPhotoPicker(
   ImageSource source,
   int limit,
 ) async {
@@ -358,7 +358,10 @@ class _AddItemPageState extends State<AddItemPage> {
     final room = maxItemPhotos - _photos.length;
     List<PickedPhoto> picked;
     try {
-      picked = await (widget.pickPhotos ?? _defaultPhotoPicker)(source, room);
+      picked = await (widget.pickPhotos ?? defaultItemPhotoPicker)(
+        source,
+        room,
+      );
     } catch (_) {
       _toast(
         'Could not open your photos. You can paste an image link instead.',
@@ -368,7 +371,7 @@ class _AddItemPageState extends State<AddItemPage> {
     if (!mounted || picked.isEmpty) return;
     final accepted = [
       for (final photo in picked)
-        if (_allowedPhotoTypes.contains(photo.extension) &&
+        if (allowedItemPhotoTypes.contains(photo.extension) &&
             photo.bytes.length <= maxPhotoBytes)
           ItemPhoto.upload(photo),
     ];

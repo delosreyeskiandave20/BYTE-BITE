@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/price_format.dart';
 import '../data/accessories_maintenance_catalog.dart';
+import '../data/catalog_images.dart';
 import '../data/part_suggestions.dart';
 import '../data/parts_catalog.dart';
 import '../data/shop_store.dart';
@@ -9,6 +10,7 @@ import '../models/catalog_product.dart';
 import '../theme/app_theme.dart';
 import '../widgets/buy_options_button.dart';
 import '../widgets/load_error_banner.dart';
+import '../widgets/zoomable_image.dart';
 import 'shop_page.dart';
 
 class SearchPage extends StatefulWidget {
@@ -205,6 +207,25 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  /// Photo folder to prefer for a parts library category.
+  static String _libraryImageCategory(String categoryId) =>
+      switch (categoryId) {
+        'design' => 'Designs',
+        'maintenance' => 'Accessories',
+        _ => 'Engine',
+      };
+
+  /// Bundled photos for the parts library and "More parts & accessories".
+  PartImageIndex _partImages = PartImageIndex.empty;
+
+  @override
+  void initState() {
+    super.initState();
+    loadPartImageIndex().then((index) {
+      if (mounted) setState(() => _partImages = index);
+    }, onError: (_) {});
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -383,32 +404,8 @@ class _SearchPageState extends State<SearchPage> {
               if (!hasResults)
                 _EmptySearch(query: _query)
               else ...[
-                if (results.isNotEmpty) ...[
-                  _SearchSectionHeader(
-                    title: 'Parts library',
-                    trailing: '${results.length} matches',
-                  ),
-                  const SizedBox(height: 10),
-                  ...results.map(
-                    (product) => _SearchResultCard(
-                      product: product,
-                      shopStore: _shopStore,
-                      onOwnerSignIn: widget.onOwnerSignIn,
-                      expanded: _expandedProductId == product.id,
-                      onTap: () => setState(() {
-                        _expandedProductId = _expandedProductId == product.id
-                            ? null
-                            : product.id;
-                      }),
-                    ),
-                  ),
-                ],
                 if (shopMatches.isNotEmpty) ...[
-                  if (results.isNotEmpty) const SizedBox(height: 18),
-                  _SearchSectionHeader(
-                    title: 'Shop listings',
-                    trailing: '${shopMatches.length} in stock',
-                  ),
+                  _SearchSectionHeader(title: 'Shop listings'),
                   const SizedBox(height: 10),
                   ...shopMatches.map(
                     (match) => _ShopListingCard(
@@ -426,18 +423,38 @@ class _SearchPageState extends State<SearchPage> {
                     label: const Text('View all in Shop'),
                   ),
                 ],
-                if (relatedParts.isNotEmpty) ...[
-                  if (results.isNotEmpty || shopMatches.isNotEmpty)
-                    const SizedBox(height: 18),
-                  _SearchSectionHeader(
-                    title: 'More parts & accessories',
-                    trailing: '${relatedParts.length} related',
+                if (results.isNotEmpty) ...[
+                  if (shopMatches.isNotEmpty) const SizedBox(height: 18),
+                  _SearchSectionHeader(title: 'Parts library'),
+                  const SizedBox(height: 10),
+                  ...results.map(
+                    (product) => _SearchResultCard(
+                      product: product,
+                      imageAsset: _partImages.lookup(
+                        product.name,
+                        _libraryImageCategory(product.categoryId),
+                      ),
+                      shopStore: _shopStore,
+                      onOwnerSignIn: widget.onOwnerSignIn,
+                      expanded: _expandedProductId == product.id,
+                      onTap: () => setState(() {
+                        _expandedProductId = _expandedProductId == product.id
+                            ? null
+                            : product.id;
+                      }),
+                    ),
                   ),
+                ],
+                if (relatedParts.isNotEmpty) ...[
+                  if (shopMatches.isNotEmpty || results.isNotEmpty)
+                    const SizedBox(height: 18),
+                  _SearchSectionHeader(title: 'More parts & accessories'),
                   const SizedBox(height: 10),
                   ...relatedParts.map(
                     (part) => _RelatedPartCard(
                       key: ValueKey('search-related-${part.name}'),
                       part: part,
+                      imageAsset: _partImages.lookup(part.name, part.category),
                       shopStore: _shopStore,
                       onOwnerSignIn: widget.onOwnerSignIn,
                       expanded: _expandedProductId == 'related:${part.name}',
@@ -480,10 +497,14 @@ class _RelatedPartCard extends StatelessWidget {
     required this.onOwnerSignIn,
     required this.expanded,
     required this.onTap,
+    this.imageAsset,
     super.key,
   });
 
   final PartSuggestion part;
+
+  /// Bundled photo of the part; the category icon is shown when missing.
+  final String? imageAsset;
   final ShopStore shopStore;
   final VoidCallback? onOwnerSignIn;
   final bool expanded;
@@ -500,6 +521,44 @@ class _RelatedPartCard extends StatelessWidget {
     'Designs' => Icons.palette_outlined,
     _ => Icons.inventory_2_outlined,
   };
+
+  static const _thumbSize = 56.0;
+
+  Widget _thumbnail() {
+    final iconBox = Container(
+      width: _thumbSize,
+      height: _thumbSize,
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(_icon(part.category), color: AppColors.primary, size: 24),
+    );
+    final asset = imageAsset;
+    if (asset == null) return iconBox;
+    return ZoomableImage(
+      imageAsset: asset,
+      title: part.name,
+      child: Container(
+        width: _thumbSize,
+        height: _thumbSize,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Image.asset(
+          asset,
+          key: ValueKey('search-related-image-${part.name}'),
+          fit: BoxFit.cover,
+          cacheWidth: 168,
+          semanticLabel: part.name,
+          errorBuilder: (context, error, stackTrace) => iconBox,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -524,19 +583,7 @@ class _RelatedPartCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _icon(part.category),
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
+                  _thumbnail(),
                   const SizedBox(width: 11),
                   Expanded(
                     child: Column(
@@ -586,44 +633,21 @@ class _RelatedPartCard extends StatelessWidget {
 }
 
 class _SearchSectionHeader extends StatelessWidget {
-  const _SearchSectionHeader({required this.title, required this.trailing});
+  const _SearchSectionHeader({required this.title});
 
   final String title;
-  final String trailing;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.primarySoft,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            trailing,
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: AppType.micro,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
+    return Text(
+      title,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        color: AppColors.ink,
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+      ),
     );
   }
 }
@@ -677,6 +701,7 @@ class _SearchResultCard extends StatelessWidget {
     required this.onOwnerSignIn,
     required this.expanded,
     required this.onTap,
+    this.imageAsset,
   });
 
   final CatalogProduct product;
@@ -684,6 +709,49 @@ class _SearchResultCard extends StatelessWidget {
   final VoidCallback? onOwnerSignIn;
   final bool expanded;
   final VoidCallback onTap;
+
+  /// Bundled photo of the part; the gradient icon is shown when missing.
+  final String? imageAsset;
+
+  Widget _thumbnail() {
+    final iconBox = Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.orange, AppColors.primary],
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(product.icon, color: Colors.white, size: 24),
+    );
+    final asset = imageAsset;
+    if (asset == null) return iconBox;
+    return ZoomableImage(
+      imageAsset: asset,
+      title: product.name,
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Image.asset(
+          asset,
+          key: ValueKey('search-library-image-${product.id}'),
+          fit: BoxFit.cover,
+          cacheWidth: 168,
+          semanticLabel: product.name,
+          errorBuilder: (context, error, stackTrace) => iconBox,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -707,19 +775,7 @@ class _SearchResultCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.orange, AppColors.primary],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(product.icon, color: Colors.white, size: 24),
-              ),
+              _thumbnail(),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -951,14 +1007,18 @@ class _ShopProductThumb extends StatelessWidget {
 
     if (!product.hasImage) return fallback;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: Image(
-        image: ResizeImage(product.imageProvider, width: 104),
-        width: 52,
-        height: 52,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => fallback,
+    return ZoomableImage.provider(
+      image: product.imageProvider,
+      title: product.name,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Image(
+          image: ResizeImage(product.imageProvider, width: 104),
+          width: 52,
+          height: 52,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => fallback,
+        ),
       ),
     );
   }

@@ -286,14 +286,6 @@ class _CatalogGroupCard extends StatelessWidget {
                               fontWeight: FontWeight.w900,
                             ),
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            '${(group.itemChoices[group.title] ?? group.items).length} choices',
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 11,
-                            ),
-                          ),
                         ],
                       ),
                     ),

@@ -171,13 +171,6 @@ class _DesignGroupRow extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(
-                '${group.items.length} options',
-                style: const TextStyle(
-                  color: AppColors.muted,
-                  fontSize: AppType.caption,
-                ),
-              ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),

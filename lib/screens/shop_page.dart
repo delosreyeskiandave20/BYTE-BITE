@@ -423,8 +423,14 @@ class _MyMotorcycleBar extends StatelessWidget {
     await myMotorcycle.choose(picked.isEmpty ? null : picked);
   }
 
+  // The bar is a const widget, so a rebuild of the page above does not
+  // rebuild it; it listens to [myMotorcycle] itself so the switch and the
+  // chosen model update as soon as they change.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: myMotorcycle, builder: _buildBar);
+
+  Widget _buildBar(BuildContext context, Widget? _) {
     final model = myMotorcycle.model;
     return Material(
       key: const ValueKey('my-motorcycle-bar'),
@@ -768,27 +774,6 @@ class _ShopCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (products.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    products.length == 1
-                        ? '1 item'
-                        : '${products.length} items',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
             ],
           ),
           if (shop.description.isNotEmpty) ...[

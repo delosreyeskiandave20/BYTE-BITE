@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Wraps a thumbnail so tapping it opens [imageAsset] full screen, where it
+/// Wraps a thumbnail so tapping it opens the photo full screen, where it
 /// can be pinched or double-tapped to zoom.
 class ZoomableImage extends StatelessWidget {
   const ZoomableImage({
@@ -8,9 +8,18 @@ class ZoomableImage extends StatelessWidget {
     required this.title,
     required this.child,
     super.key,
-  });
+  }) : image = null;
+
+  /// Zooms any image, e.g. a seller's uploaded photo from the network.
+  const ZoomableImage.provider({
+    required ImageProvider this.image,
+    required this.title,
+    required this.child,
+    super.key,
+  }) : imageAsset = '';
 
   final String imageAsset;
+  final ImageProvider? image;
   final String title;
   final Widget child;
 
@@ -21,7 +30,11 @@ class ZoomableImage extends StatelessWidget {
       label: 'Zoom photo of $title',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => showImageViewer(context, imageAsset, title),
+        onTap: () => showImageProviderViewer(
+          context,
+          image ?? AssetImage(imageAsset),
+          title,
+        ),
         child: Stack(
           fit: StackFit.passthrough,
           children: [
@@ -56,13 +69,19 @@ Future<void> showImageViewer(
   BuildContext context,
   String imageAsset,
   String title,
+) => showImageProviderViewer(context, AssetImage(imageAsset), title);
+
+/// Full-screen, zoomable view of any image.
+Future<void> showImageProviderViewer(
+  BuildContext context,
+  ImageProvider image,
+  String title,
 ) {
   return Navigator.of(context).push(
     PageRouteBuilder<void>(
       opaque: false,
       barrierColor: Colors.black,
-      pageBuilder: (_, _, _) =>
-          _ImageViewer(imageAsset: imageAsset, title: title),
+      pageBuilder: (_, _, _) => _ImageViewer(image: image, title: title),
       transitionsBuilder: (_, animation, _, child) =>
           FadeTransition(opacity: animation, child: child),
     ),
@@ -70,9 +89,9 @@ Future<void> showImageViewer(
 }
 
 class _ImageViewer extends StatefulWidget {
-  const _ImageViewer({required this.imageAsset, required this.title});
+  const _ImageViewer({required this.image, required this.title});
 
-  final String imageAsset;
+  final ImageProvider image;
   final String title;
 
   @override
@@ -129,11 +148,18 @@ class _ImageViewerState extends State<_ImageViewer> {
           minScale: 1,
           maxScale: 5,
           child: SizedBox.expand(
-            child: Image.asset(
-              widget.imageAsset,
+            child: Image(
+              image: widget.image,
               key: const ValueKey('zoomed-image'),
               fit: BoxFit.contain,
               filterQuality: FilterQuality.high,
+              errorBuilder: (context, error, stackTrace) => const Center(
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: Colors.white54,
+                  size: 48,
+                ),
+              ),
             ),
           ),
         ),
