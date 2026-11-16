@@ -131,7 +131,7 @@ void main() {
     await tester.ensureVisible(findInShops);
     await tester.pumpAndSettle();
     await tester.tap(findInShops);
-    expect(searched, 'Brake');
+    expect(searched, 'Brake caliper');
   });
 
   testWidgets('AI errors offer a retry', (WidgetTester tester) async {

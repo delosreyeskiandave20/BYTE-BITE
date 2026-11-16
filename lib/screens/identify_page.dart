@@ -274,9 +274,9 @@ class _IdentifyPageState extends State<IdentifyPage> {
           ],
         );
       } else {
-        final term = result.searchTerm.isEmpty
-            ? result.partName
-            : result.searchTerm;
+        // Search with the full part name ("Rear shock absorber"); search
+        // ranks the closest names first and still lists partial matches.
+        final term = result.partName;
         child = Column(
           key: const ValueKey('identify-ai-result'),
           crossAxisAlignment: CrossAxisAlignment.start,

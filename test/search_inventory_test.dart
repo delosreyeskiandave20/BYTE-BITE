@@ -119,4 +119,31 @@ void main() {
     expect(find.bySemanticsLabel('MotoScan Shop'), findsOneWidget);
     expect(find.text('Ceramic brake pad'), findsWidgets);
   });
+
+  testWidgets('an AI match also lists related parts and partial shop matches', (
+    WidgetTester tester,
+  ) async {
+    final store = await _storeWithInventory();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SearchPage(shopStore: store, initialQuery: 'Brake pads'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // "pads" still finds the singular shop listing.
+    expect(find.text('Ceramic brake pad'), findsOneWidget);
+    // Other brake items from the full catalogs are listed too.
+    expect(find.text('More parts & accessories'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith(
+              'search-related-',
+            ),
+      ),
+      findsWidgets,
+    );
+  });
 }

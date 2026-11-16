@@ -21,6 +21,64 @@ List<String> searchTokens(String value) => value
     .where((word) => word.isNotEmpty)
     .toList(growable: false);
 
+/// Query tokens for ranked search: generic words dropped and a plural `s`
+/// trimmed, so "Brake pads" also finds "Brake pad set".
+List<String> relevanceQueryTokens(String query) =>
+    searchTokens(query)
+        .where((word) => !_ignoredSearchWords.contains(word))
+        .map(
+          (word) =>
+              word.length > 3 && word.endsWith('s') && !word.endsWith('ss')
+              ? word.substring(0, word.length - 1)
+              : word,
+        )
+        .toList(growable: false);
+
+/// How well an item matches [queryTokens]; 0 means it should not be shown.
+///
+/// Items where every token is found anywhere in [name] or [details] rank
+/// highest. Otherwise an item still matches, lower down, when its [name]
+/// contains at least one meaningful token (3+ letters), so a specific AI
+/// answer like "Front brake caliper" also lists other brake and caliper parts.
+int searchRelevance(
+  List<String> queryTokens, {
+  required String name,
+  String details = '',
+}) {
+  if (queryTokens.isEmpty) return 1;
+  final allWords = searchTokens('$name $details');
+  if (queryTokens.every(
+    (token) => allWords.any((word) => word.startsWith(token)),
+  )) {
+    return 1000 + queryTokens.length;
+  }
+  // Partial match: each key word found in the name adds points. Position
+  // words like "rear" or "front" count for less than the part itself, so for
+  // "Rear shock absorber" a "Shock absorber spring" ranks above "Rear tire".
+  final nameWords = searchTokens(name);
+  var score = 0;
+  for (final token in queryTokens) {
+    if (token.length < 3) continue;
+    if (!nameWords.any((word) => word.startsWith(token))) continue;
+    score += _weakSearchWords.contains(token) ? 1 : 3;
+  }
+  return score;
+}
+
+/// Words that describe where a part sits rather than what it is.
+const _weakSearchWords = {
+  'rear',
+  'front',
+  'left',
+  'right',
+  'upper',
+  'lower',
+  'inner',
+  'outer',
+  'set',
+  'kit',
+};
+
 /// Whether every query token is the prefix of a word in [searchableText].
 bool matchesAllSearchTokens(String searchableText, List<String> queryTokens) {
   if (queryTokens.isEmpty) return true;

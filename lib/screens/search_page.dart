@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/price_format.dart';
 import '../data/accessories_maintenance_catalog.dart';
+import '../data/part_suggestions.dart';
 import '../data/parts_catalog.dart';
 import '../data/shop_store.dart';
 import '../models/catalog_product.dart';
@@ -72,44 +73,103 @@ class _SearchPageState extends State<SearchPage> {
   String? _selectedCategory;
   String? _expandedProductId;
 
+  static const _maxRelatedParts = 30;
+  static final _allPartSuggestions = buildPartSuggestions();
+
+  List<String> get _queryTokens => relevanceQueryTokens(_query.trim());
+
   List<CatalogProduct> get _results {
-    final query = _query.trim().toLowerCase();
-    return catalogProducts.where((product) {
-      if (isMaintenanceOwnedCatalogProduct(product.name)) return false;
-      final matchesCategory =
-          _selectedCategory == null || product.categoryId == _selectedCategory;
-      final matchesQuery =
-          query.isEmpty ||
-          [
-            product.name,
-            product.code,
-            categoryNames[product.categoryId] ?? '',
-            product.description,
-          ].join(' ').toLowerCase().contains(query);
-      return matchesCategory && matchesQuery;
-    }).toList();
+    final tokens = _queryTokens;
+    final scored = <(CatalogProduct, int)>[];
+    for (final product in catalogProducts) {
+      if (isMaintenanceOwnedCatalogProduct(product.name)) continue;
+      if (_selectedCategory != null &&
+          product.categoryId != _selectedCategory) {
+        continue;
+      }
+      final score = searchRelevance(
+        tokens,
+        name: product.name,
+        details: [
+          product.code,
+          categoryNames[product.categoryId] ?? '',
+          product.description,
+        ].join(' '),
+      );
+      if (score > 0) scored.add((product, score));
+    }
+    scored.sort((a, b) => b.$2.compareTo(a.$2));
+    return [for (final entry in scored) entry.$1];
   }
 
-  /// In-stock products from every shop, matched with the same token-prefix
-  /// rules as the library. Rebuilt whenever [ShopStore] notifies, so a product
-  /// added or edited by an owner shows up without reopening this screen.
+  /// Whether a catalog suggestion belongs under the selected filter chip.
+  bool _suggestionMatchesFilter(PartSuggestion part) =>
+      switch (_selectedCategory) {
+        null => true,
+        'engine' => part.category == 'Engine',
+        'electrical' => part.category == 'Electrical',
+        'body' => part.category == 'Body Parts',
+        'brakes' => part.name.toLowerCase().contains('brake'),
+        _ => false,
+      };
+
+  /// Every other part, accessory, maintenance item and design whose name
+  /// relates to the query, so an AI match also shows similar options.
+  List<PartSuggestion> get _relatedParts {
+    final tokens = _queryTokens;
+    if (tokens.isEmpty) return const <PartSuggestion>[];
+    final libraryNames = {
+      for (final product in catalogProducts) product.name.toLowerCase(),
+    };
+    final scored = <(PartSuggestion, int)>[];
+    for (final part in _allPartSuggestions) {
+      if (libraryNames.contains(part.name.toLowerCase())) continue;
+      if (!_suggestionMatchesFilter(part)) continue;
+      final score = searchRelevance(
+        tokens,
+        name: part.name,
+        details: part.category,
+      );
+      if (score > 0) scored.add((part, score));
+    }
+    scored.sort((a, b) {
+      final byScore = b.$2.compareTo(a.$2);
+      if (byScore != 0) return byScore;
+      return a.$1.name.compareTo(b.$1.name);
+    });
+    return [for (final entry in scored.take(_maxRelatedParts)) entry.$1];
+  }
+
+  /// In-stock products from every shop, ranked like the library: listings
+  /// matching every word first, then ones sharing a key word in their name.
+  /// Rebuilt whenever [ShopStore] notifies, so a product added or edited by an
+  /// owner shows up without reopening this screen.
   List<_ShopMatch> get _shopMatches {
     final query = _query.trim().toLowerCase();
     if (query.isEmpty) return const <_ShopMatch>[];
     final queryTokens = searchTokens(query);
     if (queryTokens.isEmpty) return const <_ShopMatch>[];
+    final relevanceTokens = _queryTokens;
 
     final matches = <_ShopMatch>[];
     for (final shop in _shopStore.shops) {
       for (final product in shop.products) {
         if (!product.isAvailable) continue;
-        if (shopProductMatchesTokens(shop, product, queryTokens)) {
-          matches.add(_ShopMatch(shop: shop, product: product));
+        final score = shopProductMatchesTokens(shop, product, queryTokens)
+            ? 2000
+            : searchRelevance(
+                relevanceTokens,
+                name: '${product.name} ${product.category}',
+              );
+        if (score > 0) {
+          matches.add(_ShopMatch(shop: shop, product: product, score: score));
         }
       }
     }
 
     matches.sort((a, b) {
+      final byScore = b.score.compareTo(a.score);
+      if (byScore != 0) return byScore;
       final aName = a.product.name.toLowerCase();
       final bName = b.product.name.toLowerCase();
       final aStarts = aName.startsWith(query) ? 0 : 1;
@@ -161,8 +221,12 @@ class _SearchPageState extends State<SearchPage> {
         builder: (context, _) {
           final results = _results;
           final shopMatches = _shopMatches;
+          final relatedParts = _relatedParts;
           final hasQuery = _query.trim().isNotEmpty;
-          final hasResults = results.isNotEmpty || shopMatches.isNotEmpty;
+          final hasResults =
+              results.isNotEmpty ||
+              shopMatches.isNotEmpty ||
+              relatedParts.isNotEmpty;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -362,6 +426,30 @@ class _SearchPageState extends State<SearchPage> {
                     label: const Text('View all in Shop'),
                   ),
                 ],
+                if (relatedParts.isNotEmpty) ...[
+                  if (results.isNotEmpty || shopMatches.isNotEmpty)
+                    const SizedBox(height: 18),
+                  _SearchSectionHeader(
+                    title: 'More parts & accessories',
+                    trailing: '${relatedParts.length} related',
+                  ),
+                  const SizedBox(height: 10),
+                  ...relatedParts.map(
+                    (part) => _RelatedPartCard(
+                      key: ValueKey('search-related-${part.name}'),
+                      part: part,
+                      shopStore: _shopStore,
+                      onOwnerSignIn: widget.onOwnerSignIn,
+                      expanded: _expandedProductId == 'related:${part.name}',
+                      onTap: () => setState(() {
+                        final id = 'related:${part.name}';
+                        _expandedProductId = _expandedProductId == id
+                            ? null
+                            : id;
+                      }),
+                    ),
+                  ),
+                ],
               ],
             ],
           );
@@ -372,10 +460,129 @@ class _SearchPageState extends State<SearchPage> {
 }
 
 class _ShopMatch {
-  const _ShopMatch({required this.shop, required this.product});
+  const _ShopMatch({
+    required this.shop,
+    required this.product,
+    required this.score,
+  });
 
   final Shop shop;
   final ShopProduct product;
+  final int score;
+}
+
+/// A part, accessory, maintenance item or design from the full catalogs.
+/// Tapping it shows where to buy it.
+class _RelatedPartCard extends StatelessWidget {
+  const _RelatedPartCard({
+    required this.part,
+    required this.shopStore,
+    required this.onOwnerSignIn,
+    required this.expanded,
+    required this.onTap,
+    super.key,
+  });
+
+  final PartSuggestion part;
+  final ShopStore shopStore;
+  final VoidCallback? onOwnerSignIn;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  static IconData _icon(String category) => switch (category) {
+    'Engine' => Icons.settings_rounded,
+    'Electrical' => Icons.bolt_rounded,
+    'Suspension' => Icons.height_rounded,
+    'Wheels and Tires' => Icons.tire_repair_rounded,
+    'Body Parts' => Icons.two_wheeler_rounded,
+    'Accessories' => Icons.sports_motorsports_outlined,
+    'Maintenance' => Icons.build_outlined,
+    'Designs' => Icons.palette_outlined,
+    _ => Icons.inventory_2_outlined,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.white,
+      margin: const EdgeInsets.only(bottom: 8),
+      clipBehavior: Clip.antiAlias,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(
+          color: expanded ? AppColors.primary : AppColors.line,
+          width: expanded ? 1.4 : 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _icon(part.category),
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          part.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.ink,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        _Tag(
+                          text: part.category,
+                          color: AppColors.primary,
+                          background: AppColors.primarySoft,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    expanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    color: AppColors.inkSoft,
+                  ),
+                ],
+              ),
+              if (expanded) ...[
+                const SizedBox(height: 10),
+                BuyOptionsButton(
+                  store: shopStore,
+                  productQuery: part.name,
+                  onOwnerSignIn: onOwnerSignIn,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SearchSectionHeader extends StatelessWidget {
