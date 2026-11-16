@@ -21,7 +21,9 @@
       "ClaudeInChromeDomain(pages.lazada.com.ph)",
       "ClaudeInChromeDomain(shopee.ph)",
       "ClaudeInChromeDomain(console.cloudinary.com)",
-      "ClaudeInChromeDomain(console.firebase.google.com)"
+      "ClaudeInChromeDomain(console.firebase.google.com)",
+      "ClaudeInChromeDomain(commons.wikimedia.org)",
+      "ClaudeInChromeDomain(api.openverse.org)"
     ]
   }
 }

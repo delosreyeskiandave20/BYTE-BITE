@@ -75,7 +75,6 @@ class _SearchPageState extends State<SearchPage> {
   String? _selectedCategory;
   String? _expandedProductId;
 
-  static const _maxRelatedParts = 30;
   static final _allPartSuggestions = buildPartSuggestions();
 
   List<String> get _queryTokens => relevanceQueryTokens(_query.trim());
@@ -115,14 +114,23 @@ class _SearchPageState extends State<SearchPage> {
         _ => false,
       };
 
-  /// Every other part, accessory, maintenance item and design whose name
-  /// relates to the query, so an AI match also shows similar options.
+  /// Every other part, accessory, maintenance item and design. With no query
+  /// that is the whole catalog (for the selected filter), so riders can
+  /// browse it; with a query, only names that relate to it, best first, so an
+  /// AI match also shows similar options.
   List<PartSuggestion> get _relatedParts {
     final tokens = _queryTokens;
-    if (tokens.isEmpty) return const <PartSuggestion>[];
     final libraryNames = {
       for (final product in catalogProducts) product.name.toLowerCase(),
     };
+    if (tokens.isEmpty) {
+      return [
+        for (final part in _allPartSuggestions)
+          if (!libraryNames.contains(part.name.toLowerCase()) &&
+              _suggestionMatchesFilter(part))
+            part,
+      ];
+    }
     final scored = <(PartSuggestion, int)>[];
     for (final part in _allPartSuggestions) {
       if (libraryNames.contains(part.name.toLowerCase())) continue;
@@ -139,7 +147,7 @@ class _SearchPageState extends State<SearchPage> {
       if (byScore != 0) return byScore;
       return a.$1.name.compareTo(b.$1.name);
     });
-    return [for (final entry in scored.take(_maxRelatedParts)) entry.$1];
+    return [for (final entry in scored) entry.$1];
   }
 
   /// In-stock products from every shop, ranked like the library: listings
@@ -446,10 +454,17 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 ],
                 if (relatedParts.isNotEmpty) ...[
-                  if (shopMatches.isNotEmpty || results.isNotEmpty)
-                    const SizedBox(height: 18),
-                  _SearchSectionHeader(title: 'More parts & accessories'),
-                  const SizedBox(height: 10),
+                  // Browsing (no query): the full catalog continues the
+                  // Parts library list instead of starting a new section.
+                  if (hasQuery) ...[
+                    if (shopMatches.isNotEmpty || results.isNotEmpty)
+                      const SizedBox(height: 18),
+                    _SearchSectionHeader(title: 'More parts & accessories'),
+                    const SizedBox(height: 10),
+                  ] else if (results.isEmpty) ...[
+                    _SearchSectionHeader(title: 'Parts library'),
+                    const SizedBox(height: 10),
+                  ],
                   ...relatedParts.map(
                     (part) => _RelatedPartCard(
                       key: ValueKey('search-related-${part.name}'),

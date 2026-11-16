@@ -216,8 +216,6 @@ const designGroups = [
       'Matte Black Exhaust',
       'Polished Stainless Exhaust',
       'Chrome Exhaust',
-      'Custom Exhaust Tip',
-      'Exhaust Heat Wrap',
     ],
   ),
   DesignGroup(
@@ -227,8 +225,6 @@ const designGroups = [
       'Belly Pan',
       'Undertail Cover',
       'Tail Tidy',
-      'Front Fender Extender',
-      'Headlight Visor',
       'Racing Fairing Kit',
       'Carbon Fiber Fairing',
     ],
@@ -238,11 +234,9 @@ const designGroups = [
     items: [
       'CNC Brake Levers',
       'CNC Footpegs',
-      'Anodized Bolt Kit',
       'Titanium Bolt Kit',
       'CNC Fuel Cap Cover',
       'Anodized Valve Caps',
-      'CNC Axle Caps',
     ],
   ),
 ];

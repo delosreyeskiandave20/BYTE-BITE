@@ -855,13 +855,6 @@ const _descriptions = <String, Map<String, String>>{
     'Chest protector': 'Armor plate that shields the chest and ribs.',
     'Knee guards': 'Strap-on or in-pant pads that protect the knees.',
     'Elbow guards': 'Pads that protect the elbows and forearms.',
-    'Hip protectors': 'Pads or shorts that protect the hips in a slide.',
-    'Neck brace':
-        'Brace that limits extreme neck movement; mainly for off-road.',
-    'Airbag vest':
-        'Vest that inflates in a crash to protect the chest, back and neck.',
-    'Armored base layer':
-        'Thin shirt or pants with built-in armor to wear under clothes.',
   },
   'Neck, Face and Base Layers': {
     'Neck gaiter': 'Tube of fabric that keeps sun, dust and wind off the neck.',
@@ -869,7 +862,6 @@ const _descriptions = <String, Map<String, String>>{
         'Thin hood worn under the helmet; absorbs sweat and keeps the liner '
         'clean.',
     'Riding face mask': 'Washable mask that filters road dust and smoke.',
-    'Arm sleeves': 'UV-blocking sleeves that protect the arms from the sun.',
     'Cooling vest': 'Vest that cools you by evaporation on hot rides.',
     'Moisture-wicking base layer':
         'Quick-dry shirt worn under the jacket to keep you dry and cool.',
@@ -913,8 +905,6 @@ const _descriptions = <String, Map<String, String>>{
     'Valve cover gasket':
         'Seals the cover on top of the engine; fixes oil seeping from the '
         'head cover.',
-    'Exhaust gasket':
-        'Seals the exhaust pipe to the engine; stops ticking leaks.',
     'Crankcase gasket': 'Seals the engine side covers and crankcase halves.',
     'Magneto cover gasket': 'Seals the stator (magneto) cover on the engine.',
     'Engine oil seal kit':
@@ -937,19 +927,12 @@ const _descriptions = <String, Map<String, String>>{
         'Small seals that stop oil running down the valves; worn ones cause '
         'smoke on start-up.',
     'Valve shims': 'Shims that set valve clearance on shim-type engines.',
-    'Carburetor repair kit':
-        'Jets, gaskets, needle and float valve to refresh a carburettor.',
-    'Fuel filter':
-        'Stops dirt in the fuel from reaching the injector or carburettor.',
-    'Fuel pump': 'Electric pump in the tank that feeds fuel-injected engines.',
   },
   'Workshop Tools': {
     'Torque wrench':
         'Tightens bolts to the exact torque in the manual so they neither '
         'loosen nor strip.',
     'Socket set': 'Metric sockets and ratchet for most motorcycle bolts.',
-    'Spark-plug socket':
-        'Deep socket with a rubber insert that holds the spark plug.',
     'Feeler gauge':
         'Thin blades for checking valve clearance and spark-plug gaps.',
     'Oil-filter wrench': 'Grips spin-on oil filters for removal.',

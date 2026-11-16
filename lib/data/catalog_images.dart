@@ -115,6 +115,23 @@ const _imageAliases = {
   'led_projector_headlight': 'led_headlight',
   'sport_rear_view_mirrors': 'side_mirrors',
   'universal_phone_holder': 'handlebar_phone_holder',
+  // Engine valves, not the tire valve photos whose names also contain
+  // "valve".
+  'valves': 'valve_stem_seals',
+  'motorcycle_cover': 'full_cover',
+  // Parts list names pointed at the clearest photo already bundled.
+  'front_fork_front_shock': 'front_fork_inner_tube',
+  'swing_arm': 'swingarm',
+  'steering_bearings': 'steering_head_bearings',
+  'mags_rims': 'front_wheel_rim',
+  'handle_switches': 'handlebar_switch_set',
+  'brake_lever_set': 'handlebar_grip_set',
+  'helmet': 'full_face_helmet',
+  'emblem_logo': 'brand_logo_stickers',
+  'full_wrap': 'custom_printed_wrap',
+  'seat_design': 'carbon_look_seat_cover',
+  'plate_holder': 'number_plate_frame',
+  'raincoat': 'one_piece_rain_suit',
 };
 
 /// Builds a [PartImageIndex] from the asset manifest.
