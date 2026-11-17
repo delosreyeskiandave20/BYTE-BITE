@@ -67,6 +67,13 @@ const _geminiModel = String.fromEnvironment(
   defaultValue: 'gemini-3.5-flash-lite',
 );
 
+/// Build with `--dart-define=SHOW_AI_ERRORS=true` to show the raw error
+/// under the friendly message (useful on devices that block logcat).
+const _showAiErrors = bool.fromEnvironment('SHOW_AI_ERRORS');
+
+String _withDetails(String message, Object error) =>
+    _showAiErrors ? '$message\n\n[${error.runtimeType}] $error' : message;
+
 const _instructions =
     'You are a motorcycle parts expert for MotoScan, a motorcycle parts '
     'marketplace. Look at the photo and identify the single main motorcycle '
@@ -151,13 +158,19 @@ class GeminiPartIdentifier {
           '--dart-define=GEMINI_MODEL=<a valid model name>.',
         );
       }
-      throw const PartIdentificationException(
-        'The AI service is unavailable right now. Please try again.',
+      throw PartIdentificationException(
+        _withDetails(
+          'The AI service is unavailable right now. Please try again.',
+          error,
+        ),
       );
     } catch (error) {
       debugPrint('Gemini request failed: $error');
-      throw const PartIdentificationException(
-        'Could not reach the AI service. Check your connection and try again.',
+      throw PartIdentificationException(
+        _withDetails(
+          'Could not reach the AI service. Check your connection and try again.',
+          error,
+        ),
       );
     }
 

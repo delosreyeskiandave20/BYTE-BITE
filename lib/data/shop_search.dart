@@ -37,9 +37,11 @@ List<String> relevanceQueryTokens(String query) =>
 /// How well an item matches [queryTokens]; 0 means it should not be shown.
 ///
 /// Items where every token is found anywhere in [name] or [details] rank
-/// highest. Otherwise an item still matches, lower down, when its [name]
-/// contains at least one meaningful token (3+ letters), so a specific AI
-/// answer like "Front brake caliper" also lists other brake and caliper parts.
+/// highest. Otherwise an item still matches, lower down, only when its [name]
+/// shares the query's main part word (the last key word, e.g. "caliper" in
+/// "Front brake caliper") or at least two key words. So "Air filter" also
+/// lists "Oil filter" but not "Air horn", and "Rear shock absorber" does not
+/// list "Rear tire".
 int searchRelevance(
   List<String> queryTokens, {
   required String name,
@@ -52,15 +54,24 @@ int searchRelevance(
   )) {
     return 1000 + queryTokens.length;
   }
-  // Partial match: each key word found in the name adds points. Position
-  // words like "rear" or "front" count for less than the part itself, so for
-  // "Rear shock absorber" a "Shock absorber spring" ranks above "Rear tire".
+  final keyTokens = [
+    for (final token in queryTokens)
+      if (token.length >= 3 && !_weakSearchWords.contains(token)) token,
+  ];
+  if (keyTokens.isEmpty) return 0;
   final nameWords = searchTokens(name);
-  var score = 0;
+  bool inName(String token) => nameWords.any((word) => word.startsWith(token));
+
+  final matchedKeys = keyTokens.where(inName).length;
+  final headMatched = inName(keyTokens.last);
+  if (!headMatched && matchedKeys < 2) return 0;
+
+  // Each key word found adds points, the main part word most; position words
+  // like "rear" add a little, so "Rear shock absorber" ranks "Shock absorber
+  // spring" above "Rear absorber bracket".
+  var score = matchedKeys * 3 + (headMatched ? 3 : 0);
   for (final token in queryTokens) {
-    if (token.length < 3) continue;
-    if (!nameWords.any((word) => word.startsWith(token))) continue;
-    score += _weakSearchWords.contains(token) ? 1 : 3;
+    if (_weakSearchWords.contains(token) && inName(token)) score += 1;
   }
   return score;
 }

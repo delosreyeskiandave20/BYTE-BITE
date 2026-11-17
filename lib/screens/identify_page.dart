@@ -195,6 +195,20 @@ class _IdentifyPageState extends State<IdentifyPage> {
     });
   }
 
+  /// "Search the parts library": after a successful scan, opens the library
+  /// with the scanned part name so its matches are listed first; otherwise
+  /// opens the full library.
+  void _searchLibrary() {
+    final result = _result;
+    if (result != null &&
+        result.isMotorcyclePart &&
+        result.partName.isNotEmpty) {
+      _searchFor(result.partName);
+    } else {
+      widget.onSearchParts?.call();
+    }
+  }
+
   void _searchFor(String term) {
     final onSearchQuery = widget.onSearchQuery;
     if (onSearchQuery != null) {
@@ -530,7 +544,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
                   const SizedBox(height: 6),
                   TextButton.icon(
                     key: const ValueKey('identify-search-parts'),
-                    onPressed: _isPicking ? null : widget.onSearchParts,
+                    onPressed: _isPicking ? null : _searchLibrary,
                     icon: const Icon(Icons.search, size: 18),
                     label: const Text('Search the parts library'),
                     style: TextButton.styleFrom(

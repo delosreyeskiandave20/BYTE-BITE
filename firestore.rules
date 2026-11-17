@@ -37,7 +37,8 @@ service cloud.firestore {
           'marketplaceUrl',
           'marketplaceApproved',
           'verified',
-          'lastEditedAt'
+          'lastEditedAt',
+          'bannerUrl'
         ])
         && data.keys().hasAll([
           'ownerEmailHash',
@@ -170,6 +171,16 @@ service cloud.firestore {
             == resource.data.get('marketplaceUrl', ''));
     }
 
+    // The shop banner is set by the app admin in the Firebase console. Owners
+    // may keep it as it is when they save their shop, but never add or change
+    // it from the app.
+    function bannerUnchanged() {
+      let data = request.resource.data;
+      return resource == null
+        ? !('bannerUrl' in data)
+        : data.get('bannerUrl', null) == resource.data.get('bannerUrl', null);
+    }
+
     match /shops/{ownerId} {
       // Public marketplace reads only verified shops. Owners can read their own
       // shop before verification to complete setup.
@@ -177,7 +188,8 @@ service cloud.firestore {
       allow create, update: if isShopOwner(ownerId)
         && validShop()
         && validVerificationState()
-        && validMarketplaceApproval();
+        && validMarketplaceApproval()
+        && bannerUnchanged();
       allow delete: if isShopOwner(ownerId);
 
       match /products/{productId} {

@@ -470,12 +470,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // The shop name is also a "Visit a shop" chip, so scroll to its card.
     await tester.scrollUntilVisible(
-      find.text('Test Parts Shop'),
+      find.text('Cebu City, Cebu'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Test Parts Shop'), findsOneWidget);
+    expect(find.text('Test Parts Shop'), findsWidgets);
     expect(find.text('Cebu City, Cebu'), findsOneWidget);
     expect(find.text('Brake lever'), findsOneWidget);
     expect(find.text('₱275.00'), findsOneWidget);
@@ -951,7 +952,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('Clutch friction plate'),
+      find.text('Clutch friction plate').last,
       120,
       scrollable: find
           .descendant(
@@ -961,9 +962,21 @@ void main() {
           .first,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Clutch friction plate'), findsOneWidget);
-    expect(find.text('Air filter element'), findsNothing);
-    expect(find.text('Rear brake cable'), findsNothing);
+    // Listed as a result and also as a related-search chip.
+    expect(find.text('Clutch friction plate'), findsWidgets);
+    // Unrelated parts are not matches; they only follow below the matches.
+    final otherItems = find.byKey(const ValueKey('search-all-other-items'));
+    expect(otherItems, findsOneWidget);
+    final dividerY = tester.getTopLeft(otherItems).dy;
+    expect(
+      tester.getTopLeft(find.text('Clutch friction plate').last).dy,
+      lessThan(dividerY),
+    );
+    for (final unrelated in ['Air filter element', 'Rear brake cable']) {
+      final found = find.text(unrelated);
+      if (found.evaluate().isEmpty) continue;
+      expect(tester.getTopLeft(found.first).dy, greaterThan(dividerY));
+    }
   });
 
   testWidgets('category catalog lists parts without motorcycle filtering', (
@@ -1035,7 +1048,7 @@ void main() {
     await tester.tap(find.text('View shop'));
     await tester.pumpAndSettle();
     expect(
-      find.text('Available shops for Universal phone holder'),
+      find.text('Parts in this shop for Universal phone holder'),
       findsOneWidget,
     );
     expect(find.text('8 in stock'), findsOneWidget);

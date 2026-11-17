@@ -150,6 +150,40 @@ class _SearchPageState extends State<SearchPage> {
     return [for (final entry in scored) entry.$1];
   }
 
+  /// With a query: every library item and catalog part that did NOT match it,
+  /// so the matches come first and the rest of the catalog follows below.
+  /// Empty without a query, where the whole catalog is already listed.
+  (List<CatalogProduct>, List<PartSuggestion>) _remainingCatalog(
+    List<CatalogProduct> results,
+    List<PartSuggestion> relatedParts,
+  ) {
+    if (_query.trim().isEmpty) return (const [], const []);
+    final matchedIds = {for (final product in results) product.id};
+    final matchedNames = {
+      for (final part in relatedParts) part.name.toLowerCase(),
+    };
+    final libraryNames = {
+      for (final product in catalogProducts) product.name.toLowerCase(),
+    };
+    return (
+      [
+        for (final product in catalogProducts)
+          if (!isMaintenanceOwnedCatalogProduct(product.name) &&
+              (_selectedCategory == null ||
+                  product.categoryId == _selectedCategory) &&
+              !matchedIds.contains(product.id))
+            product,
+      ],
+      [
+        for (final part in _allPartSuggestions)
+          if (!libraryNames.contains(part.name.toLowerCase()) &&
+              _suggestionMatchesFilter(part) &&
+              !matchedNames.contains(part.name.toLowerCase()))
+            part,
+      ],
+    );
+  }
+
   /// In-stock products from every shop, ranked like the library: listings
   /// matching every word first, then ones sharing a key word in their name.
   /// Rebuilt whenever [ShopStore] notifies, so a product added or edited by an
@@ -191,6 +225,39 @@ class _SearchPageState extends State<SearchPage> {
     });
 
     return matches.take(_maxShopMatches).toList(growable: false);
+  }
+
+  /// Short list of searches related to the current query, e.g. a part the AI
+  /// recognized, shown under the search bar in place of popular searches.
+  /// Built from the ranked catalog part names listed below, closest first;
+  /// sellers' own listing names are left out because they make poor search
+  /// terms ("Ceramic brake pad pro").
+  List<String> _relatedSearches(
+    List<CatalogProduct> results,
+    List<PartSuggestion> relatedParts,
+  ) {
+    const maxSuggestions = 6;
+    final query = _query.trim().toLowerCase();
+    final seen = <String>{query};
+    final suggestions = <String>[];
+    void add(String name) {
+      final trimmed = name.trim();
+      if (trimmed.isEmpty || !seen.add(trimmed.toLowerCase())) return;
+      suggestions.add(trimmed);
+    }
+
+    for (final product in results) {
+      add(product.name);
+    }
+    for (final part in relatedParts) {
+      add(part.name);
+    }
+    return suggestions.take(maxSuggestions).toList(growable: false);
+  }
+
+  void _searchFor(String term) {
+    _searchController.text = term;
+    _setQuery(term);
   }
 
   void _openShop(_ShopMatch match) {
@@ -256,6 +323,42 @@ class _SearchPageState extends State<SearchPage> {
               results.isNotEmpty ||
               shopMatches.isNotEmpty ||
               relatedParts.isNotEmpty;
+          final (otherLibrary, otherParts) = _remainingCatalog(
+            results,
+            relatedParts,
+          );
+          final relatedSearches = hasQuery
+              ? _relatedSearches(results, relatedParts)
+              : const <String>[];
+
+          Widget libraryCard(CatalogProduct product) => _SearchResultCard(
+            key: ValueKey('search-library-${product.id}'),
+            product: product,
+            imageAsset: _partImages.lookup(
+              product.name,
+              _libraryImageCategory(product.categoryId),
+            ),
+            shopStore: _shopStore,
+            onOwnerSignIn: widget.onOwnerSignIn,
+            expanded: _expandedProductId == product.id,
+            onTap: () => setState(() {
+              _expandedProductId = _expandedProductId == product.id
+                  ? null
+                  : product.id;
+            }),
+          );
+          Widget partCard(PartSuggestion part) => _RelatedPartCard(
+            key: ValueKey('search-related-${part.name}'),
+            part: part,
+            imageAsset: _partImages.lookup(part.name, part.category),
+            shopStore: _shopStore,
+            onOwnerSignIn: widget.onOwnerSignIn,
+            expanded: _expandedProductId == 'related:${part.name}',
+            onTap: () => setState(() {
+              final id = 'related:${part.name}';
+              _expandedProductId = _expandedProductId == id ? null : id;
+            }),
+          );
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -382,10 +485,33 @@ class _SearchPageState extends State<SearchPage> {
                       _PopularSearch(
                         key: ValueKey('popular-$term'),
                         term: term,
-                        onTap: () {
-                          _searchController.text = term;
-                          _setQuery(term);
-                        },
+                        onTap: () => _searchFor(term),
+                      ),
+                  ],
+                ),
+              ],
+              if (relatedSearches.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  'Related to "${_query.trim()}"',
+                  key: const ValueKey('related-searches-title'),
+                  style: const TextStyle(
+                    color: AppColors.muted,
+                    fontSize: AppType.micro,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final term in relatedSearches)
+                      _PopularSearch(
+                        key: ValueKey('related-search-$term'),
+                        term: term,
+                        onTap: () => _searchFor(term),
                       ),
                   ],
                 ),
@@ -435,23 +561,7 @@ class _SearchPageState extends State<SearchPage> {
                   if (shopMatches.isNotEmpty) const SizedBox(height: 18),
                   _SearchSectionHeader(title: 'Parts library'),
                   const SizedBox(height: 10),
-                  ...results.map(
-                    (product) => _SearchResultCard(
-                      product: product,
-                      imageAsset: _partImages.lookup(
-                        product.name,
-                        _libraryImageCategory(product.categoryId),
-                      ),
-                      shopStore: _shopStore,
-                      onOwnerSignIn: widget.onOwnerSignIn,
-                      expanded: _expandedProductId == product.id,
-                      onTap: () => setState(() {
-                        _expandedProductId = _expandedProductId == product.id
-                            ? null
-                            : product.id;
-                      }),
-                    ),
-                  ),
+                  ...results.map(libraryCard),
                 ],
                 if (relatedParts.isNotEmpty) ...[
                   // Browsing (no query): the full catalog continues the
@@ -465,23 +575,20 @@ class _SearchPageState extends State<SearchPage> {
                     _SearchSectionHeader(title: 'Parts library'),
                     const SizedBox(height: 10),
                   ],
-                  ...relatedParts.map(
-                    (part) => _RelatedPartCard(
-                      key: ValueKey('search-related-${part.name}'),
-                      part: part,
-                      imageAsset: _partImages.lookup(part.name, part.category),
-                      shopStore: _shopStore,
-                      onOwnerSignIn: widget.onOwnerSignIn,
-                      expanded: _expandedProductId == 'related:${part.name}',
-                      onTap: () => setState(() {
-                        final id = 'related:${part.name}';
-                        _expandedProductId = _expandedProductId == id
-                            ? null
-                            : id;
-                      }),
-                    ),
-                  ),
+                  ...relatedParts.map(partCard),
                 ],
+              ],
+              // Matches for the query come first; every other part and item
+              // follows, so riders can keep browsing past the matches.
+              if (otherLibrary.isNotEmpty || otherParts.isNotEmpty) ...[
+                const SizedBox(height: 22),
+                _SearchSectionHeader(
+                  key: const ValueKey('search-all-other-items'),
+                  title: 'All other parts & items',
+                ),
+                const SizedBox(height: 10),
+                ...otherLibrary.map(libraryCard),
+                ...otherParts.map(partCard),
               ],
             ],
           );
@@ -648,7 +755,7 @@ class _RelatedPartCard extends StatelessWidget {
 }
 
 class _SearchSectionHeader extends StatelessWidget {
-  const _SearchSectionHeader({required this.title});
+  const _SearchSectionHeader({required this.title, super.key});
 
   final String title;
 
@@ -717,6 +824,7 @@ class _SearchResultCard extends StatelessWidget {
     required this.expanded,
     required this.onTap,
     this.imageAsset,
+    super.key,
   });
 
   final CatalogProduct product;

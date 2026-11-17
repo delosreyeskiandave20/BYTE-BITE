@@ -87,13 +87,14 @@ void main() {
     addTearDown(store.dispose);
 
     await _pumpShop(tester, store);
+    // The shop name is also a "Visit a shop" chip, so scroll to its card.
     await tester.scrollUntilVisible(
-      find.text('New Motorcycle Shop'),
+      find.text('No products listed yet.'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
 
-    expect(find.text('New Motorcycle Shop'), findsOneWidget);
+    expect(find.text('New Motorcycle Shop'), findsWidgets);
     expect(find.text('No products listed yet.'), findsOneWidget);
   });
 

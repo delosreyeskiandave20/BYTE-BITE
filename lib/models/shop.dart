@@ -209,6 +209,7 @@ class Shop {
     this.marketplaceApproved = false,
     this.isVerified = false,
     this.lastEditedAt,
+    this.bannerUrl = '',
   });
 
   /// Firestore document ID. This is the owner's Firebase Auth UID in cloud
@@ -239,6 +240,18 @@ class Shop {
       marketplaceApproved ? parseMarketplaceLink(marketplaceUrl) : null;
 
   final List<ShopProduct> products;
+
+  /// Banner picture for the shop page and shop list. Set by the app admin in
+  /// the Firebase console; the app never writes it, and the rules stop owners
+  /// from changing it. Only http(s) URLs are shown.
+  final String bannerUrl;
+
+  bool get hasBanner {
+    final uri = Uri.tryParse(bannerUrl.trim());
+    return uri != null &&
+        (uri.scheme == 'https' || uri.scheme == 'http') &&
+        uri.host.isNotEmpty;
+  }
 
   /// Whether the owner confirmed their email address. Unverified shops are
   /// hidden from the public shop list.
@@ -285,6 +298,7 @@ class Shop {
       products: products ?? this.products,
       isVerified: isVerified ?? this.isVerified,
       lastEditedAt: lastEditedAt ?? this.lastEditedAt,
+      bannerUrl: bannerUrl,
     );
   }
 
@@ -318,6 +332,7 @@ class Shop {
       products: const <ShopProduct>[],
       isVerified: data['verified'] as bool? ?? false,
       lastEditedAt: (data['lastEditedAt'] as num?)?.toInt(),
+      bannerUrl: data['bannerUrl'] as String? ?? '',
     );
   }
 }

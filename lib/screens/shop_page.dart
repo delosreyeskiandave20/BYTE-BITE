@@ -12,6 +12,7 @@ import '../widgets/motoscan_wordmark.dart';
 import '../data/my_motorcycle.dart';
 import '../widgets/shop_item_card.dart';
 import 'online_store_page.dart';
+import 'shop_browse_pages.dart';
 import 'shop_item_page.dart';
 
 /// Pseudo-category that shows every product in a shop.
@@ -58,6 +59,17 @@ class _ShopPageState extends State<ShopPage> {
   void _clearSearch() {
     _searchController.clear();
     setState(() => _searchQuery = '');
+  }
+
+  /// Opens [shop] on its own full-screen page with all of its items.
+  void _visitShop(Shop shop) => openShopBrowsePage(context, widget.store, shop);
+
+  void _openShopList() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ShopListPage(store: widget.store),
+      ),
+    );
   }
 
   Future<void> _openMarketplace(String marketplace) async {
@@ -167,6 +179,8 @@ class _ShopPageState extends State<ShopPage> {
                 onClearSearch: _clearSearch,
                 onCategorySelected: (category) =>
                     setState(() => _selectedCategory = category),
+                onVisitShop: _visitShop,
+                onOpenShopList: _openShopList,
                 onOpenMarketplace: _openMarketplace,
                 error: error,
               ),
@@ -190,6 +204,8 @@ class _ShopContent extends StatelessWidget {
     required this.onClearSearch,
     required this.onCategorySelected,
     required this.onOpenMarketplace,
+    required this.onVisitShop,
+    required this.onOpenShopList,
     this.error,
     super.key,
   });
@@ -204,6 +220,10 @@ class _ShopContent extends StatelessWidget {
   final VoidCallback onClearSearch;
   final ValueChanged<String> onCategorySelected;
   final ValueChanged<String> onOpenMarketplace;
+
+  /// Opens one shop on its own page.
+  final ValueChanged<Shop> onVisitShop;
+  final VoidCallback onOpenShopList;
   final String? error;
 
   @override
@@ -250,6 +270,8 @@ class _ShopContent extends StatelessWidget {
               (query == null && filterTokens.isEmpty && !onlyFits),
         )
         .toList(growable: false);
+    // On a single shop's own page there is nothing else to visit.
+    final canVisit = initialShopName == null;
     final categories = <String>{
       _allCategories,
       for (final entry in shops)
@@ -301,7 +323,11 @@ class _ShopContent extends StatelessWidget {
         const _MyMotorcycleBar(),
         const SizedBox(height: 20),
         _SectionHeading(
-          title: activeQuery.isEmpty
+          title: !canVisit
+              ? (activeQuery.isEmpty
+                    ? 'All parts in this shop'
+                    : 'Parts in this shop for $activeQuery')
+              : activeQuery.isEmpty
               ? 'Available shops'
               : 'Available shops for $activeQuery',
           subtitle: shops.isEmpty
@@ -310,6 +336,14 @@ class _ShopContent extends StatelessWidget {
                     '$productCount ${productCount == 1 ? 'product' : 'products'}',
         ),
         const SizedBox(height: 10),
+        if (canVisit && shops.length > 1) ...[
+          _ShopPicker(
+            shops: [for (final entry in shops) entry.shop],
+            onVisitShop: onVisitShop,
+            onSeeAll: onOpenShopList,
+          ),
+          const SizedBox(height: 10),
+        ],
         if (shops.isEmpty)
           FadeSlideIn(
             key: const ValueKey('shop-empty'),
@@ -365,20 +399,23 @@ class _ShopContent extends StatelessWidget {
                 shop: entry.shop,
                 products: products,
                 myMotorcycle: mine,
+                onVisit: canVisit ? () => onVisitShop(entry.shop) : null,
               ),
             );
           }),
         ],
         // Local shops are the point of MotoScan, so online marketplaces come
-        // after them as a fallback.
-        const SizedBox(height: 22),
-        OnlineStoresSection(
-          searchQuery: activeQuery,
-          sellerStores: [
-            for (final shop in store.shops) ?onlineStoreForShop(shop),
-          ],
-        ),
-        if (query == null) ...[
+        // after them as a fallback. A single shop's own page skips them.
+        if (canVisit) ...[
+          const SizedBox(height: 22),
+          OnlineStoresSection(
+            searchQuery: activeQuery,
+            sellerStores: [
+              for (final shop in store.shops) ?onlineStoreForShop(shop),
+            ],
+          ),
+        ],
+        if (canVisit && query == null) ...[
           const SizedBox(height: 22),
           const _SectionHeading(
             title: 'Shop online',
@@ -699,16 +736,92 @@ class _SectionHeading extends StatelessWidget {
   }
 }
 
+/// "Visit a shop": a quick row of shops; tapping one opens its own page.
+class _ShopPicker extends StatelessWidget {
+  const _ShopPicker({
+    required this.shops,
+    required this.onVisitShop,
+    required this.onSeeAll,
+  });
+
+  final List<Shop> shops;
+  final ValueChanged<Shop> onVisitShop;
+
+  /// Opens the list of every shop.
+  final VoidCallback onSeeAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Visit a shop',
+                style: TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            TextButton(
+              key: const ValueKey('shop-see-all'),
+              onPressed: onSeeAll,
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              child: const Text('See all shops'),
+            ),
+          ],
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final shop in shops)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    key: ValueKey('visit-shop-${shop.id}'),
+                    avatar: const Icon(
+                      Icons.storefront_outlined,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    label: Text(shop.name),
+                    onPressed: () => onVisitShop(shop),
+                    backgroundColor: AppColors.surface,
+                    side: const BorderSide(color: AppColors.line),
+                    labelStyle: const TextStyle(
+                      color: AppColors.ink,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _ShopCard extends StatelessWidget {
   const _ShopCard({
     required this.shop,
     required this.products,
     this.myMotorcycle,
+    this.onVisit,
   });
 
   final Shop shop;
   final List<ShopProduct> products;
   final String? myMotorcycle;
+
+  /// Opens this shop on its own page. Null hides the button.
+  final VoidCallback? onVisit;
 
   @override
   Widget build(BuildContext context) {
@@ -774,6 +887,13 @@ class _ShopCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onVisit != null)
+                TextButton.icon(
+                  key: ValueKey('visit-button-${shop.id}'),
+                  onPressed: onVisit,
+                  icon: const Icon(Icons.storefront_outlined, size: 17),
+                  label: const Text('Visit shop'),
+                ),
             ],
           ),
           if (shop.description.isNotEmpty) ...[
