@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/chat.dart';
 import '../data/item_parts.dart';
 import '../data/price_format.dart';
 import '../models/shop.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shop_item_card.dart';
+import 'chat_pages.dart';
 
 /// Turns a shop's contact into a link: a PH mobile number becomes an SMS
 /// link, and web or Messenger addresses open in the browser/app.
@@ -38,6 +40,7 @@ class ShopItemPage extends StatefulWidget {
     required this.product,
     this.myMotorcycle,
     this.openLink,
+    this.chatService,
     super.key,
   });
 
@@ -45,6 +48,9 @@ class ShopItemPage extends StatefulWidget {
   final ShopProduct product;
   final String? myMotorcycle;
   final LinkOpener? openLink;
+
+  /// In-app chat with the seller. Defaults to [ChatService.shared].
+  final ChatService? chatService;
 
   @override
   State<ShopItemPage> createState() => _ShopItemPageState();
@@ -286,23 +292,26 @@ class _ShopItemPageState extends State<ShopItemPage> {
                         ],
                       ),
                       const SizedBox(height: 12),
+                      // In-app chat; the seller replies from their dashboard.
                       FilledButton.icon(
                         key: const ValueKey('message-seller'),
-                        onPressed: contact == null
-                            ? null
-                            : () => _messageSeller(contact),
+                        onPressed: () => openChatWithShop(
+                          context,
+                          shopId: shop.id,
+                          shopName: shop.name,
+                          productName: product.name,
+                          service: widget.chatService,
+                        ),
                         icon: const Icon(Icons.chat_bubble_outline),
                         label: const Text('Message seller'),
                       ),
-                      if (contact == null) ...[
+                      if (contact != null) ...[
                         const SizedBox(height: 6),
-                        const Text(
-                          'This seller has not added a way to message them yet.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.muted,
-                            fontSize: AppType.caption,
-                          ),
+                        TextButton.icon(
+                          key: const ValueKey('contact-seller-outside'),
+                          onPressed: () => _messageSeller(contact),
+                          icon: const Icon(Icons.call_outlined, size: 18),
+                          label: Text('Call or text: ${shop.contact.trim()}'),
                         ),
                       ],
                     ],

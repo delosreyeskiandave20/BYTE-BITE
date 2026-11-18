@@ -12,6 +12,7 @@ import '../widgets/motoscan_wordmark.dart';
 import '../data/my_motorcycle.dart';
 import '../widgets/shop_item_card.dart';
 import 'online_store_page.dart';
+import 'chat_pages.dart';
 import 'shop_browse_pages.dart';
 import 'shop_item_page.dart';
 
@@ -125,15 +126,22 @@ class _ShopPageState extends State<ShopPage> {
             ),
           ),
         ),
-        actions: widget.onOwnerSignIn == null
-            ? null
-            : [
-                IconButton(
-                  tooltip: 'Manage your shop',
-                  onPressed: widget.onOwnerSignIn,
-                  icon: const Icon(Icons.person_outline),
-                ),
-              ],
+        actions: [
+          IconButton(
+            key: const ValueKey('open-my-messages'),
+            tooltip: 'My messages',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const ChatInboxPage()),
+            ),
+            icon: const ChatUnreadIcon(),
+          ),
+          if (widget.onOwnerSignIn != null)
+            IconButton(
+              tooltip: 'Manage your shop',
+              onPressed: widget.onOwnerSignIn,
+              icon: const Icon(Icons.person_outline),
+            ),
+        ],
       ),
       body: SafeArea(
         child: AnimatedBuilder(

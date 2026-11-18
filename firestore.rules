@@ -200,5 +200,93 @@ service cloud.firestore {
         allow delete: if isShopOwner(ownerId);
       }
     }
+
+    // ---- Buyer <-> seller chat ----
+    // chats/{shopId_buyerUid}: one chat per buyer per shop. The shop document
+    // ID is the owner's UID, so the seller is the user whose UID == shopId.
+    // Buyers are Firebase Anonymous (guest) users or other signed-in users.
+
+    function isChatMember(chat) {
+      return signedIn()
+        && (request.auth.uid == chat.buyerUid || request.auth.uid == chat.shopId);
+    }
+
+    function validChat() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'shopId',
+          'shopName',
+          'buyerUid',
+          'buyerName',
+          'productName',
+          'lastMessage',
+          'lastSenderUid',
+          'updatedAt',
+          'buyerUnread',
+          'sellerUnread'
+        ])
+        && data.keys().hasAll([
+          'shopId',
+          'shopName',
+          'buyerUid',
+          'buyerName',
+          'lastMessage',
+          'lastSenderUid',
+          'updatedAt',
+          'buyerUnread',
+          'sellerUnread'
+        ])
+        && data.shopId is string && data.shopId.size() > 0
+        && data.shopName is string && data.shopName.size() <= 120
+        && data.buyerUid is string && data.buyerUid.size() > 0
+        && data.buyerName is string
+        && data.buyerName.size() >= 1 && data.buyerName.size() <= 60
+        && (!('productName' in data)
+          || (data.productName is string && data.productName.size() <= 120))
+        && data.lastMessage is string && data.lastMessage.size() <= 1000
+        && data.lastSenderUid is string
+        && data.updatedAt is int
+        && data.buyerUnread is int && data.buyerUnread >= 0
+        && data.sellerUnread is int && data.sellerUnread >= 0;
+    }
+
+    match /chats/{chatId} {
+      allow read: if isChatMember(resource.data);
+      // Only the buyer starts a chat, with a real shop, under the fixed ID.
+      allow create: if signedIn()
+        && validChat()
+        && request.resource.data.buyerUid == request.auth.uid
+        && request.resource.data.shopId != request.auth.uid
+        && chatId == request.resource.data.shopId + '_' + request.auth.uid
+        && exists(/databases/$(database)/documents/shops/$(request.resource.data.shopId));
+      // Members only update the summary and unread counts; who is in the chat
+      // never changes.
+      allow update: if isChatMember(resource.data)
+        && validChat()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'lastMessage',
+          'lastSenderUid',
+          'updatedAt',
+          'buyerUnread',
+          'sellerUnread'
+        ]);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        // getAfter: the first message is written in the same batch that
+        // creates the chat.
+        allow read: if isChatMember(
+          get(/databases/$(database)/documents/chats/$(chatId)).data);
+        allow create: if isChatMember(
+            getAfter(/databases/$(database)/documents/chats/$(chatId)).data)
+          && request.resource.data.keys().hasOnly(['senderUid', 'text', 'sentAt'])
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 1000
+          && request.resource.data.sentAt is int;
+        allow update, delete: if false;
+      }
+    }
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../data/price_format.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
+import 'chat_pages.dart';
 import 'shop_item_page.dart';
 
 /// Viewer-only shop browsing: a list of every shop, and a full-screen page per
@@ -234,8 +235,23 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final shopForChat = widget.store.shops
+        .where((shop) => shop.id == widget.shopId)
+        .firstOrNull;
     return Scaffold(
       backgroundColor: AppColors.paper,
+      floatingActionButton: shopForChat == null
+          ? null
+          : FloatingActionButton.extended(
+              key: const ValueKey('shop-detail-message'),
+              onPressed: () => openChatWithShop(
+                context,
+                shopId: shopForChat.id,
+                shopName: shopForChat.name,
+              ),
+              icon: const Icon(Icons.chat_bubble_outline),
+              label: const Text('Message shop'),
+            ),
       body: ListenableBuilder(
         listenable: widget.store,
         builder: (context, _) {

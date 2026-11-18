@@ -12,6 +12,7 @@ import '../data/item_specs.dart';
 import '../data/marketplace_link.dart';
 import '../widgets/motorcycle_checklist.dart';
 import 'add_item_page.dart';
+import 'chat_pages.dart';
 
 /// Form validator for fields that must not be blank.
 String? _requiredField(String? value, String label) {
@@ -568,6 +569,30 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                 ),
                 const SizedBox(height: 14),
               ],
+              // Buyers' messages to this shop, with the live unread count.
+              ListenableBuilder(
+                listenable: widget.store,
+                builder: (context, _) {
+                  final shop = widget.store.shopForOwner(widget.ownerEmail);
+                  if (shop == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('open-customer-messages'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ChatInboxPage(shopId: shop.id),
+                        ),
+                      ),
+                      icon: ChatUnreadIcon(shopId: shop.id),
+                      label: const Text('Customer messages'),
+                    ),
+                  );
+                },
+              ),
               const Text(
                 'Shop profile',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
