@@ -7,8 +7,10 @@ service firebase.storage {
   match /b/{bucket}/o {
     match /shops/{ownerId}/products/{fileName} {
       allow read: if true;
+      // Not guest (anonymous) chat accounts, so they cannot fill storage.
       allow create, update: if request.auth != null
         && request.auth.uid == ownerId
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
         && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
       allow delete: if request.auth != null && request.auth.uid == ownerId;

@@ -62,32 +62,33 @@ Shop _shop(ShopStore store, String name) =>
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('the shop page shows only that shop\'s items in a 2-column grid', (
-    tester,
-  ) async {
-    final store = await _twoShops();
-    addTearDown(store.dispose);
-    final north = _shop(store, 'North Moto');
+  testWidgets(
+    'the shop page shows only that shop\'s items in a 2-column grid',
+    (tester) async {
+      final store = await _twoShops();
+      addTearDown(store.dispose);
+      final north = _shop(store, 'North Moto');
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ShopDetailPage(store: store, shopId: north.id),
-      ),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ShopDetailPage(store: store, shopId: north.id),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('North Moto'), findsWidgets);
-    expect(find.text('North Moto Street, Cebu City'), findsOneWidget);
-    expect(find.text('North brake pads'), findsOneWidget);
-    expect(find.text('In stock: 4'), findsOneWidget);
-    expect(find.text('Out of stock'), findsOneWidget);
-    expect(find.text('South side mirror'), findsNothing);
+      expect(find.text('North Moto'), findsWidgets);
+      expect(find.text('North Moto Street, Cebu City'), findsOneWidget);
+      expect(find.text('North brake pads'), findsOneWidget);
+      expect(find.text('In stock: 4'), findsOneWidget);
+      expect(find.text('Out of stock'), findsOneWidget);
+      expect(find.text('South side mirror'), findsNothing);
 
-    final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
-    final delegate =
-        grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
-    expect(delegate.crossAxisCount, 2);
-  });
+      final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
+      final delegate =
+          grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+      expect(delegate.crossAxisCount, 2);
+    },
+  );
 
   testWidgets('a shop with no items says so', (tester) async {
     final store = await _twoShops();

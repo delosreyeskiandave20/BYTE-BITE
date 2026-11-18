@@ -7,15 +7,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'fake_owner_auth.dart';
 
 List<String> _relatedChipTerms(WidgetTester tester) => [
-  for (final element in find
-      .byWidgetPredicate(
-        (widget) =>
-            widget.key is ValueKey<String> &&
-            (widget.key! as ValueKey<String>).value.startsWith(
-              'related-search-',
-            ),
-      )
-      .evaluate())
+  for (final element
+      in find
+          .byWidgetPredicate(
+            (widget) =>
+                widget.key is ValueKey<String> &&
+                (widget.key! as ValueKey<String>).value.startsWith(
+                  'related-search-',
+                ),
+          )
+          .evaluate())
     (element.widget.key! as ValueKey<String>).value.substring(
       'related-search-'.length,
     ),
@@ -70,13 +71,15 @@ void main() {
     addTearDown(store.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(home: SearchPage(shopStore: store, initialQuery: 'Battery')),
+      MaterialApp(
+        home: SearchPage(shopStore: store, initialQuery: 'Battery'),
+      ),
     );
     await tester.pumpAndSettle();
 
     final list = tester.widget<ListView>(find.byType(ListView).first);
-    final children = (list.childrenDelegate as SliverChildListDelegate)
-        .children;
+    final children =
+        (list.childrenDelegate as SliverChildListDelegate).children;
     String? keyOf(Widget widget) => widget.key is ValueKey<String>
         ? (widget.key! as ValueKey<String>).value
         : null;

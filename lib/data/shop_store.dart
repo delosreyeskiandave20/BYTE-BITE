@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/shop.dart';
 import 'cloudinary_photo_storage.dart';
+import 'facebook_link.dart';
 import 'item_specs.dart';
 import 'marketplace_link.dart';
 import 'owner_auth.dart';
@@ -552,9 +553,12 @@ class ShopStore extends ChangeNotifier {
       'Shop information',
       maxLength: _maxShopDescriptionLength,
     );
+    // The contact is the shop's Facebook page, saved as a clean link.
+    final contactError = validateFacebookLink(contact);
+    if (contactError != null) throw StateError(contactError);
     final trimmedContact = _optionalText(
-      contact,
-      'Contact',
+      parseFacebookLink(contact)?.pageUrl ?? '',
+      'Facebook page',
       maxLength: _maxLocationLength,
     );
     final account = _requireSignedInOwner(normalizedEmail);

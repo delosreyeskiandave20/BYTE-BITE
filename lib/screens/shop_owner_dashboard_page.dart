@@ -7,6 +7,7 @@ import '../data/price_format.dart';
 import '../data/shop_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/load_error_banner.dart';
+import '../data/facebook_link.dart';
 import '../data/item_parts.dart';
 import '../data/item_specs.dart';
 import '../data/marketplace_link.dart';
@@ -146,9 +147,12 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
         contact: _contactController.text,
         marketplaceUrl: _marketplaceController.text,
       );
-      // Show the cleaned-up link that was saved.
+      // Show the cleaned-up links that were saved.
       final saved = widget.store.shopForOwner(widget.ownerEmail);
-      if (saved != null) _marketplaceController.text = saved.marketplaceUrl;
+      if (saved != null) {
+        _marketplaceController.text = saved.marketplaceUrl;
+        _contactController.text = saved.contact;
+      }
       _savedSignature = _currentSignature;
       return true;
     } catch (error) {
@@ -655,12 +659,21 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                       key: const ValueKey('shop-contact'),
                       controller: _contactController,
                       keyboardType: TextInputType.url,
+                      autocorrect: false,
                       decoration: const InputDecoration(
-                        labelText: 'How buyers can message you',
-                        hintText: 'e.g. 09171234567 or m.me/yourshop',
-                        helperText: 'Used by the "Message seller" button on your items.',
+                        labelText: 'Shop Facebook page (optional)',
+                        hintText: 'e.g. facebook.com/yourshop',
+                        helperText:
+                            'Buyers tap "Message on Facebook" to chat with '
+                            'your shop in Messenger.',
+                        helperMaxLines: 2,
+                        prefixIcon: Icon(
+                          Icons.facebook,
+                          color: Color(0xFF1877F2),
+                        ),
                         border: OutlineInputBorder(),
                       ),
+                      validator: (value) => validateFacebookLink(value ?? ''),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(

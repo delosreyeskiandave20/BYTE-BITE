@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/data/shop_store.dart';
 import 'package:flutter_application_1/screens/shop_owner_dashboard_page.dart';
+import 'package:flutter_application_1/screens/shop_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -112,6 +113,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.shopForOwner(_owner)!.hasBanner, isFalse);
     expect(find.text('Add picture'), findsOneWidget);
+  });
+
+  testWidgets('the Shop tab card shows the shop picture', (tester) async {
+    tester.view.physicalSize = const Size(800, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final store = await _storeWithShop();
+    addTearDown(store.dispose);
+    final shop = store.shopForOwner(_owner)!;
+
+    await tester.pumpWidget(MaterialApp(home: ShopPage(store: store)));
+    await tester.pumpAndSettle();
+    // No picture yet: the storefront icon.
+    expect(find.byKey(ValueKey('shop-avatar-${shop.id}')), findsNothing);
+
+    await store.setShopBanner(ownerEmail: _owner, photo: _photo);
+    await tester.pumpAndSettle();
+    final picture = tester.widget<Image>(
+      find.byKey(ValueKey('shop-avatar-${shop.id}')),
+    );
+    expect(
+      (picture.image as NetworkImage).url,
+      'https://photos.example.com/shop-1.png',
+    );
   });
 
   testWidgets('a new shop must be saved before adding a picture', (

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/chat.dart';
+import '../data/facebook_link.dart';
 import '../data/item_parts.dart';
 import '../data/price_format.dart';
 import '../models/shop.dart';
@@ -319,7 +320,28 @@ class _ShopItemPageState extends State<ShopItemPage> {
                         icon: const Icon(Icons.chat_bubble_outline),
                         label: const Text('Message seller'),
                       ),
-                      if (contact != null) ...[
+                      // The shop's Facebook page: opens Messenger directly.
+                      if (parseFacebookLink(shop.contact)
+                          case final facebook?) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          key: const ValueKey('message-on-facebook'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1877F2),
+                            side: const BorderSide(color: Color(0xFF1877F2)),
+                          ),
+                          onPressed: () =>
+                              _messageSeller(facebook.messengerUri),
+                          icon: const Icon(Icons.facebook),
+                          label: const Text('Message on Facebook'),
+                        ),
+                        TextButton(
+                          key: const ValueKey('view-facebook-page'),
+                          onPressed: () => _messageSeller(facebook.pageUri),
+                          child: const Text('View Facebook page'),
+                        ),
+                      ] else if (contact != null) ...[
+                        // Older shops saved a phone number here.
                         const SizedBox(height: 6),
                         TextButton.icon(
                           key: const ValueKey('contact-seller-outside'),

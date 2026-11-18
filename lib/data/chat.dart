@@ -6,6 +6,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../firebase_bootstrap.dart';
+
 /// Longest chat message, kept in sync with firestore.rules.
 const maxChatMessageLength = 1000;
 
@@ -202,6 +204,9 @@ abstract class ChatBackend {
   /// Signs in a guest account when nobody is signed in, and returns the UID.
   Future<String> signInAsGuest();
 
+  /// The signed-in UID now and whenever it changes (sign-in, sign-out).
+  Stream<String?> userChanges();
+
   Stream<List<ChatThread>> buyerThreads(String buyerUid);
   Stream<List<ChatThread>> shopThreads(String shopId);
   Stream<ChatThread?> thread(String chatId);
@@ -233,6 +238,10 @@ class FirestoreChatBackend implements ChatBackend {
 
   @override
   String? get currentUid => _auth.currentUser?.uid;
+
+  @override
+  Stream<String?> userChanges() =>
+      _auth.authStateChanges().map((user) => user?.uid);
 
   @override
   Future<String> signInAsGuest() async {
@@ -275,11 +284,32 @@ class FirestoreChatBackend implements ChatBackend {
       _chats.where('shopId', isEqualTo: shopId).snapshots().map(_threads);
 
   @override
-  Stream<ChatThread?> thread(String chatId) =>
-      _chats.doc(chatId).snapshots().map((doc) {
-        final data = doc.data();
-        return data == null ? null : ChatThread.fromMap(doc.id, data);
-      });
+  Stream<ChatThread?> thread(String chatId) {
+    // A chat this device is still creating is reported as not existing until
+    // the server confirms it: the server refuses to list the messages of a
+    // chat it does not have yet, and a refused listener never recovers.
+    var confirmed = false;
+    return _chats
+        .doc(chatId)
+        .snapshots(includeMetadataChanges: true)
+        .map((doc) {
+          final data = doc.data();
+          if (data == null) return null;
+          if (!doc.metadata.hasPendingWrites) confirmed = true;
+          return confirmed ? ChatThread.fromMap(doc.id, data) : null;
+        })
+        .distinct(_sameThread);
+  }
+
+  /// Metadata-only changes emit again; skip them unless the chat changed.
+  static bool _sameThread(ChatThread? a, ChatThread? b) {
+    if (a == null || b == null) return a == b;
+    return a.updatedAt == b.updatedAt &&
+        a.buyerUnread == b.buyerUnread &&
+        a.sellerUnread == b.sellerUnread &&
+        a.lastMessage == b.lastMessage &&
+        a.productName == b.productName;
+  }
 
   @override
   Stream<List<ChatMessage>> messages(String chatId) => _chats
@@ -307,10 +337,15 @@ class FirestoreChatBackend implements ChatBackend {
     final chatRef = _chats.doc(thread.id);
     final messageRef = chatRef.collection('messages').doc();
     final batch = _firestore.batch();
+    // The summary names the new message and the server time, which the
+    // security rules check (no faked previews, one message per second).
+    final proof = {
+      'lastMessageId': messageRef.id,
+      'lastSentAt': FieldValue.serverTimestamp(),
+    };
     if (isNew) {
-      batch.set(
-        chatRef,
-        thread
+      batch.set(chatRef, {
+        ...thread
             .copyWith(
               productName: item?.name,
               lastMessage: text,
@@ -320,7 +355,8 @@ class FirestoreChatBackend implements ChatBackend {
               sellerUnread: fromSeller ? 0 : 1,
             )
             .toMap(),
-      );
+        ...proof,
+      });
     } else {
       batch.update(chatRef, {
         'lastMessage': text,
@@ -328,6 +364,7 @@ class FirestoreChatBackend implements ChatBackend {
         'updatedAt': now,
         'productName': ?item?.name,
         fromSeller ? 'buyerUnread' : 'sellerUnread': FieldValue.increment(1),
+        ...proof,
       });
     }
     batch.set(
@@ -353,22 +390,41 @@ class FirestoreChatBackend implements ChatBackend {
 
 /// Keeps chats in memory. Used by tests and by previews without Firebase.
 class InMemoryChatBackend implements ChatBackend {
-  InMemoryChatBackend([this._uid]);
+  InMemoryChatBackend([this._uid])
+    : _threads = {},
+      _messages = {},
+      _changes = StreamController<void>.broadcast();
+
+  /// Another sign-in to the same chats as [other], like a second Firebase app
+  /// on the same project.
+  InMemoryChatBackend.sharedWith(InMemoryChatBackend other, [this._uid])
+    : _threads = other._threads,
+      _messages = other._messages,
+      _changes = other._changes;
 
   String? _uid;
-  final _threads = <String, ChatThread>{};
-  final _messages = <String, List<ChatMessage>>{};
-  final _changes = StreamController<void>.broadcast();
+  final Map<String, ChatThread> _threads;
+  final Map<String, List<ChatMessage>> _messages;
+  final StreamController<void> _changes;
   var _nextId = 0;
 
   /// Switches who is "signed in", e.g. to reply as the seller in a test.
-  set currentUid(String? uid) => _uid = uid;
+  set currentUid(String? uid) {
+    _uid = uid;
+    _changes.add(null);
+  }
 
   @override
   String? get currentUid => _uid;
 
   @override
-  Future<String> signInAsGuest() async => _uid ??= 'guest-${_nextId++}';
+  Future<String> signInAsGuest() async {
+    if (_uid == null) currentUid = 'guest-${_nextId++}';
+    return _uid!;
+  }
+
+  @override
+  Stream<String?> userChanges() => _watch(() => _uid).distinct();
 
   Stream<T> _watch<T>(T Function() read) async* {
     yield read();
@@ -415,7 +471,7 @@ class InMemoryChatBackend implements ChatBackend {
     );
     (_messages[thread.id] ??= []).add(
       ChatMessage(
-        id: 'm${_nextId++}',
+        id: 'm-$senderUid-${_nextId++}',
         senderUid: senderUid,
         text: text,
         sentAt: now,
@@ -438,24 +494,52 @@ class InMemoryChatBackend implements ChatBackend {
 
 /// Chat between buyers and sellers: who is chatting, and the buyer's name.
 class ChatService {
-  ChatService(this.backend);
+  /// [backend] is signed in as the buyer's guest account; [sellerBackend]
+  /// as the shop owner. They are separate sign-ins, so an owner signing in or
+  /// out never replaces the buyer's guest account. Tests may pass one backend
+  /// for both.
+  ChatService(this.backend, {ChatBackend? sellerBackend})
+    : sellerBackend = sellerBackend ?? backend;
 
+  /// Buyer side: the guest account that starts chats with shops.
   final ChatBackend backend;
+
+  /// Seller side: the shop owner's account, which answers customers.
+  final ChatBackend sellerBackend;
+
+  /// The backend to read and write [asSeller]'s side of a chat with.
+  ChatBackend backendFor({required bool asSeller}) =>
+      asSeller ? sellerBackend : backend;
+
+  /// The UID that sends messages on [asSeller]'s side.
+  String? uidFor({required bool asSeller}) =>
+      backendFor(asSeller: asSeller).currentUid;
 
   static const _buyerNameKey = 'chat_buyer_name';
 
   static ChatService? _shared;
 
   /// The app-wide service: Firestore when Firebase is set up, otherwise an
-  /// in-memory one so previews still work.
-  static ChatService get shared => _shared ??= ChatService(
-    Firebase.apps.isNotEmpty
-        ? FirestoreChatBackend(
-            FirebaseFirestore.instance,
-            FirebaseAuth.instance,
-          )
-        : InMemoryChatBackend(),
-  );
+  /// in-memory one so previews still work. Buyers chat through the separate
+  /// buyer-chat Firebase app; sellers through the default app they sign in
+  /// to.
+  static ChatService get shared => _shared ??= _createShared();
+
+  static ChatService _createShared() {
+    if (Firebase.apps.isEmpty) return ChatService(InMemoryChatBackend());
+    final seller = FirestoreChatBackend(
+      FirebaseFirestore.instance,
+      FirebaseAuth.instance,
+    );
+    final chatApp = FirebaseBootstrap.chatApp;
+    final buyer = chatApp == null
+        ? seller
+        : FirestoreChatBackend(
+            FirebaseFirestore.instanceFor(app: chatApp),
+            FirebaseAuth.instanceFor(app: chatApp),
+          );
+    return ChatService(buyer, sellerBackend: seller);
+  }
 
   String? get currentUid => backend.currentUid;
 
@@ -487,6 +571,9 @@ class ChatService {
     required String buyerName,
     String productName = '',
   }) async {
+    if (sellerBackend.currentUid == shopId) {
+      throw const ChatException('This is your own shop.');
+    }
     final uid = await backend.signInAsGuest();
     if (uid == shopId) {
       throw const ChatException('This is your own shop.');
@@ -496,10 +583,86 @@ class ChatService {
       shopId: shopId,
       shopName: shopName,
       buyerUid: uid,
-      buyerName: buyerName,
+      buyerName: buyerName.trim(),
       productName: productName,
     );
   }
+
+  /// Every conversation on this device, newest first: the guest's chats
+  /// with shops and, when a shop owner is signed in, chats from their
+  /// customers. Follows both sign-ins, so it fills in once a guest account
+  /// exists and keeps the guest's chats when an owner signs in or out.
+  Stream<List<ChatThread>> myThreads() {
+    late final StreamController<List<ChatThread>> controller;
+    final subscriptions = <StreamSubscription<Object?>>[];
+    StreamSubscription<List<ChatThread>>? buyerInner;
+    StreamSubscription<List<ChatThread>>? shopInner;
+    // Null until that side has reported once.
+    List<ChatThread>? asBuyer;
+    List<ChatThread>? asShop;
+
+    void emit() {
+      final buyer = asBuyer;
+      final shop = asShop;
+      if (buyer == null || shop == null) return;
+      final byId = {
+        for (final thread in [...buyer, ...shop]) thread.id: thread,
+      };
+      controller.add(
+        byId.values.toList()
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)),
+      );
+    }
+
+    controller = StreamController<List<ChatThread>>(
+      onListen: () {
+        subscriptions
+          ..add(
+            backend.userChanges().listen((uid) {
+              buyerInner?.cancel();
+              buyerInner = null;
+              if (uid == null) {
+                asBuyer = const [];
+                emit();
+                return;
+              }
+              buyerInner = backend.buyerThreads(uid).listen((threads) {
+                asBuyer = threads;
+                emit();
+              }, onError: controller.addError);
+            }, onError: controller.addError),
+          )
+          ..add(
+            sellerBackend.userChanges().listen((uid) {
+              shopInner?.cancel();
+              shopInner = null;
+              if (uid == null) {
+                asShop = const [];
+                emit();
+                return;
+              }
+              shopInner = sellerBackend.shopThreads(uid).listen((threads) {
+                asShop = threads;
+                emit();
+              }, onError: controller.addError);
+            }, onError: controller.addError),
+          );
+      },
+      onCancel: () async {
+        await buyerInner?.cancel();
+        await shopInner?.cancel();
+        for (final subscription in subscriptions) {
+          await subscription.cancel();
+        }
+      },
+    );
+    return controller.stream;
+  }
+
+  /// Whether the signed-in user is the shop in [thread].
+  bool isSellerIn(ChatThread thread) =>
+      sellerBackend.currentUid != null &&
+      sellerBackend.currentUid == thread.shopId;
 
   /// Sends [text] in [thread] from the signed-in user, with the [item] it
   /// asks about.
@@ -517,9 +680,10 @@ class ChatService {
         'Messages can be up to $maxChatMessageLength characters.',
       );
     }
-    final uid = backend.currentUid;
+    final sender = backendFor(asSeller: asSeller);
+    final uid = sender.currentUid;
     if (uid == null) throw const ChatException('Sign in to send messages.');
-    await backend.send(
+    await sender.send(
       thread,
       uid,
       trimmed,

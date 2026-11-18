@@ -172,10 +172,16 @@ class ChatPage extends StatefulWidget {
     required this.asSeller,
     this.attachedItem,
     this.openItem,
+    this.earlierThreads = const [],
     super.key,
   });
 
   final ChatService service;
+
+  /// Older chats of the same buyer with this shop (for example from another
+  /// guest account). Their messages are shown in the same conversation;
+  /// replies go to [thread], the newest one.
+  final List<ChatThread> earlierThreads;
 
   /// The item the buyer came from; sent with their next message.
   final ChatItem? attachedItem;
@@ -196,6 +202,8 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final _controller = TextEditingController();
   StreamSubscription<ChatThread?>? _threadSubscription;
+  final _earlierSubscriptions = <StreamSubscription<List<ChatMessage>>>[];
+  final _earlierMessages = <String, List<ChatMessage>>{};
   StreamSubscription<List<ChatMessage>>? _messageSubscription;
 
   /// Whether we know yet if the chat is stored.
@@ -205,6 +213,7 @@ class _ChatPageState extends State<ChatPage> {
   /// The conversation, oldest first; null until it has loaded.
   List<ChatMessage>? _messages;
   Object? _loadError;
+  bool _retriedMessages = false;
   bool _sending = false;
   late ChatItem? _pendingItem = widget.attachedItem;
 
@@ -212,6 +221,30 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     _listen();
+    _listenToEarlierChats();
+  }
+
+  /// Messages of the buyer's older chats, merged into this conversation.
+  void _listenToEarlierChats() {
+    final backend = widget.service.backendFor(asSeller: widget.asSeller);
+    for (final earlier in widget.earlierThreads) {
+      _earlierSubscriptions.add(
+        backend.messages(earlier.id).listen(
+          (messages) {
+            if (mounted) {
+              setState(() => _earlierMessages[earlier.id] = messages);
+            }
+          },
+          onError: (Object error) =>
+              debugPrint('Earlier chat failed to load: $error'),
+        ),
+      );
+      if (earlier.unreadFor(asSeller: widget.asSeller) > 0) {
+        backend
+            .markRead(earlier.id, asSeller: widget.asSeller)
+            .catchError((_) {});
+      }
+    }
   }
 
   /// Watches the chat. Its messages are only read once the chat is stored:
@@ -221,7 +254,7 @@ class _ChatPageState extends State<ChatPage> {
     _threadSubscription?.cancel();
     _messageSubscription?.cancel();
     _messageSubscription = null;
-    final backend = widget.service.backend;
+    final backend = widget.service.backendFor(asSeller: widget.asSeller);
     _threadSubscription = backend
         .thread(widget.thread.id)
         .listen(
@@ -249,7 +282,8 @@ class _ChatPageState extends State<ChatPage> {
 
   void _listenToMessages() {
     if (_messageSubscription != null) return;
-    _messageSubscription = widget.service.backend
+    _messageSubscription = widget.service
+        .backendFor(asSeller: widget.asSeller)
         .messages(widget.thread.id)
         .listen(
           (messages) {
@@ -257,6 +291,16 @@ class _ChatPageState extends State<ChatPage> {
           },
           onError: (Object error) {
             debugPrint('Chat messages failed to load: $error');
+            // A just-created chat can briefly be unknown to the server; try
+            // once more on our own before showing an error.
+            if (!_retriedMessages) {
+              _retriedMessages = true;
+              _messageSubscription = null;
+              Future<void>.delayed(const Duration(seconds: 1), () {
+                if (mounted && _loadError == null) _listenToMessages();
+              });
+              return;
+            }
             if (mounted) setState(() => _loadError = error);
           },
         );
@@ -265,6 +309,7 @@ class _ChatPageState extends State<ChatPage> {
   void _retry() {
     setState(() {
       _loadError = null;
+      _retriedMessages = false;
       _threadLoaded = false;
       _messages = null;
     });
@@ -281,6 +326,9 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   void dispose() {
+    for (final subscription in _earlierSubscriptions) {
+      subscription.cancel();
+    }
     _threadSubscription?.cancel();
     _messageSubscription?.cancel();
     _controller.dispose();
@@ -324,9 +372,13 @@ class _ChatPageState extends State<ChatPage> {
         ),
       );
     }
-    final messages = _messages;
-    final stillLoading =
-        !_threadLoaded || (_stored != null && messages == null);
+    final current = _messages;
+    final stillLoading = !_threadLoaded || (_stored != null && current == null);
+    // The buyer's older chats come first, then this one, all by time.
+    final List<ChatMessage>? messages = _earlierMessages.isEmpty
+        ? current
+        : ([for (final list in _earlierMessages.values) ...list, ...?current]
+            ..sort((a, b) => a.sentAt.compareTo(b.sentAt)));
     if (stillLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -401,7 +453,7 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     final thread = widget.thread;
     final title = widget.asSeller ? thread.buyerName : thread.shopName;
-    final me = widget.service.currentUid;
+    final me = widget.service.uidFor(asSeller: widget.asSeller);
     return Scaffold(
       backgroundColor: AppColors.paper,
       appBar: AppBar(
@@ -701,12 +753,14 @@ class _PendingItem extends StatelessWidget {
   }
 }
 
-/// A list of chats: the buyer's chats with shops, or a shop's chats with
-/// buyers when [shopId] is given.
-class ChatInboxPage extends StatelessWidget {
+/// A list of conversations; tapping one opens the full chat.
+///
+/// With [shopId]: that shop's chats with its customers (the seller
+/// dashboard). Without: every conversation of the signed-in user, both the
+/// shops they asked as a buyer and, if they own a shop, their customers.
+class ChatInboxPage extends StatefulWidget {
   const ChatInboxPage({this.shopId, this.service, this.openItem, super.key});
 
-  /// The seller's shop; null shows the signed-in buyer's chats.
   final String? shopId;
   final ChatService? service;
 
@@ -714,31 +768,72 @@ class ChatInboxPage extends StatelessWidget {
   final ChatItemOpener? openItem;
 
   @override
+  State<ChatInboxPage> createState() => _ChatInboxPageState();
+}
+
+class _ChatInboxPageState extends State<ChatInboxPage> {
+  late final ChatService _chat = widget.service ?? ChatService.shared;
+
+  // Created once so rebuilds do not restart the live listeners.
+  late Stream<List<ChatThread>> _threads = _load();
+
+  Stream<List<ChatThread>> _load() {
+    final shopId = widget.shopId;
+    return shopId == null
+        ? _chat.myThreads()
+        : _chat.sellerBackend.shopThreads(shopId);
+  }
+
+  bool _asSellerIn(ChatThread thread) =>
+      widget.shopId != null || _chat.isSellerIn(thread);
+
+  /// One row per buyer account and shop. Chats are only fused when they come
+  /// from the same account: fusing by the typed name would let a stranger who
+  /// types the same name receive the seller's replies. [threads] is newest
+  /// first, and so are the groups and the chats inside each group.
+  List<List<ChatThread>> _groupByPerson(List<ChatThread> threads) {
+    final groups = <String, List<ChatThread>>{};
+    for (final thread in threads) {
+      final key = '${thread.shopId}|${thread.buyerUid}';
+      (groups[key] ??= []).add(thread);
+    }
+    return groups.values.toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final chat = service ?? ChatService.shared;
-    final asSeller = shopId != null;
-    final uid = chat.currentUid;
-    final Stream<List<ChatThread>> threads = asSeller
-        ? chat.backend.shopThreads(shopId!)
-        : uid == null
-        ? Stream.value(const [])
-        : chat.backend.buyerThreads(uid);
+    final shopInbox = widget.shopId != null;
     return Scaffold(
       backgroundColor: AppColors.paper,
       appBar: AppBar(
         backgroundColor: AppColors.paper,
         foregroundColor: AppColors.ink,
         elevation: 0,
-        title: Text(asSeller ? 'Customer messages' : 'My messages'),
+        title: Text(shopInbox ? 'Customer messages' : 'My messages'),
       ),
       body: StreamBuilder<List<ChatThread>>(
-        stream: threads,
+        stream: _threads,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(
-              child: Text(
-                "Can't load messages",
-                style: TextStyle(color: AppColors.muted),
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Can't load messages",
+                      key: ValueKey('inbox-error'),
+                      style: TextStyle(color: AppColors.muted),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() => _threads = _load()),
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Try again'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -751,7 +846,7 @@ class ChatInboxPage extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(28),
                 child: Text(
-                  asSeller
+                  shopInbox
                       ? 'No messages yet. Buyers can message you from your '
                             'items.'
                       : 'No messages yet. Tap "Message seller" on an item to '
@@ -763,87 +858,36 @@ class ChatInboxPage extends StatelessWidget {
               ),
             );
           }
+          final groups = _groupByPerson(list);
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-            itemCount: list.length,
+            itemCount: groups.length,
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
-              final thread = list[index];
-              final unread = thread.unreadFor(asSeller: asSeller);
-              final name = asSeller ? thread.buyerName : thread.shopName;
-              return Material(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(14),
-                child: ListTile(
-                  key: ValueKey('inbox-${thread.id}'),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    side: const BorderSide(color: AppColors.line),
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.primarySoft,
-                    foregroundColor: AppColors.primary,
-                    child: Icon(
-                      asSeller ? Icons.person_outline : Icons.storefront,
-                    ),
-                  ),
-                  title: Text(
-                    name.isEmpty ? 'Chat' : name,
-                    style: TextStyle(
-                      fontWeight: unread > 0
-                          ? FontWeight.w900
-                          : FontWeight.w700,
-                    ),
-                  ),
-                  // The latest item asked about, so the seller knows what
-                  // the buyer wants before opening the chat.
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (thread.productName.isNotEmpty)
-                        Text(
-                          'Item: ${thread.productName}',
-                          key: ValueKey('inbox-item-${thread.id}'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                          ),
-                        ),
-                      Text(
-                        thread.lastMessage,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        _timeLabel(thread.updatedAt),
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 11,
-                        ),
-                      ),
-                      if (unread > 0) ...[
-                        const SizedBox(height: 4),
-                        _CountBadge(count: unread),
-                      ],
-                    ],
-                  ),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => ChatPage(
-                        service: chat,
-                        thread: thread,
-                        asSeller: asSeller,
-                        openItem: openItem,
-                      ),
+              final group = groups[index];
+              final latest = group.first;
+              final asSeller = _asSellerIn(latest);
+              return _InboxTile(
+                thread: latest,
+                asSeller: asSeller,
+                // Unread messages across all of this person's chats.
+                unread: group.fold(
+                  0,
+                  (sum, thread) => sum + thread.unreadFor(asSeller: asSeller),
+                ),
+                productName: group
+                    .map((thread) => thread.productName)
+                    .firstWhere((name) => name.isNotEmpty, orElse: () => ''),
+                // In the combined list, say who each chat is with.
+                showRole: !shopInbox,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ChatPage(
+                      service: _chat,
+                      thread: latest,
+                      earlierThreads: group.skip(1).toList(),
+                      asSeller: asSeller,
+                      openItem: widget.openItem,
                     ),
                   ),
                 ),
@@ -856,6 +900,129 @@ class ChatInboxPage extends StatelessWidget {
   }
 }
 
+class _InboxTile extends StatelessWidget {
+  const _InboxTile({
+    required this.thread,
+    required this.asSeller,
+    required this.unread,
+    required this.productName,
+    required this.showRole,
+    required this.onTap,
+  });
+
+  /// The person's newest chat: its last message and time are shown.
+  final ChatThread thread;
+
+  /// Unread messages across all of this person's chats.
+  final int unread;
+
+  /// The latest item they asked about, or empty.
+  final String productName;
+
+  /// True when the viewer is the shop in this chat, so the other person is
+  /// a customer.
+  final bool asSeller;
+  final bool showRole;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = (asSeller ? thread.buyerName : thread.shopName).trim();
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: ListTile(
+        key: ValueKey('inbox-${thread.id}'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppColors.line),
+        ),
+        leading: CircleAvatar(
+          backgroundColor: AppColors.primarySoft,
+          foregroundColor: AppColors.primary,
+          child: Icon(asSeller ? Icons.person_outline : Icons.storefront),
+        ),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                name.isEmpty ? 'Chat' : name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: unread > 0 ? FontWeight.w900 : FontWeight.w700,
+                ),
+              ),
+            ),
+            if (showRole) ...[
+              const SizedBox(width: 6),
+              Container(
+                key: ValueKey('inbox-role-${thread.id}'),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: asSeller ? const Color(0xFFE3F0E6) : AppColors.paper,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.line),
+                ),
+                child: Text(
+                  asSeller ? 'Customer' : 'Shop',
+                  style: const TextStyle(
+                    color: AppColors.inkSoft,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        // The latest item asked about, so the seller knows what the buyer
+        // wants before opening the chat.
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (productName.isNotEmpty)
+              Text(
+                'Item: $productName',
+                key: ValueKey('inbox-item-${thread.id}'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
+            Text(
+              thread.lastMessage,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              _timeLabel(thread.updatedAt),
+              style: const TextStyle(color: AppColors.muted, fontSize: 11),
+            ),
+            if (unread > 0) ...[
+              const SizedBox(height: 4),
+              _CountBadge(count: unread),
+            ],
+          ],
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+/// Unread counts are red so they stand out from the brand orange.
+const _unreadRed = Color(0xFFE53935);
+
 class _CountBadge extends StatelessWidget {
   const _CountBadge({required this.count});
 
@@ -867,7 +1034,7 @@ class _CountBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       constraints: const BoxConstraints(minWidth: 18),
       decoration: BoxDecoration(
-        color: AppColors.primary,
+        color: _unreadRed,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -884,35 +1051,44 @@ class _CountBadge extends StatelessWidget {
 }
 
 /// Messages icon with the live unread count, for app bars and buttons.
-/// Pass [shopId] for a seller's count; otherwise the buyer's.
-class ChatUnreadIcon extends StatelessWidget {
+/// With [shopId]: that shop's unread customer messages. Without: all unread
+/// messages of the signed-in user, as a buyer and as a seller.
+class ChatUnreadIcon extends StatefulWidget {
   const ChatUnreadIcon({this.shopId, this.service, super.key});
 
   final String? shopId;
   final ChatService? service;
 
   @override
+  State<ChatUnreadIcon> createState() => _ChatUnreadIconState();
+}
+
+class _ChatUnreadIconState extends State<ChatUnreadIcon> {
+  late final ChatService _chat = widget.service ?? ChatService.shared;
+
+  // Created once: the Shop tab rebuilds often and must not restart listeners.
+  late final Stream<List<ChatThread>> _threads = widget.shopId == null
+      ? _chat.myThreads()
+      : _chat.sellerBackend.shopThreads(widget.shopId!);
+
+  @override
   Widget build(BuildContext context) {
-    final chat = service ?? ChatService.shared;
-    final uid = chat.currentUid;
-    final asSeller = shopId != null;
-    final Stream<List<ChatThread>> threads = asSeller
-        ? chat.backend.shopThreads(shopId!)
-        : uid == null
-        ? Stream.value(const [])
-        : chat.backend.buyerThreads(uid);
     return StreamBuilder<List<ChatThread>>(
-      stream: threads,
+      stream: _threads,
       builder: (context, snapshot) {
         final unread = (snapshot.data ?? const <ChatThread>[]).fold<int>(
           0,
-          (sum, thread) => sum + thread.unreadFor(asSeller: asSeller),
+          (sum, thread) =>
+              sum +
+              thread.unreadFor(
+                asSeller: widget.shopId != null || _chat.isSellerIn(thread),
+              ),
         );
         return Badge(
           key: const ValueKey('chat-unread-badge'),
           isLabelVisible: unread > 0,
           label: Text(unread > 99 ? '99+' : '$unread'),
-          backgroundColor: AppColors.primary,
+          backgroundColor: _unreadRed,
           child: const Icon(Icons.chat_bubble_outline),
         );
       },

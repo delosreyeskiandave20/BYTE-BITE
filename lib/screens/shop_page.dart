@@ -847,65 +847,69 @@ class _ShopCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: const Icon(
-                  Icons.storefront_outlined,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      shop.name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.place_outlined,
-                          size: 14,
-                          color: AppColors.muted,
+          // The whole header opens the shop; a small arrow marks it, so the
+          // shop name keeps nearly the full width.
+          InkWell(
+            key: ValueKey('visit-header-${shop.id}'),
+            onTap: onVisit,
+            borderRadius: BorderRadius.circular(14),
+            child: Row(
+              children: [
+                _ShopAvatar(shop: shop),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        shop.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
                         ),
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            shop.location,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 12,
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.place_outlined,
+                            size: 14,
+                            color: AppColors.muted,
+                          ),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              shop.location,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (onVisit != null) ...[
+                  const SizedBox(width: 6),
+                  IconButton.filledTonal(
+                    key: ValueKey('visit-button-${shop.id}'),
+                    tooltip: 'Visit shop',
+                    onPressed: onVisit,
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.primarySoft,
+                      foregroundColor: AppColors.primary,
                     ),
-                  ],
-                ),
-              ),
-              if (onVisit != null)
-                TextButton.icon(
-                  key: ValueKey('visit-button-${shop.id}'),
-                  onPressed: onVisit,
-                  icon: const Icon(Icons.storefront_outlined, size: 17),
-                  label: const Text('Visit shop'),
-                ),
-            ],
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                  ),
+                ],
+              ],
+            ),
           ),
           if (shop.description.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -970,6 +974,45 @@ class _ShopCard extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The shop's picture when the owner added one, so buyers recognise the
+/// shop; otherwise the storefront icon. Grey while the picture loads.
+class _ShopAvatar extends StatelessWidget {
+  const _ShopAvatar({required this.shop});
+
+  final Shop shop;
+
+  static const _size = 56.0;
+
+  @override
+  Widget build(BuildContext context) {
+    const icon = ColoredBox(
+      color: AppColors.primarySoft,
+      child: Center(
+        child: Icon(Icons.storefront_outlined, color: AppColors.primary),
+      ),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: SizedBox(
+        width: _size,
+        height: _size,
+        child: !shop.hasBanner
+            ? icon
+            : Image.network(
+                shop.bannerUrl.trim(),
+                key: ValueKey('shop-avatar-${shop.id}'),
+                fit: BoxFit.cover,
+                frameBuilder: (context, child, frame, sync) =>
+                    sync || frame != null
+                    ? child
+                    : const ColoredBox(color: Color(0xFFE6E4E0)),
+                errorBuilder: (context, error, stack) => icon,
+              ),
       ),
     );
   }

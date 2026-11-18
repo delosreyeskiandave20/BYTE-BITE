@@ -46,6 +46,16 @@ class FirebaseBootstrap {
   static bool _initialized = false;
   static bool _appCheckEnabled = false;
 
+  /// Name of the second Firebase app used only for buyer chat.
+  static const chatAppName = 'buyer-chat';
+  static FirebaseApp? _chatApp;
+
+  /// A separate Firebase app (same project) whose sign-in is the buyer's
+  /// guest account. Keeping it apart from the default app means a shop owner
+  /// signing in or out never replaces the buyer's guest account, so their
+  /// chats stay in "My messages". Null when Firebase is not set up.
+  static FirebaseApp? get chatApp => _chatApp;
+
   /// Whether a Firebase app was successfully initialized in this process.
   static bool get isInitialized => _initialized;
 
@@ -55,6 +65,7 @@ class FirebaseBootstrap {
   static Future<void> initialize() async {
     if (Firebase.apps.isNotEmpty) {
       _initialized = true;
+      await _initChatApp(Firebase.app().options);
       await _activateAppCheck();
       return;
     }
@@ -82,8 +93,27 @@ class FirebaseBootstrap {
       return;
     }
 
+    await _initChatApp(options);
     await _activateAppCheck();
   }
+
+  static Future<void> _initChatApp(FirebaseOptions options) async {
+    try {
+      _chatApp =
+          Firebase.apps.where((app) => app.name == chatAppName).firstOrNull ??
+          await Firebase.initializeApp(name: chatAppName, options: options);
+    } catch (error) {
+      // Chat then falls back to the default app's sign-in.
+      debugPrint('Buyer chat app failed to start: $error');
+    }
+  }
+
+  /// App Check for the default app and the buyer chat app.
+  static List<FirebaseAppCheck> _appChecks() => [
+    FirebaseAppCheck.instance,
+    if (_chatApp case final chatApp?)
+      FirebaseAppCheck.instanceFor(app: chatApp),
+  ];
 
   /// Activates App Check without ever blocking app startup. Debug builds skip
   /// enforcement unless a site key or provider is explicitly configured.
@@ -101,9 +131,11 @@ class FirebaseBootstrap {
           }
           return;
         }
-        await FirebaseAppCheck.instance.activate(
-          providerWeb: ReCaptchaV3Provider(_webRecaptchaSiteKey),
-        );
+        for (final appCheck in _appChecks()) {
+          await appCheck.activate(
+            providerWeb: ReCaptchaV3Provider(_webRecaptchaSiteKey),
+          );
+        }
       } else if (kDebugMode) {
         debugPrint(
           'App Check skipped in debug mode. Register a debug token in the '
@@ -111,12 +143,14 @@ class FirebaseBootstrap {
         );
         return;
       } else {
-        await FirebaseAppCheck.instance.activate(
-          providerAndroid: _androidDebugToken.isEmpty
-              ? const AndroidPlayIntegrityProvider()
-              : const AndroidDebugProvider(debugToken: _androidDebugToken),
-          providerApple: const AppleAppAttestProvider(),
-        );
+        for (final appCheck in _appChecks()) {
+          await appCheck.activate(
+            providerAndroid: _androidDebugToken.isEmpty
+                ? const AndroidPlayIntegrityProvider()
+                : const AndroidDebugProvider(debugToken: _androidDebugToken),
+            providerApple: const AppleAppAttestProvider(),
+          );
+        }
       }
       _appCheckEnabled = true;
       debugPrint('App Check activated.');

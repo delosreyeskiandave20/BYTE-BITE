@@ -12,6 +12,13 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == ownerId;
     }
 
+    // A real shop owner account: signed in as this shop, and not a guest
+    // (anonymous) account used for buyer chat.
+    function isRealOwner(ownerId) {
+      return isShopOwner(ownerId)
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
     function isVerifiedShop() {
       return resource.data.verified == true;
     }
@@ -185,7 +192,7 @@ service cloud.firestore {
       // Public marketplace reads only verified shops. Owners can read their own
       // shop before verification to complete setup.
       allow read: if isVerifiedShop() || isShopOwner(ownerId);
-      allow create, update: if isShopOwner(ownerId)
+      allow create, update: if isRealOwner(ownerId)
         && validShop()
         && validVerificationState()
         && validMarketplaceApproval()
@@ -194,7 +201,7 @@ service cloud.firestore {
 
       match /products/{productId} {
         allow read: if isShopOwner(ownerId) || parentShopVerified(ownerId);
-        allow create, update: if isShopOwner(ownerId)
+        allow create, update: if isRealOwner(ownerId)
           && validProduct()
           && request.resource.data.id == productId;
         allow delete: if isShopOwner(ownerId);
@@ -202,9 +209,15 @@ service cloud.firestore {
     }
 
     // ---- Buyer <-> seller chat ----
-    // chats/{shopId_buyerUid}: one chat per buyer per shop. The shop document
-    // ID is the owner's UID, so the seller is the user whose UID == shopId.
-    // Buyers are Firebase Anonymous (guest) users or other signed-in users.
+    // chats/{shopId_buyerUid}: one chat per buyer account per shop. The shop
+    // document ID is the owner's UID, so the seller is the user whose
+    // UID == shopId. Buyers are Firebase Anonymous (guest) users or other
+    // signed-in users.
+    //
+    // Every message is written in one batch with the chat summary: the
+    // summary names the new message (lastMessageId) and the server time it
+    // was sent (lastSentAt), so the preview cannot be faked without a real
+    // message, and each chat is limited to one message per second.
 
     function isChatMember(chat) {
       return signedIn()
@@ -221,6 +234,8 @@ service cloud.firestore {
           'productName',
           'lastMessage',
           'lastSenderUid',
+          'lastMessageId',
+          'lastSentAt',
           'updatedAt',
           'buyerUnread',
           'sellerUnread'
@@ -245,9 +260,34 @@ service cloud.firestore {
           || (data.productName is string && data.productName.size() <= 120))
         && data.lastMessage is string && data.lastMessage.size() <= 1000
         && data.lastSenderUid is string
+        && (!('lastMessageId' in data)
+          || (data.lastMessageId is string && data.lastMessageId.size() <= 64))
+        && (!('lastSentAt' in data) || data.lastSentAt is timestamp)
         && data.updatedAt is int
         && data.buyerUnread is int && data.buyerUnread >= 0
         && data.sellerUnread is int && data.sellerUnread >= 0;
+    }
+
+    // The new message named by the summary exists after this write and says
+    // the same thing, and it was sent now by the signed-in user.
+    function summaryMatchesNewMessage(chatId) {
+      let data = request.resource.data;
+      let message = getAfter(
+        /databases/$(database)/documents/chats/$(chatId)/messages/$(data.lastMessageId)).data;
+      return data.lastSenderUid == request.auth.uid
+        && data.lastSentAt == request.time
+        && message.senderUid == request.auth.uid
+        && message.text == data.lastMessage;
+    }
+
+    // At most one message per second in a chat, by the server's clock.
+    function notTooSoon() {
+      return resource.data.get('lastSentAt', null) == null
+        || request.time > resource.data.lastSentAt + duration.value(1, 's');
+    }
+
+    function isBuyerOf(chat) {
+      return request.auth.uid == chat.buyerUid;
     }
 
     match /chats/{chatId} {
@@ -255,34 +295,64 @@ service cloud.firestore {
       // so a buyer's new chat opens before the first message is sent.
       allow get: if resource == null || isChatMember(resource.data);
       allow list: if isChatMember(resource.data);
-      // Only the buyer starts a chat, with a real shop, under the fixed ID.
+
+      // Only the buyer starts a chat, with a public (verified) shop, under the
+      // fixed ID, together with its first message.
       allow create: if signedIn()
         && validChat()
         && request.resource.data.buyerUid == request.auth.uid
         && request.resource.data.shopId != request.auth.uid
         && chatId == request.resource.data.shopId + '_' + request.auth.uid
-        && exists(/databases/$(database)/documents/shops/$(request.resource.data.shopId));
-      // Members only update the summary and unread counts; who is in the chat
-      // never changes.
+        && get(/databases/$(database)/documents/shops/$(request.resource.data.shopId))
+          .data.verified == true
+        && request.resource.data.buyerUnread == 0
+        && request.resource.data.sellerUnread == 1
+        && summaryMatchesNewMessage(chatId);
+
+      // Members either send a message (the summary moves to it and the other
+      // side's unread count goes up by exactly one) or mark their own side
+      // read. Who is in the chat never changes.
       allow update: if isChatMember(resource.data)
         && validChat()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'productName',
-          'lastMessage',
-          'lastSenderUid',
-          'updatedAt',
-          'buyerUnread',
-          'sellerUnread'
-        ]);
+        && (
+          // Send: buyer.
+          (isBuyerOf(resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'productName', 'lastMessage', 'lastSenderUid', 'lastMessageId',
+              'lastSentAt', 'updatedAt', 'sellerUnread'
+            ])
+            && request.resource.data.sellerUnread == resource.data.sellerUnread + 1
+            && notTooSoon()
+            && summaryMatchesNewMessage(chatId))
+          // Send: seller.
+          || (!isBuyerOf(resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'lastMessage', 'lastSenderUid', 'lastMessageId', 'lastSentAt',
+              'updatedAt', 'buyerUnread'
+            ])
+            && request.resource.data.buyerUnread == resource.data.buyerUnread + 1
+            && notTooSoon()
+            && summaryMatchesNewMessage(chatId))
+          // Mark read: only your own unread count, only to zero.
+          || (isBuyerOf(resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['buyerUnread'])
+            && request.resource.data.buyerUnread == 0)
+          || (!isBuyerOf(resource.data)
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['sellerUnread'])
+            && request.resource.data.sellerUnread == 0)
+        );
       allow delete: if false;
 
       match /messages/{messageId} {
-        // getAfter: the first message is written in the same batch that
-        // creates the chat.
         allow read: if isChatMember(
           get(/databases/$(database)/documents/chats/$(chatId)).data);
+        // Written in the same batch as the chat summary, which must name it.
         allow create: if isChatMember(
             getAfter(/databases/$(database)/documents/chats/$(chatId)).data)
+          && getAfter(/databases/$(database)/documents/chats/$(chatId))
+            .data.get('lastMessageId', '') == messageId
           && request.resource.data.keys().hasOnly([
             'senderUid',
             'text',
@@ -303,8 +373,8 @@ service cloud.firestore {
       }
     }
 
-    // The item a message asks about: either none, or all four fields for an
-    // item that really belongs to this chat's shop.
+    // The item a message asks about: either none, or all four fields copied
+    // from a real item of this chat's shop (so nobody can show a fake price).
     function validChatItem(shopId) {
       let data = request.resource.data;
       return (!('productId' in data)
@@ -314,16 +384,15 @@ service cloud.firestore {
         || (data.productId is string
           && data.productId.size() > 0
           && data.productId.size() <= 120
-          && data.productName is string
-          && data.productName.size() >= 1
-          && data.productName.size() <= 120
-          && data.productPrice is number
-          && data.productPrice >= 0
-          && data.productImage is string
-          && data.productImage.size() <= 500
-          && (data.productImage == ''
-            || data.productImage.matches('^https://[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]+$'))
-          && exists(/databases/$(database)/documents/shops/$(shopId)/products/$(data.productId)));
+          && validChatItemCopy(
+            get(/databases/$(database)/documents/shops/$(shopId)/products/$(data.productId)).data));
+    }
+
+    function validChatItemCopy(product) {
+      let data = request.resource.data;
+      return data.productName == product.name
+        && data.productPrice == product.price
+        && (data.productImage == '' || data.productImage == product.imageUrl);
     }
   }
 }
