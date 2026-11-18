@@ -584,6 +584,8 @@ class ShopStore extends ChangeNotifier {
       products: existing?.products ?? const <ShopProduct>[],
       isVerified: account.emailVerified || (existing?.isVerified ?? false),
       lastEditedAt: DateTime.now().millisecondsSinceEpoch,
+      // Saved separately by [setShopBanner]; kept as it is here.
+      bannerUrl: existing?.bannerUrl ?? '',
     );
 
     if (firestore == null) {
@@ -604,6 +606,37 @@ class ShopStore extends ChangeNotifier {
     );
     _shopDocuments[account.uid] = shop;
     _productsByShop[account.uid] ??= shop.products;
+    _rebuildShops();
+  }
+
+  /// Sets the shop picture shown on the shop list and the shop page: uploads
+  /// [photo] and saves its link, or removes the picture when [photo] is null.
+  /// The shop must already be saved.
+  Future<void> setShopBanner({
+    required String ownerEmail,
+    PickedPhoto? photo,
+  }) async {
+    final shop = _requireOwnerShop(ownerEmail);
+    final url = photo == null
+        ? ''
+        : _validateImageUrl(
+            await uploadProductPhoto(ownerEmail: ownerEmail, photo: photo),
+          );
+    final editedAt = DateTime.now().millisecondsSinceEpoch;
+    final updated = shop.copyWith(bannerUrl: url, lastEditedAt: editedAt);
+
+    final firestore = _firestore;
+    if (firestore == null) {
+      _replaceShop(updated);
+      return;
+    }
+    await _commit(
+      _shopRef(
+        firestore,
+        shop.id,
+      ).update({'bannerUrl': url, 'lastEditedAt': editedAt}),
+    );
+    _shopDocuments[shop.id] = updated;
     _rebuildShops();
   }
 

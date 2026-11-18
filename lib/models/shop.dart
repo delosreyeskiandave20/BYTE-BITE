@@ -241,9 +241,9 @@ class Shop {
 
   final List<ShopProduct> products;
 
-  /// Banner picture for the shop page and shop list. Set by the app admin in
-  /// the Firebase console; the app never writes it, and the rules stop owners
-  /// from changing it. Only http(s) URLs are shown.
+  /// Banner picture for the shop page and shop list, uploaded by the owner
+  /// from the dashboard (or set in the Firebase console). Only http(s) URLs
+  /// are shown.
   final String bannerUrl;
 
   bool get hasBanner {
@@ -284,6 +284,7 @@ class Shop {
     List<ShopProduct>? products,
     bool? isVerified,
     int? lastEditedAt,
+    String? bannerUrl,
   }) {
     return Shop(
       id: id,
@@ -298,7 +299,7 @@ class Shop {
       products: products ?? this.products,
       isVerified: isVerified ?? this.isVerified,
       lastEditedAt: lastEditedAt ?? this.lastEditedAt,
-      bannerUrl: bannerUrl,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
     );
   }
 

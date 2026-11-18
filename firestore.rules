@@ -171,14 +171,14 @@ service cloud.firestore {
             == resource.data.get('marketplaceUrl', ''));
     }
 
-    // The shop banner is set by the app admin in the Firebase console. Owners
-    // may keep it as it is when they save their shop, but never add or change
-    // it from the app.
-    function bannerUnchanged() {
+    // Optional shop picture uploaded by the owner: empty, or an https link.
+    function validBanner() {
       let data = request.resource.data;
-      return resource == null
-        ? !('bannerUrl' in data)
-        : data.get('bannerUrl', null) == resource.data.get('bannerUrl', null);
+      return !('bannerUrl' in data)
+        || (data.bannerUrl is string
+          && data.bannerUrl.size() <= 500
+          && (data.bannerUrl == ''
+            || data.bannerUrl.matches('^https://[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]+$')));
     }
 
     match /shops/{ownerId} {
@@ -189,7 +189,7 @@ service cloud.firestore {
         && validShop()
         && validVerificationState()
         && validMarketplaceApproval()
-        && bannerUnchanged();
+        && validBanner();
       allow delete: if isShopOwner(ownerId);
 
       match /products/{productId} {

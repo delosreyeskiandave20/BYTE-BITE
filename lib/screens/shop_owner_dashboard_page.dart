@@ -582,6 +582,13 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                 ),
               ),
               const SizedBox(height: 16),
+              _ShopPictureEditor(
+                store: widget.store,
+                ownerEmail: widget.ownerEmail,
+                pickPhotos: widget.pickPhotos,
+                describeError: _describeError,
+              ),
+              const SizedBox(height: 16),
               Form(
                 key: _formKey,
                 child: Column(
@@ -1464,6 +1471,212 @@ class _MarketplaceStatus extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Shop picture": the banner shown on the shop list and the shop page. It is
+/// uploaded and saved straight away, separately from the shop details form.
+class _ShopPictureEditor extends StatefulWidget {
+  const _ShopPictureEditor({
+    required this.store,
+    required this.ownerEmail,
+    required this.describeError,
+    this.pickPhotos,
+  });
+
+  final ShopStore store;
+  final String ownerEmail;
+  final ItemPhotoPicker? pickPhotos;
+  final String Function(Object error) describeError;
+
+  @override
+  State<_ShopPictureEditor> createState() => _ShopPictureEditorState();
+}
+
+class _ShopPictureEditorState extends State<_ShopPictureEditor> {
+  bool _busy = false;
+
+  static const _placeholderColor = Color(0xFFE6E4E0);
+
+  Future<void> _change() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: const ValueKey('shop-picture-camera'),
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              key: const ValueKey('shop-picture-gallery'),
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+    final List<PickedPhoto> picked;
+    try {
+      picked = await (widget.pickPhotos ?? defaultItemPhotoPicker)(source, 1);
+    } catch (error) {
+      _showError(error);
+      return;
+    }
+    if (picked.isEmpty) return;
+    final photo = picked.first;
+    if (!allowedItemPhotoTypes.contains(photo.extension)) {
+      _showError(StateError('Use a JPG, PNG or WEBP picture.'));
+      return;
+    }
+    await _save(photo);
+  }
+
+  Future<void> _save(PickedPhoto? photo) async {
+    setState(() => _busy = true);
+    try {
+      await widget.store.setShopBanner(
+        ownerEmail: widget.ownerEmail,
+        photo: photo,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              photo == null ? 'Shop picture removed.' : 'Shop picture saved.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      _showError(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _showError(Object error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Could not save the shop picture: ${widget.describeError(error)}',
+        ),
+        backgroundColor: AppColors.danger,
+      ),
+    );
+  }
+
+  Widget _preview(Shop? shop) {
+    if (shop == null || !shop.hasBanner) {
+      return const ColoredBox(
+        color: _placeholderColor,
+        child: Icon(
+          Icons.storefront_outlined,
+          size: 40,
+          color: Color(0xFFB4B0AA),
+        ),
+      );
+    }
+    return Image.network(
+      shop.bannerUrl.trim(),
+      key: const ValueKey('shop-picture-preview'),
+      fit: BoxFit.cover,
+      frameBuilder: (context, child, frame, sync) => sync || frame != null
+          ? child
+          : const ColoredBox(color: _placeholderColor),
+      errorBuilder: (context, error, stack) => const ColoredBox(
+        color: _placeholderColor,
+        child: Icon(Icons.broken_image_outlined),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.store,
+      builder: (context, _) {
+        final shop = widget.store.shopForOwner(widget.ownerEmail);
+        final Widget actions;
+        if (shop == null) {
+          actions = const Text(
+            'Save your shop details first, then add a picture.',
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          );
+        } else if (!widget.store.canUploadPhotos) {
+          actions = const Text(
+            'Picture uploads need the online shop.',
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          );
+        } else {
+          actions = Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  key: const ValueKey('shop-picture-change'),
+                  onPressed: _busy ? null : _change,
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add_photo_alternate_outlined),
+                  label: Text(
+                    shop.hasBanner ? 'Change picture' : 'Add picture',
+                  ),
+                ),
+              ),
+              if (shop.hasBanner) ...[
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  key: const ValueKey('shop-picture-remove'),
+                  onPressed: _busy ? null : () => _save(null),
+                  child: const Text('Remove'),
+                ),
+              ],
+            ],
+          );
+        }
+        return Container(
+          key: const ValueKey('shop-picture-editor'),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Shop picture',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Shown on the shop list and at the top of your shop page.',
+                style: TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(aspectRatio: 16 / 9, child: _preview(shop)),
+              ),
+              const SizedBox(height: 10),
+              actions,
+            ],
+          ),
+        );
+      },
     );
   }
 }

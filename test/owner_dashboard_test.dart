@@ -196,6 +196,12 @@ void main() {
     await tester.tap(find.text('Open shop'));
     await tester.pumpAndSettle();
 
+    // The shop picture sits above the form; scroll down to the name field.
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'Shop name'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Shop name'),
       'Unsaved Shop',
@@ -230,10 +236,19 @@ void main() {
     await tester.tap(find.text('Open shop'));
     await tester.pumpAndSettle();
 
+    // The shop picture sits above the form; scroll down to the name field.
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'Shop name'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Shop name'),
       'Saved Shop',
     );
+    // Close the keyboard so the focused field does not pull the page back up.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
     // The dashboard ListView builds lazily; scroll until Done is built.
     await tester.scrollUntilVisible(
       find.text('Done'),
