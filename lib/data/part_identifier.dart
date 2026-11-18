@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter/foundation.dart';
 
-import 'offline_part_matcher.dart';
 import 'parts_catalog.dart';
 
 /// What the AI thinks a photographed part is.
@@ -16,27 +15,7 @@ class PartIdentification {
     required this.confidence,
     required this.description,
     required this.searchTerm,
-    this.isOffline = false,
-    this.alternatives = const [],
   });
-
-  /// The closest bundled part photos when the online AI cannot be reached.
-  /// Offline guesses are never "high" confidence.
-  factory PartIdentification.offline(List<OfflineMatch> matches) {
-    final best = matches.first;
-    return PartIdentification(
-      isMotorcyclePart: true,
-      partName: best.name,
-      categoryId: categoryIdForOfflineMatch(best),
-      confidence: best.similarity >= 0.75 ? 'medium' : 'low',
-      description:
-          'Matched offline with MotoScan\'s part photos. Connect to the '
-          'internet for a more accurate result.',
-      searchTerm: best.name,
-      isOffline: true,
-      alternatives: [for (final match in matches.skip(1)) match.name],
-    );
-  }
 
   factory PartIdentification.fromJson(Map<String, dynamic> json) {
     final category = json['categoryId'] as String? ?? 'other';
@@ -62,12 +41,6 @@ class PartIdentification {
 
   /// Short keyword to look the part up in the parts library and shops.
   final String searchTerm;
-
-  /// True when this came from offline matching, not the online AI.
-  final bool isOffline;
-
-  /// Other likely parts (offline matching), best first.
-  final List<String> alternatives;
 
   String get categoryName => categoryNames[categoryId] ?? 'Other';
 }
@@ -195,7 +168,8 @@ class GeminiPartIdentifier {
       debugPrint('Gemini request failed: $error');
       throw PartIdentificationException(
         _withDetails(
-          'Could not reach the AI service. Check your connection and try again.',
+          'No internet connection. Connect to Wi-Fi or mobile data and try '
+          'again.',
           error,
         ),
       );
