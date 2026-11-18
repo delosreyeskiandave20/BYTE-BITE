@@ -1,5 +1,5 @@
 name: flutter_application_1
-description: "MotoScan — motorcycle parts, accessories, and local shop marketplace."
+description: "MotoScan â€” motorcycle parts, accessories, and local shop marketplace."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -45,6 +45,7 @@ dependencies:
   firebase_storage: ^14.0.1
   shared_preferences: ^2.5.6
   firebase_ai: ^5.1.0
+  tflite_flutter: ^0.12.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -68,6 +69,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/motoscan_logo.png
+    # Offline scanning: image model and the fingerprints of the part photos.
+    - assets/ml/
     - assets/motorcycle_parts_catalog.json
     - assets/parts/
     - assets/vehicle_parts/

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../data/offline_part_matcher.dart';
 import '../data/part_identifier.dart';
 import '../firebase_bootstrap.dart';
 import '../theme/app_theme.dart';
@@ -16,6 +17,7 @@ class IdentifyPage extends StatefulWidget {
     this.onSearchParts,
     this.onSearchQuery,
     this.identifyPart,
+    this.offlineMatcher,
   });
 
   /// Lets tests supply a fake picker instead of opening the device camera.
@@ -31,6 +33,10 @@ class IdentifyPage extends StatefulWidget {
   /// neither is available the page works as a photo preview only.
   final PartIdentifier? identifyPart;
 
+  /// Recognizes parts without internet when the online AI cannot be
+  /// reached. Defaults to [OfflinePartMatcher.shared]; tests inject a fake.
+  final OfflinePartMatcher? offlineMatcher;
+
   @override
   State<IdentifyPage> createState() => _IdentifyPageState();
 }
@@ -44,6 +50,8 @@ class _IdentifyPageState extends State<IdentifyPage> {
   late final PartIdentifier? _identifier =
       widget.identifyPart ??
       (FirebaseBootstrap.isInitialized ? GeminiPartIdentifier().call : null);
+  late final OfflinePartMatcher _offline =
+      widget.offlineMatcher ?? OfflinePartMatcher.shared;
   bool _isIdentifying = false;
   PartIdentification? _result;
   String? _identifyError;
@@ -117,7 +125,7 @@ class _IdentifyPageState extends State<IdentifyPage> {
       _result = null;
       _identifyError = null;
     });
-    if (_identifier == null) {
+    if (_identifier == null && !_offline.isSupported) {
       _showMessage(
         'Photo preview ready. AI part recognition is not connected yet.',
       );
@@ -129,7 +137,8 @@ class _IdentifyPageState extends State<IdentifyPage> {
   Future<void> _identify() async {
     final identifier = _identifier;
     final bytes = _photoBytes;
-    if (identifier == null || bytes == null) return;
+    if (bytes == null) return;
+    if (identifier == null && !_offline.isSupported) return;
 
     final requestId = ++_requestId;
     setState(() {
@@ -138,21 +147,44 @@ class _IdentifyPageState extends State<IdentifyPage> {
       _identifyError = null;
     });
     try {
+      if (identifier == null) {
+        throw const PartIdentificationException(
+          'AI part recognition is not connected yet.',
+        );
+      }
       final result = await identifier(bytes, _photoMimeType);
       if (!mounted || requestId != _requestId) return;
       setState(() => _result = result);
-    } on PartIdentificationException catch (error) {
+    } catch (error) {
+      // No internet (or the AI is unavailable): match offline instead.
+      final offline = await _matchOffline(bytes);
       if (!mounted || requestId != _requestId) return;
-      setState(() => _identifyError = error.message);
-    } catch (_) {
-      if (!mounted || requestId != _requestId) return;
-      setState(
-        () => _identifyError = 'Could not identify the part. Please try again.',
-      );
+      setState(() {
+        if (offline != null) {
+          _result = offline;
+        } else {
+          _identifyError = error is PartIdentificationException
+              ? error.message
+              : 'Could not identify the part. Please try again.';
+        }
+      });
     } finally {
       if (mounted && requestId == _requestId) {
         setState(() => _isIdentifying = false);
       }
+    }
+  }
+
+  /// The closest bundled part photos, or null when offline matching is not
+  /// available on this platform or fails.
+  Future<PartIdentification?> _matchOffline(Uint8List bytes) async {
+    if (!_offline.isSupported) return null;
+    try {
+      final matches = await _offline.match(bytes);
+      return matches.isEmpty ? null : PartIdentification.offline(matches);
+    } catch (error) {
+      debugPrint('Offline matching failed: $error');
+      return null;
     }
   }
 
@@ -295,13 +327,18 @@ class _IdentifyPageState extends State<IdentifyPage> {
           key: const ValueKey('identify-ai-result'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
-                SizedBox(width: 6),
+                Icon(
+                  result.isOffline ? Icons.wifi_off : Icons.auto_awesome,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 6),
                 Text(
-                  'AI match',
-                  style: TextStyle(
+                  result.isOffline ? 'Offline match' : 'AI match',
+                  key: const ValueKey('identify-ai-source'),
+                  style: const TextStyle(
                     color: AppColors.primary,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
@@ -340,6 +377,37 @@ class _IdentifyPageState extends State<IdentifyPage> {
               const Text(
                 'Not sure? Retake the photo closer, or search the library.',
                 style: TextStyle(color: AppColors.muted, fontSize: 11),
+              ),
+            ],
+            if (result.alternatives.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Also could be',
+                style: TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final alternative in result.alternatives)
+                    ActionChip(
+                      key: ValueKey('identify-alternative-$alternative'),
+                      label: Text(alternative),
+                      onPressed: () => _searchFor(alternative),
+                      backgroundColor: AppColors.surface,
+                      side: const BorderSide(color: AppColors.line),
+                      labelStyle: const TextStyle(
+                        color: AppColors.ink,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
               ),
             ],
             const SizedBox(height: 12),
