@@ -57,7 +57,7 @@ class ChatThread {
   final String buyerUid;
   final String buyerName;
 
-  /// The item the buyer started the chat from, if any.
+  /// The item the buyer asked about most recently, if any.
   final String productName;
   final String lastMessage;
   final String lastSenderUid;
@@ -84,6 +84,7 @@ class ChatThread {
   };
 
   ChatThread copyWith({
+    String? productName,
     String? lastMessage,
     String? lastSenderUid,
     int? updatedAt,
@@ -96,7 +97,7 @@ class ChatThread {
       shopName: shopName,
       buyerUid: buyerUid,
       buyerName: buyerName,
-      productName: productName,
+      productName: productName ?? this.productName,
       lastMessage: lastMessage ?? this.lastMessage,
       lastSenderUid: lastSenderUid ?? this.lastSenderUid,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -106,6 +107,45 @@ class ChatThread {
   }
 }
 
+/// The shop item a message asks about, copied onto the message so the seller
+/// sees it even if the listing later changes.
+@immutable
+class ChatItem {
+  const ChatItem({
+    required this.productId,
+    required this.name,
+    required this.price,
+    this.imageUrl = '',
+  });
+
+  final String productId;
+  final String name;
+  final double price;
+
+  /// Cover photo link; empty for bundled demo photos, which cannot be shared.
+  final String imageUrl;
+
+  static ChatItem? fromMap(Map<String, dynamic> map) {
+    final productId = map['productId'];
+    final name = map['productName'];
+    if (productId is! String || productId.isEmpty) return null;
+    if (name is! String || name.isEmpty) return null;
+    return ChatItem(
+      productId: productId,
+      name: name,
+      price: (map['productPrice'] as num?)?.toDouble() ?? 0,
+      imageUrl: map['productImage'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'productId': productId,
+    'productName': name,
+    'productPrice': price,
+    'productImage': imageUrl,
+  };
+}
+
 @immutable
 class ChatMessage {
   const ChatMessage({
@@ -113,6 +153,7 @@ class ChatMessage {
     required this.senderUid,
     required this.text,
     required this.sentAt,
+    this.item,
   });
 
   factory ChatMessage.fromMap(String id, Map<String, dynamic> map) {
@@ -121,6 +162,7 @@ class ChatMessage {
       senderUid: map['senderUid'] as String? ?? '',
       text: map['text'] as String? ?? '',
       sentAt: (map['sentAt'] as num?)?.toInt() ?? 0,
+      item: ChatItem.fromMap(map),
     );
   }
 
@@ -131,10 +173,14 @@ class ChatMessage {
   /// Epoch milliseconds.
   final int sentAt;
 
+  /// The item this message asks about, if the buyer sent it from an item.
+  final ChatItem? item;
+
   Map<String, dynamic> toMap() => {
     'senderUid': senderUid,
     'text': text,
     'sentAt': sentAt,
+    ...?item?.toMap(),
   };
 }
 
@@ -161,13 +207,15 @@ abstract class ChatBackend {
   Stream<ChatThread?> thread(String chatId);
   Stream<List<ChatMessage>> messages(String chatId);
 
-  /// Adds [text] from [senderUid]; creates [thread] first when it is new.
+  /// Adds [text] from [senderUid], with the [item] it asks about; creates
+  /// [thread] first when it is new.
   Future<void> send(
     ChatThread thread,
     String senderUid,
     String text, {
     required bool fromSeller,
     required bool isNew,
+    ChatItem? item,
   });
 
   Future<void> markRead(String chatId, {required bool asSeller});
@@ -253,6 +301,7 @@ class FirestoreChatBackend implements ChatBackend {
     String text, {
     required bool fromSeller,
     required bool isNew,
+    ChatItem? item,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final chatRef = _chats.doc(thread.id);
@@ -263,6 +312,7 @@ class FirestoreChatBackend implements ChatBackend {
         chatRef,
         thread
             .copyWith(
+              productName: item?.name,
               lastMessage: text,
               lastSenderUid: senderUid,
               updatedAt: now,
@@ -276,6 +326,7 @@ class FirestoreChatBackend implements ChatBackend {
         'lastMessage': text,
         'lastSenderUid': senderUid,
         'updatedAt': now,
+        'productName': ?item?.name,
         fromSeller ? 'buyerUnread' : 'sellerUnread': FieldValue.increment(1),
       });
     }
@@ -286,6 +337,7 @@ class FirestoreChatBackend implements ChatBackend {
         senderUid: senderUid,
         text: text,
         sentAt: now,
+        item: item,
       ).toMap(),
     );
     await batch.commit();
@@ -349,10 +401,12 @@ class InMemoryChatBackend implements ChatBackend {
     String text, {
     required bool fromSeller,
     required bool isNew,
+    ChatItem? item,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch + _nextId;
     final current = _threads[thread.id] ?? thread;
     _threads[thread.id] = current.copyWith(
+      productName: item?.name,
       lastMessage: text,
       lastSenderUid: senderUid,
       updatedAt: now,
@@ -365,6 +419,7 @@ class InMemoryChatBackend implements ChatBackend {
         senderUid: senderUid,
         text: text,
         sentAt: now,
+        item: item,
       ),
     );
     _changes.add(null);
@@ -446,12 +501,14 @@ class ChatService {
     );
   }
 
-  /// Sends [text] in [thread] from the signed-in user.
+  /// Sends [text] in [thread] from the signed-in user, with the [item] it
+  /// asks about.
   Future<void> send(
     ChatThread thread,
     String text, {
     required bool asSeller,
     required bool isNew,
+    ChatItem? item,
   }) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
@@ -468,6 +525,7 @@ class ChatService {
       trimmed,
       fromSeller: asSeller,
       isNew: isNew,
+      item: item,
     );
   }
 }

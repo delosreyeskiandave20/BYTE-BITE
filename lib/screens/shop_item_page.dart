@@ -299,7 +299,21 @@ class _ShopItemPageState extends State<ShopItemPage> {
                           context,
                           shopId: shop.id,
                           shopName: shop.name,
-                          productName: product.name,
+                          // Sent with the buyer's message so the seller sees
+                          // exactly which item they mean.
+                          item: chatItemFor(product),
+                          openItem: (context, thread, item) {
+                            if (item.productId != product.id) return;
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ShopItemPage(
+                                  shop: shop,
+                                  product: product,
+                                  chatService: widget.chatService,
+                                ),
+                              ),
+                            );
+                          },
                           service: widget.chatService,
                         ),
                         icon: const Icon(Icons.chat_bubble_outline),

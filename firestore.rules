@@ -251,7 +251,10 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read: if isChatMember(resource.data);
+      // A chat that does not exist yet may be looked up (it reveals nothing),
+      // so a buyer's new chat opens before the first message is sent.
+      allow get: if resource == null || isChatMember(resource.data);
+      allow list: if isChatMember(resource.data);
       // Only the buyer starts a chat, with a real shop, under the fixed ID.
       allow create: if signedIn()
         && validChat()
@@ -264,6 +267,7 @@ service cloud.firestore {
       allow update: if isChatMember(resource.data)
         && validChat()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'productName',
           'lastMessage',
           'lastSenderUid',
           'updatedAt',
@@ -279,14 +283,47 @@ service cloud.firestore {
           get(/databases/$(database)/documents/chats/$(chatId)).data);
         allow create: if isChatMember(
             getAfter(/databases/$(database)/documents/chats/$(chatId)).data)
-          && request.resource.data.keys().hasOnly(['senderUid', 'text', 'sentAt'])
+          && request.resource.data.keys().hasOnly([
+            'senderUid',
+            'text',
+            'sentAt',
+            'productId',
+            'productName',
+            'productPrice',
+            'productImage'
+          ])
           && request.resource.data.senderUid == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() >= 1
           && request.resource.data.text.size() <= 1000
-          && request.resource.data.sentAt is int;
+          && request.resource.data.sentAt is int
+          && validChatItem(
+            getAfter(/databases/$(database)/documents/chats/$(chatId)).data.shopId);
         allow update, delete: if false;
       }
+    }
+
+    // The item a message asks about: either none, or all four fields for an
+    // item that really belongs to this chat's shop.
+    function validChatItem(shopId) {
+      let data = request.resource.data;
+      return (!('productId' in data)
+          && !('productName' in data)
+          && !('productPrice' in data)
+          && !('productImage' in data))
+        || (data.productId is string
+          && data.productId.size() > 0
+          && data.productId.size() <= 120
+          && data.productName is string
+          && data.productName.size() >= 1
+          && data.productName.size() <= 120
+          && data.productPrice is number
+          && data.productPrice >= 0
+          && data.productImage is string
+          && data.productImage.size() <= 500
+          && (data.productImage == ''
+            || data.productImage.matches('^https://[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]+$'))
+          && exists(/databases/$(database)/documents/shops/$(shopId)/products/$(data.productId)));
     }
   }
 }

@@ -584,7 +584,10 @@ class _ShopOwnerDashboardPageState extends State<ShopOwnerDashboardPage> {
                       ),
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => ChatInboxPage(shopId: shop.id),
+                          builder: (_) => ChatInboxPage(
+                            shopId: shop.id,
+                            openItem: chatItemOpenerFor(widget.store),
+                          ),
                         ),
                       ),
                       icon: ChatUnreadIcon(shopId: shop.id),

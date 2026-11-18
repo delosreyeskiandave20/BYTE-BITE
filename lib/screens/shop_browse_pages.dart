@@ -248,6 +248,7 @@ class _ShopDetailPageState extends State<ShopDetailPage> {
                 context,
                 shopId: shopForChat.id,
                 shopName: shopForChat.name,
+                openItem: chatItemOpenerFor(widget.store),
               ),
               icon: const Icon(Icons.chat_bubble_outline),
               label: const Text('Message shop'),

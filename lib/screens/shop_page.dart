@@ -131,7 +131,10 @@ class _ShopPageState extends State<ShopPage> {
             key: const ValueKey('open-my-messages'),
             tooltip: 'My messages',
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const ChatInboxPage()),
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    ChatInboxPage(openItem: chatItemOpenerFor(widget.store)),
+              ),
             ),
             icon: const ChatUnreadIcon(),
           ),
