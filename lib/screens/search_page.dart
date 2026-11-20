@@ -534,6 +534,15 @@ class _SearchPageState extends State<SearchPage> {
                   onRetry: _shopStore.retry,
                 ),
               ],
+              // No shop sells it: say so right under the search bar; the
+              // matching parts and then every other part follow below.
+              if (hasQuery &&
+                  shopMatches.isEmpty &&
+                  !_shopStore.isLoading &&
+                  _shopStore.lastErrorMessage == null) ...[
+                const SizedBox(height: 12),
+                _NoShopItems(query: _query.trim()),
+              ],
               const SizedBox(height: 18),
               if (!hasResults)
                 _EmptySearch(query: _query)
@@ -1220,6 +1229,47 @@ class _EmptySearch extends StatelessWidget {
               color: AppColors.muted,
               fontSize: AppType.caption,
               height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "No items found in shops" notice under the search bar.
+class _NoShopItems extends StatelessWidget {
+  const _NoShopItems({required this.query});
+
+  final String query;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('search-no-shop-items'),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.storefront_outlined,
+            size: 20,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'No items found in shops for "$query". '
+              'Matching parts are listed below.',
+              style: const TextStyle(
+                color: AppColors.ink,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
             ),
           ),
         ],

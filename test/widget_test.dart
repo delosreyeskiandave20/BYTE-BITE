@@ -33,7 +33,7 @@ import 'package:flutter_application_1/screens/shop_page.dart';
 import 'package:flutter_application_1/screens/shop_owner_dashboard_page.dart';
 import 'package:flutter_application_1/theme/app_theme.dart';
 import 'package:flutter_application_1/widgets/buy_options_button.dart';
-import 'package:flutter_application_1/widgets/desktop_phone_frame.dart';
+import 'package:flutter_application_1/widgets/phone_frame.dart';
 import 'package:flutter_application_1/widgets/vehicle_variant_carousel.dart';
 
 import 'fake_owner_auth.dart';
@@ -1253,6 +1253,10 @@ void main() {
   testWidgets('motorcycle parts catalog selects and lists vehicle parts', (
     WidgetTester tester,
   ) async {
+    // A phone-shaped window: the 4:3 bike card is sized from the width.
+    tester.view.physicalSize = const Size(390, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final store = TemporaryShopStore();
     addTearDown(store.dispose);
     const vehicle = VehiclePartsVariant(
@@ -1380,15 +1384,18 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('part-category-Engine')));
     await tester.pumpAndSettle();
 
-    final shopButton = find.byKey(const ValueKey('go-to-shop-Engine oil'));
+    final shopButton = find.byKey(const ValueKey('find-in-shop-Engine oil'));
+    expect(find.text('Find in shop'), findsWidgets);
     await tester.ensureVisible(shopButton);
     await tester.pumpAndSettle();
     await tester.tap(shopButton);
     await tester.pumpAndSettle();
-    expect(find.bySemanticsLabel('MotoScan Shop'), findsOneWidget);
-    expect(find.text('Available shops for Engine oil'), findsOneWidget);
+    // No shop stocks it: the search page opens for it and says so (in-stock
+    // parts are covered in find_in_shop_test.dart).
+    expect(find.bySemanticsLabel('MotoScan Shop'), findsNothing);
+    expect(find.byKey(const ValueKey('search-no-shop-items')), findsOneWidget);
     expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
       'Engine oil',
     );
   });
@@ -1871,6 +1878,8 @@ void main() {
   testWidgets('scan controls stay readable in the desktop phone preview', (
     WidgetTester tester,
   ) async {
+    PhoneFrame.showOnAllPlatforms = true;
+    addTearDown(() => PhoneFrame.showOnAllPlatforms = false);
     tester.view.physicalSize = const Size(1365, 630);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -1892,6 +1901,8 @@ void main() {
   testWidgets('desktop frame scales to smaller laptop viewports', (
     WidgetTester tester,
   ) async {
+    PhoneFrame.showOnAllPlatforms = true;
+    addTearDown(() => PhoneFrame.showOnAllPlatforms = false);
     tester.view.physicalSize = const Size(1024, 600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -1900,7 +1911,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         builder: (context, child) =>
-            DesktopPhoneFrame(child: child ?? const SizedBox.shrink()),
+            PhoneFrame(child: child ?? const SizedBox.shrink()),
         home: const MotoScanAuthPage(),
       ),
     );
@@ -1910,7 +1921,7 @@ void main() {
     final cameraCutout = find.byKey(const ValueKey('desktop-camera-cutout'));
     final loginHeading = find.text('Shop owner access');
 
-    expect(find.byType(DesktopPhoneFrame), findsOneWidget);
+    expect(find.byType(PhoneFrame), findsOneWidget);
     expect(frame, findsOneWidget);
     expect(tester.getSize(frame).width, lessThanOrEqualTo(430));
     expect(tester.getSize(frame).width, greaterThan(230));
@@ -1924,6 +1935,8 @@ void main() {
   testWidgets('desktop window fits the app inside a safe phone frame', (
     WidgetTester tester,
   ) async {
+    PhoneFrame.showOnAllPlatforms = true;
+    addTearDown(() => PhoneFrame.showOnAllPlatforms = false);
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -1936,7 +1949,7 @@ void main() {
     final cameraCutout = find.byKey(const ValueKey('desktop-camera-cutout'));
     final loginHeading = find.text('Browse parts');
 
-    expect(find.byType(DesktopPhoneFrame), findsOneWidget);
+    expect(find.byType(PhoneFrame), findsOneWidget);
     expect(frame, findsOneWidget);
     expect(tester.getSize(frame).width, lessThanOrEqualTo(430));
     expect(

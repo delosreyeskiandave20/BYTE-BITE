@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:firebase_ai/firebase_ai.dart';
@@ -125,6 +126,27 @@ class GeminiPartIdentifier {
 
   final GenerativeModel _model;
 
+  /// What to tell the shopper for a failure that is not a Gemini error:
+  /// App Check rejections are not "no internet", so they get their own text.
+  static String _messageFor(Object error) {
+    final details = error.toString().toLowerCase();
+    if (details.contains('app_check') ||
+        details.contains('app check') ||
+        details.contains('appcheck') ||
+        details.contains('attestation') ||
+        details.contains('too many attempts')) {
+      return 'AI scan is not allowed for this copy of the app (security '
+          'check failed). Install the official build or ask the developer '
+          'for an updated APK.';
+    }
+    if (error is TimeoutException) {
+      return 'The AI took too long to answer. Check your connection and try '
+          'again.';
+    }
+    return 'No internet connection. Connect to Wi-Fi or mobile data and try '
+        'again.';
+  }
+
   Future<PartIdentification> call(Uint8List bytes, String mimeType) async {
     final GenerateContentResponse response;
     try {
@@ -167,11 +189,7 @@ class GeminiPartIdentifier {
     } catch (error) {
       debugPrint('Gemini request failed: $error');
       throw PartIdentificationException(
-        _withDetails(
-          'No internet connection. Connect to Wi-Fi or mobile data and try '
-          'again.',
-          error,
-        ),
+        _withDetails(_messageFor(error), error),
       );
     }
 

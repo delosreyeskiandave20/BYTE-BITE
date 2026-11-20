@@ -239,7 +239,14 @@ class _ShopContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final filterTokens = searchTokens(searchQuery.trim());
+    // Opened for a part ("12-V battery"): its related listings are already
+    // picked below, so the same text in the search box must not filter them
+    // again word by word. Typing something else filters as usual.
+    final searchingThePart =
+        query != null && searchQuery.trim() == query!.trim();
+    final filterTokens = searchingThePart
+        ? const <String>[]
+        : searchTokens(searchQuery.trim());
     final mine = myMotorcycle.model;
     final onlyFits = myMotorcycle.onlyFits;
     final shops = store.shops

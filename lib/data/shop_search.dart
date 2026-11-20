@@ -115,14 +115,32 @@ bool shopProductMatchesTokens(
   return matchesAllSearchTokens(searchableText, queryTokens);
 }
 
-/// In-stock products whose name matches [query].
+/// In-stock products related to [query] (a part name such as "12-V
+/// battery"), closest first.
+///
+/// A listing matches when the seller picked exactly this part in Add Item,
+/// when its name shares the part's main word ("Battery", "Motolite battery
+/// 12V"), or by the older word-overlap rule.
 List<ShopProduct> availableProductsForQuery(Shop shop, String query) {
-  return shop.products
-      .where(
-        (product) =>
-            product.isAvailable && matchesShopProductQuery(product.name, query),
-      )
-      .toList(growable: false);
+  final normalizedQuery = query.trim().toLowerCase();
+  final tokens = relevanceQueryTokens(query);
+  final scored = <(ShopProduct, int)>[];
+  for (final product in shop.products) {
+    if (!product.isAvailable) continue;
+    var score = searchRelevance(
+      tokens,
+      name: product.name,
+      details: '${product.part} ${product.brand}',
+    );
+    if (product.part.trim().toLowerCase() == normalizedQuery) {
+      score = score > 2000 ? score : 2000;
+    } else if (score == 0 && matchesShopProductQuery(product.name, query)) {
+      score = 1;
+    }
+    if (score > 0) scored.add((product, score));
+  }
+  scored.sort((a, b) => b.$2.compareTo(a.$2));
+  return [for (final (product, _) in scored) product];
 }
 
 /// Matches a product name against a query using significant words only.

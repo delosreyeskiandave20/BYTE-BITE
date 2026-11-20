@@ -5,6 +5,7 @@ import '../data/vehicle_images.dart';
 import '../data/motorcycle_specs.dart';
 import '../data/part_descriptions.dart';
 import '../data/vehicle_parts_catalog.dart';
+import 'search_page.dart';
 import 'shop_page.dart';
 import '../theme/app_theme.dart';
 import '../widgets/zoomable_image.dart';
@@ -154,9 +155,11 @@ class _MotorcyclePartsCatalogPageState
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 210,
+                      // 4:3 from the card width, so the whole bike shows
+                      // and the page scrolls instead of cutting it off.
+                      child: AspectRatio(
+                        key: const ValueKey('motorcycle-preview-box'),
+                        aspectRatio: 4 / 3,
                         child: selectedImageAsset == null
                             ? const ColoredBox(
                                 color: Colors.white,
@@ -373,20 +376,10 @@ class _VehiclePartTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 7),
                 FilledButton.icon(
-                  key: ValueKey('go-to-shop-$part'),
-                  onPressed: () {
-                    Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) => ShopPage(
-                          store: shopStore,
-                          onOwnerSignIn: onOwnerSignIn,
-                          initialProductQuery: part,
-                        ),
-                      ),
-                    );
-                  },
+                  key: ValueKey('find-in-shop-$part'),
+                  onPressed: () => _findInShop(context),
                   icon: const Icon(Icons.storefront_outlined, size: 17),
-                  label: const Text('Go to shop'),
+                  label: const Text('Find in shop'),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -402,6 +395,38 @@ class _VehiclePartTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Searches the shops for [part] right away: opens the Shop page with only
+  /// the in-stock listings that match. When no shop has it, opens the search
+  /// page for the part instead, which says no shop items were found and lists
+  /// the matching parts first, then every other part.
+  void _findInShop(BuildContext context) {
+    final stillLoading = shopStore.isLoading && shopStore.shops.isEmpty;
+    final inStock = shopStore.shops.any(
+      (shop) => availableProductsForQuery(shop, part).isNotEmpty,
+    );
+    if (!stillLoading && !inStock) {
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => SearchPage(
+            shopStore: shopStore,
+            initialQuery: part,
+            onOwnerSignIn: onOwnerSignIn,
+          ),
+        ),
+      );
+      return;
+    }
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ShopPage(
+          store: shopStore,
+          onOwnerSignIn: onOwnerSignIn,
+          initialProductQuery: part,
+        ),
       ),
     );
   }
@@ -673,67 +698,60 @@ class _BrandChoiceGrid extends StatelessWidget {
             ),
           ),
         ),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: choices
-                .expand((choice) {
-                  final isSelected = choice == selected;
-                  return [
-                    if (choice != choices.first) const SizedBox(width: 8),
-                    Expanded(
-                      child: Semantics(
-                        key: ValueKey('vehicle-BRAND-${choice.toLowerCase()}'),
-                        label: choice,
-                        button: true,
-                        selected: isSelected,
-                        child: Material(
-                          color: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(13),
-                            side: BorderSide(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : AppColors.line,
-                              width: isSelected ? 2 : 1,
-                            ),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () => onSelected(choice),
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(6, 10, 6, 8),
-                              child: Column(
-                                children: [
-                                  SizedBox(
-                                    height: 44,
-                                    child: Image.asset(
-                                      'assets/brands/${choice.toLowerCase()}.png',
-                                      cacheWidth: 200,
-                                      fit: BoxFit.contain,
-                                      filterQuality: FilterQuality.medium,
-                                      excludeFromSemantics: true,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              const Icon(
-                                                Icons.two_wheeler,
-                                                color: AppColors.primary,
-                                              ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ];
-                })
-                .toList(growable: false),
-          ),
+        // Square tiles, 4 per row, sized from the available width.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const perRow = 4;
+            const gap = 8.0;
+            final side = (constraints.maxWidth - gap * (perRow - 1)) / perRow;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final choice in choices)
+                  SizedBox.square(dimension: side, child: _tile(choice)),
+              ],
+            );
+          },
         ),
       ],
+    );
+  }
+
+  Widget _tile(String choice) {
+    final isSelected = choice == selected;
+    return Semantics(
+      key: ValueKey('vehicle-BRAND-${choice.toLowerCase()}'),
+      label: choice,
+      button: true,
+      selected: isSelected,
+      child: Material(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(13),
+          side: BorderSide(
+            color: isSelected ? AppColors.primary : AppColors.line,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => onSelected(choice),
+          // The logo fills the square tile with a margin.
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Image.asset(
+              'assets/brands/${choice.toLowerCase()}.png',
+              cacheWidth: 200,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+              excludeFromSemantics: true,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.two_wheeler, color: AppColors.primary),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

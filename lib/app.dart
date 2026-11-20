@@ -14,7 +14,7 @@ import 'screens/shop_page.dart';
 import 'screens/shop_owner_dashboard_page.dart';
 import 'screens/welcome_page.dart';
 import 'theme/app_theme.dart';
-import 'widgets/desktop_phone_frame.dart';
+import 'widgets/phone_frame.dart';
 import 'widgets/home_bottom_navigation.dart';
 
 /// Root app widget.
@@ -48,7 +48,7 @@ class MotoScanApp extends StatelessWidget {
             )
           : const _MotoScanShell(),
       builder: (context, child) =>
-          DesktopPhoneFrame(child: child ?? const SizedBox.shrink()),
+          PhoneFrame(child: child ?? const SizedBox.shrink()),
     );
   }
 }
